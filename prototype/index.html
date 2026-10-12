@@ -1,0 +1,1658 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sahi Mirror App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;1,6..72,500&display=swap">
+<style>
+/* Layout: a demo rail on the left and a 390x844 phone on the right; on a real phone the app fills the screen and the rail becomes a sheet.
+   Palette: after-the-close dusk. Teal-ink accent for actions, tinted neutrals, flags in neutral chips (never red). */
+:root {
+  --stage: #D6DEDB;
+  --bg: #F1F4F3;
+  --surface: #FFFFFF;
+  --surface-2: #E8EDEB;
+  --ink: #13201E;
+  --ink-2: #4A5856;
+  --ink-3: #75837F;
+  --line: #D9E1DE;
+  --accent: #0C6A63;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #D6EDE9;
+  --chip: #E5EBE9;
+  --chip-ink: #2A3836;
+  --up: #2C8A5F;
+  --down: #BF5640;
+  --stop: #8C6B12;
+  --mask: rgba(19, 32, 30, .045);
+  --hatch: rgba(19, 32, 30, .10);
+  --scrim: rgba(8, 14, 13, .45);
+  --warn-bg: #FBF0D3;
+  --warn-ink: #5A4204;
+  --danger: #B3261E;
+  --device: #0B0F0E;
+  --lock-a: #1C3A37;
+  --lock-b: #0B1514;
+  --font-ui: 'Onest', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Newsreader', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 22px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --stage: #070B0A; --bg: #0C1211; --surface: #141C1B; --surface-2: #1B2524; --ink: #E3EBE9; --ink-2: #A4B2AF; --ink-3: #6F7E7B; --line: #24302E;
+    --accent: #5CC1B6; --accent-ink: #04211E; --accent-soft: #15332F; --chip: #213029; --chip-ink: #CFDBD8;
+    --up: #4DB488; --down: #E07B63; --stop: #D4B45C; --mask: rgba(227, 235, 233, .035); --hatch: rgba(227, 235, 233, .09); --scrim: rgba(0, 0, 0, .62);
+    --warn-bg: #362D14; --warn-ink: #F0D78E; --danger: #F28A80; --device: #000; --lock-a: #17302D; --lock-b: #050909;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --stage: #070B0A; --bg: #0C1211; --surface: #141C1B; --surface-2: #1B2524; --ink: #E3EBE9; --ink-2: #A4B2AF; --ink-3: #6F7E7B; --line: #24302E;
+  --accent: #5CC1B6; --accent-ink: #04211E; --accent-soft: #15332F; --chip: #213029; --chip-ink: #CFDBD8;
+  --up: #4DB488; --down: #E07B63; --stop: #D4B45C; --mask: rgba(227, 235, 233, .035); --hatch: rgba(227, 235, 233, .09); --scrim: rgba(0, 0, 0, .62);
+  --warn-bg: #362D14; --warn-ink: #F0D78E; --danger: #F28A80; --device: #000; --lock-a: #17302D; --lock-b: #050909;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--stage); color: var(--ink); font: 14px/1.42 var(--font-ui); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; }
+button:disabled { cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- stage ---------- */
+.stage { min-height: 100%; display: flex; align-items: center; justify-content: center; gap: 44px; padding-block: 20px; padding-inline: 24px; }
+.demo { width: 300px; flex: none; align-self: stretch; display: flex; flex-direction: column; gap: 18px; max-height: calc(100vh - 40px); overflow-y: auto; padding-right: 4px; }
+.demo h1 { font: 500 26px/1.1 var(--font-display); margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+.demo .lede { margin: 6px 0 0; color: var(--ink-2); font-size: 13px; }
+.dgroup { display: flex; flex-direction: column; gap: 8px; }
+.dgroup > .dlabel { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.dseg { display: flex; flex-wrap: wrap; gap: 6px; }
+.dseg button { padding: 7px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 12.5px; color: var(--ink-2); }
+.dseg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.dnote { font-size: 12px; color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 10px; }
+.djump { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.djump button { padding: 8px 10px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--line); font-size: 12.5px; display: flex; gap: 6px; align-items: baseline; }
+.djump button b { font-weight: 600; color: var(--accent); font-size: 11px; min-width: 20px; }
+.dbtn { padding: 9px 12px; border-radius: var(--r-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 13px; text-align: center; }
+.dbtn.ghost { background: transparent; color: var(--ink-2); border: 1px solid var(--line); }
+.dfoot { font-size: 11.5px; color: var(--ink-3); }
+.demo-fab { display: none; }
+.device-wrap { flex: none; position: relative; }
+.device { width: 414px; height: 868px; padding: 12px; border-radius: 58px; background: var(--device); box-shadow: 0 30px 80px -30px rgba(0,0,0,.45), inset 0 0 0 2px rgba(255,255,255,.06); transform-origin: top left; position: absolute; top: 0; left: 0; }
+.phone { position: relative; width: 100%; height: 100%; border-radius: 46px; overflow: hidden; background: var(--bg); display: flex; flex-direction: column; isolation: isolate; }
+
+/* ---------- phone chrome ---------- */
+.statusbar { height: 50px; flex: none; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 30px 8px 36px; font-weight: 600; font-size: 15px; background: var(--surface); position: relative; z-index: 3; }
+.statusbar .island { position: absolute; left: 50%; top: 11px; transform: translateX(-50%); width: 112px; height: 32px; border-radius: 20px; background: #000; }
+.statusbar .sys { display: flex; gap: 6px; align-items: center; }
+.statusbar svg { display: block; }
+.view { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+.screens { flex: 1; min-height: 0; position: relative; }
+.tabbar { flex: none; display: grid; grid-template-columns: repeat(5, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding-top: 6px; position: relative; z-index: 3; }
+.tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; color: var(--ink-3); padding: 2px 0 4px; position: relative; min-height: 48px; }
+.tab[aria-current="page"] { color: var(--accent); }
+.tab .dot { position: absolute; top: 1px; left: calc(50% + 9px); width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); }
+.home-ind { height: 26px; flex: none; background: var(--surface); display: flex; align-items: center; justify-content: center; position: relative; z-index: 3; }
+.home-ind span { width: 134px; height: 5px; border-radius: 3px; background: var(--ink); opacity: .85; }
+
+/* ---------- screens ---------- */
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); }
+.screen.enter { animation: slideIn .3s cubic-bezier(.2, .8, .2, 1); }
+.screen.fade { animation: fadeIn .2s ease-out; }
+@keyframes slideIn { from { transform: translateX(36%); opacity: .4; } to { transform: none; opacity: 1; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.scroll::-webkit-scrollbar { display: none; }
+.content { padding: 4px 16px 28px; display: flex; flex-direction: column; gap: 22px; }
+
+.nav { flex: none; background: var(--surface); border-bottom: 1px solid var(--line); padding: 6px 8px 10px; display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 4px; min-height: 56px; }
+.nav .back { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; color: var(--accent); }
+.nav .ttl { min-width: 0; text-align: center; }
+.nav .ttl b { display: block; font-size: 15.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav .ttl span { display: block; font-size: 12px; color: var(--ink-3); }
+.nav .right { min-width: 44px; display: flex; justify-content: flex-end; padding-right: 6px; }
+.pill { font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+
+.mhead { flex: none; background: var(--surface); border-bottom: 1px solid var(--line); padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+.mhead .row1 { display: flex; align-items: center; justify-content: space-between; }
+.mhead h1 { margin: 0; font: 500 30px/1.1 var(--font-display); letter-spacing: -.01em; }
+.iconbtn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; color: var(--ink-2); }
+.iconbtn:active { background: var(--surface-2); }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--surface-2); border-radius: 10px; padding: 3px; }
+.seg button { padding: 7px 0; border-radius: 8px; font-weight: 600; font-size: 13.5px; text-align: center; color: var(--ink-2); }
+.seg button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.seg.sm button { font-size: 12px; padding: 5px 0; }
+
+.strip-wrap { display: flex; align-items: stretch; gap: 8px; margin: 0 -16px; padding: 12px 16px 0; }
+.strip { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; scroll-padding: 0 8px; }
+.strip::-webkit-scrollbar { display: none; }
+.dchip { flex: none; width: 54px; padding: 7px 0 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.dchip small { font-size: 11px; color: var(--ink-3); }
+.dchip b { font-size: 17px; font-weight: 600; }
+.dchip i { width: 6px; height: 6px; border-radius: 50%; margin-top: 3px; background: transparent; border: 1.5px solid var(--ink-3); }
+.dchip i.s-rev { background: var(--ink-3); }
+.dchip i.s-plan { background: var(--up); border-color: var(--up); }
+.dchip i.s-open { border-color: var(--accent); background: var(--accent); }
+.dchip i.s-skip { border-style: dashed; }
+.dchip i.s-none { border-color: transparent; background: var(--line); }
+.dchip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.dchip[aria-pressed="true"] small { color: inherit; opacity: .75; }
+.dchip:disabled { opacity: .55; }
+.dchip .opens { font-size: 9.5px; line-height: 1.1; text-align: center; color: var(--ink-3); margin-top: 2px; }
+.calbtn { flex: none; width: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; color: var(--ink-2); }
+
+/* ---------- cards and sections ---------- */
+.card { background: var(--surface); border-radius: var(--r-md); border: 1px solid var(--line); }
+.sec { display: flex; flex-direction: column; gap: 10px; }
+.sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sec-h h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.quiet { color: var(--ink-3); font-size: 12px; }
+.note { background: var(--warn-bg); color: var(--warn-ink); border-radius: var(--r-sm); padding: 10px 12px; font-size: 13px; }
+
+.daycard { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.daycard .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.headline { margin: 0; font: 500 27px/1.12 var(--font-display); letter-spacing: -.01em; text-wrap: balance; }
+.headline em { font-style: italic; }
+.vals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; border-top: 1px solid var(--line); padding-top: 12px; }
+.vals div { min-width: 0; }
+.vals dt { font-size: 11.5px; color: var(--ink-3); line-height: 1.25; }
+.vals dd { margin: 3px 0 0; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.daycard .foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+.status { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 3px 8px 3px 7px; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; }
+.status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.status.s-open { color: var(--accent); background: var(--accent-soft); }
+.status.s-rev { color: var(--ink-2); background: var(--surface-2); }
+.status.s-plan { color: var(--up); background: color-mix(in srgb, var(--up) 14%, transparent); }
+.status.s-skip { color: var(--ink-3); border-color: var(--line); border-style: dashed; }
+.status.s-skip::before { background: transparent; border: 1.5px dashed currentColor; width: 5px; height: 5px; }
+.status.s-none { color: var(--ink-3); background: var(--surface-2); }
+
+.fchip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 4px 10px 4px 8px; border-radius: 999px; background: var(--chip); color: var(--chip-ink); font-size: 12.5px; font-weight: 500; border: 1px solid transparent; white-space: nowrap; }
+.fchip svg { flex: none; opacity: .7; }
+button.fchip:active { border-color: var(--line); }
+.fchip.ro { cursor: default; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.more { font-size: 12px; color: var(--ink-3); align-self: center; }
+
+.tcard { width: 100%; display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
+.tcard .r1 { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.tcard .inst { font-weight: 600; font-size: 14.5px; min-width: 0; }
+.tcard .sub { font-size: 12.5px; color: var(--ink-2); }
+.tcard .r3 { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 30px; }
+.hiddenline { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-3); }
+.pnl { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.list { list-style: none; margin: 0; padding: 0; overflow: hidden; }
+.list li + li { border-top: 1px solid var(--line); }
+.row { width: 100%; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 11px 14px; min-height: 60px; }
+.row .lead { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.row .lead small { display: block; font-size: 10.5px; color: var(--ink-3); font-weight: 500; }
+.row .main { min-width: 0; }
+.row .t { display: block; font-size: 13.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .s { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--ink-3); margin-top: 2px; flex-wrap: wrap; }
+.row .trail { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.row .trail .pnl { font-size: 13.5px; }
+.row .trail .pnl.hid { color: var(--ink-3); font-weight: 500; }
+.fcount { font-size: 11px; color: var(--chip-ink); background: var(--chip); border-radius: 999px; padding: 1px 7px; }
+
+.rules { padding: 4px 14px; }
+.rrow { padding: 12px 0; display: flex; flex-direction: column; gap: 4px; }
+.rrow + .rrow { border-top: 1px solid var(--line); }
+.rrow .rt { font-weight: 500; }
+.rrow .rr { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.link { color: var(--accent); font-weight: 600; font-size: 13px; padding: 6px 0; align-self: flex-start; }
+
+.firstrun { padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--accent-soft); border-color: transparent; }
+.firstrun h3 { margin: 0; font: 500 21px/1.15 var(--font-display); }
+.firstrun p { margin: 0; color: var(--ink-2); }
+.firstrun .acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.empty { padding: 28px 18px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.empty h3 { margin: 0; font: 500 22px/1.2 var(--font-display); text-wrap: balance; }
+.empty p { margin: 0; color: var(--ink-2); max-width: 30ch; }
+.building { padding: 18px 16px; display: flex; gap: 12px; align-items: center; }
+.spin { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--line); border-top-color: var(--accent); animation: spin .9s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- buttons ---------- */
+.btn { min-height: 48px; padding: 0 18px; border-radius: 14px; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+.btn.sm { min-height: 40px; font-size: 13.5px; padding: 0 14px; border-radius: 12px; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.btn.tertiary { color: var(--accent); }
+.btn.danger { color: var(--danger); }
+.btn.full { width: 100%; }
+.btn:disabled { opacity: .45; }
+.btn .sub { font-weight: 500; font-size: 12px; opacity: .8; }
+.btn.stack { flex-direction: column; gap: 0; line-height: 1.2; padding: 6px 18px; }
+
+.sticky { flex: none; background: var(--surface); border-top: 1px solid var(--line); padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+.sticky .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.sticky .helper { font-size: 12px; color: var(--ink-3); text-align: center; }
+
+/* ---------- trade reflection ---------- */
+.chartp { background: var(--surface); border-bottom: 1px solid var(--line); padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 8px; }
+.chartp .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.chartp .seg { width: 190px; }
+.chartp .legend { font-size: 11.5px; color: var(--ink-3); }
+.chart { position: relative; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.chart svg { display: block; width: 100%; height: auto; }
+.cu { fill: var(--up); } .cd { fill: var(--down); }
+.wu { stroke: var(--up); } .wd { stroke: var(--down); }
+.cgrid { stroke: var(--line); stroke-width: 1; }
+.ct { fill: var(--ink-3); font: 500 9.5px var(--font-ui); font-variant-numeric: tabular-nums; }
+.cstop { stroke: var(--stop); stroke-width: 1.3; stroke-dasharray: 4 3; fill: none; }
+.cstopt { fill: var(--stop); font: 600 9.5px var(--font-ui); }
+.cmark { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.cmark2 { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
+.cmt { fill: var(--ink); font: 600 10px var(--font-ui); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+.cmtbg { fill: var(--surface); opacity: .85; }
+.cmask { fill: var(--mask); }
+.chatch { stroke: var(--hatch); stroke-width: 1; }
+.cmaskt { fill: var(--ink-2); font: 500 11px var(--font-ui); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.cdiam { fill: var(--stop); stroke: var(--surface); stroke-width: 1.5; }
+.cx { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 2 2; }
+.ctip { position: absolute; top: 0; transform: translateX(-50%); background: var(--ink); color: var(--bg); font-size: 11px; font-weight: 600; padding: 3px 7px; border-radius: 6px; pointer-events: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0; }
+.facts div { padding: 10px 14px; min-width: 0; }
+.facts div:nth-child(n+3) { border-top: 1px solid var(--line); }
+.facts div:nth-child(odd) { border-right: 1px solid var(--line); }
+.facts dt { font-size: 11.5px; color: var(--ink-3); }
+.facts dd { margin: 2px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.facts .new { animation: reveal .5s ease-out both; }
+@keyframes reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.recall { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.recall h2 { margin: 0; font: 500 24px/1.15 var(--font-display); text-wrap: balance; }
+.rchips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.rchip { min-height: 48px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 600; font-size: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 4px 6px; text-align: center; }
+.rchip small { font-size: 10px; font-weight: 600; color: var(--accent); letter-spacing: .02em; }
+.rchip[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+.helper { font-size: 12.5px; color: var(--ink-3); display: flex; gap: 6px; align-items: center; }
+
+.reveal { display: flex; flex-direction: column; gap: 14px; animation: reveal .5s ease-out both; }
+.blk-h { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.saiddid { padding: 0; }
+.saiddid .said { padding: 12px 14px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 1px solid var(--line); }
+.saiddid .lbl { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.saiddid .said .v { font: 500 20px/1.1 var(--font-display); }
+.saiddid .did { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.tl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; }
+.tl li { display: grid; grid-template-columns: 62px 14px minmax(0, 1fr); gap: 6px; align-items: start; font-size: 13.5px; position: relative; padding-bottom: 10px; }
+.tl li:last-child { padding-bottom: 0; }
+.tl time { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; padding-top: 1px; }
+.tl .dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--ink-3); background: var(--surface); margin-top: 4px; position: relative; z-index: 1; }
+.tl li:not(:last-child)::after { content: ""; position: absolute; left: 72px; top: 13px; bottom: -3px; width: 1.5px; background: var(--line); }
+.tl li.key .dot { border-color: var(--stop); background: var(--stop); }
+
+.obs { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.obs .lab { display: flex; gap: 6px; align-items: center; font-size: 11.5px; color: var(--ink-3); }
+.obs .txt { margin: 0; font: 500 18.5px/1.38 var(--font-display); text-wrap: pretty; }
+.obs .acts { display: flex; gap: 2px; align-items: center; margin: 0 -8px -6px; }
+.obs .acts .sp { flex: 1; }
+.obs .acts button { width: 44px; height: 40px; display: grid; place-items: center; border-radius: 10px; color: var(--ink-3); }
+.obs .acts button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
+.obs.hiddenobs .txt { font: 400 14px/1.4 var(--font-ui); color: var(--ink-2); }
+.shimmer { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-2), var(--line), var(--surface-2)); background-size: 200% 100%; animation: sh 1.2s linear infinite; }
+@keyframes sh { to { background-position: -200% 0; } }
+
+.q { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.q .qt { margin: 0; font-weight: 600; font-size: 15px; }
+.achips { display: flex; flex-wrap: wrap; gap: 6px; }
+.achip { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--line); font-weight: 600; font-size: 13.5px; }
+.achip[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.savedtag { font-size: 12px; color: var(--accent); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.note-in { width: 100%; min-height: 76px; resize: none; border-radius: 12px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); font: 14px/1.4 var(--font-ui); padding: 10px 12px; }
+.note-in:focus { outline: none; border-color: var(--accent); }
+.note-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); min-height: 16px; }
+
+details.hist { padding: 0; }
+details.hist summary { list-style: none; padding: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: 600; }
+details.hist summary::-webkit-details-marker { display: none; }
+details.hist summary svg { transition: transform .2s; color: var(--ink-3); }
+details.hist[open] summary svg { transform: rotate(180deg); }
+details.hist ol { list-style: none; margin: 0; padding: 0 14px 12px; display: flex; flex-direction: column; gap: 8px; }
+details.hist li { font-size: 13px; display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 8px; }
+details.hist li time { color: var(--ink-3); font-variant-numeric: tabular-nums; font-size: 12px; padding-top: 1px; }
+
+.ruleon { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); background: var(--surface-2); border-radius: 12px; padding: 8px 10px; min-height: 48px; }
+
+/* ---------- patterns ---------- */
+.summary h2 { margin: 0; font: 500 23px/1.2 var(--font-display); text-wrap: balance; }
+.pcard { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.pcard .vals { border-top: 0; padding-top: 0; }
+.pcard .acts { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.base { background: var(--surface-2); border-color: transparent; }
+.base h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.bars { display: flex; flex-direction: column; gap: 6px; }
+.bar { display: grid; grid-template-columns: 92px minmax(0, 1fr) 38px; gap: 8px; align-items: center; font-size: 11.5px; color: var(--ink-2); }
+.bar .tr { display: block; height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.bar .fl { display: block; height: 100%; border-radius: 4px; background: var(--ink-2); }
+.bar.base-b .fl { background: var(--ink-3); opacity: .55; }
+.bar .pc { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.obsline { margin: 0; font: 500 16px/1.38 var(--font-display); }
+.prog { display: grid; grid-template-columns: minmax(0, 1fr) 90px; gap: 10px; align-items: center; padding: 10px 14px; }
+.prog + .prog { border-top: 1px solid var(--line); }
+.prog .tr { display: block; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; grid-column: 1 / -1; }
+.prog .fl { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.prog .c { text-align: right; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.rcard { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.rcard .rt { font-weight: 600; font-size: 15px; }
+.rcard dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 13px; }
+.rcard dt { color: var(--ink-3); }
+.rcard dd { margin: 0; font-variant-numeric: tabular-nums; }
+.rcard .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.dhead { position: sticky; top: 0; z-index: 1; background: var(--bg); padding: 8px 0 6px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+
+/* ---------- settings ---------- */
+.group { display: flex; flex-direction: column; gap: 8px; }
+.group > h3 { margin: 0 4px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.group .card { overflow: hidden; }
+.group .gnote { margin: 0 4px; font-size: 12px; color: var(--ink-3); }
+.srow { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.srow + .srow { border-top: 1px solid var(--line); }
+.srow .r { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 32px; }
+.srow .lab { font-weight: 500; }
+.srow .help { font-size: 12.5px; color: var(--ink-3); }
+.srow.dis { opacity: .5; }
+.srow .ctrls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.srow .saved { font-size: 12px; color: var(--accent); font-weight: 600; }
+.srow .err { font-size: 12.5px; color: var(--danger); }
+.switch { width: 51px; height: 31px; border-radius: 16px; background: var(--line); position: relative; flex: none; transition: background .2s; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+.switch[aria-checked="true"] { background: var(--accent); }
+.switch[aria-checked="true"]::after { transform: translateX(20px); }
+.stepper { display: inline-grid; grid-template-columns: 40px minmax(52px, auto) 40px; align-items: center; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg); }
+.stepper button { height: 38px; display: grid; place-items: center; color: var(--accent); font-size: 18px; font-weight: 600; }
+.stepper button:disabled { color: var(--ink-3); opacity: .5; }
+.stepper output { text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; padding: 0 6px; }
+.stepper.lg { grid-template-columns: 56px minmax(80px, auto) 56px; border-radius: 14px; }
+.stepper.lg button { height: 52px; font-size: 22px; }
+.stepper.lg output { font-size: 22px; }
+.timein { height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 600 15px var(--font-ui); padding: 0 10px; }
+.check { display: flex; align-items: center; gap: 12px; padding: 12px 14px; width: 100%; min-height: 48px; }
+.check + .check { border-top: 1px solid var(--line); }
+.check .box { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--ink-3); display: grid; place-items: center; color: var(--accent-ink); flex: none; }
+.check[aria-checked="true"] .box { background: var(--accent); border-color: var(--accent); }
+.dangerrow { padding: 14px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+
+/* ---------- banners and overlays ---------- */
+.banner { flex: none; margin: 8px 10px 0; padding: 12px 10px 12px 14px; border-radius: 14px; background: var(--ink); color: var(--bg); display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; align-items: center; position: relative; z-index: 2; }
+.banner.anim { animation: drop .35s cubic-bezier(.2,.8,.2,1); }
+.banner b { display: block; font-size: 14px; }
+.banner span { font-size: 12.5px; opacity: .8; }
+.banner .open { background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 13px; padding: 8px 12px; border-radius: 10px; white-space: nowrap; }
+.banner .x { width: 36px; height: 36px; display: grid; place-items: center; opacity: .75; }
+@keyframes drop { from { transform: translateY(-14px); opacity: 0; } to { transform: none; opacity: 1; } }
+.offline { flex: none; padding: 7px 14px; font-size: 12.5px; font-weight: 500; background: var(--warn-bg); color: var(--warn-ink); display: flex; gap: 8px; align-items: center; justify-content: center; position: relative; z-index: 2; }
+
+.snack { position: absolute; left: 12px; right: 12px; z-index: 20; background: var(--ink); color: var(--bg); border-radius: 12px; padding: 12px 14px; display: flex; gap: 12px; align-items: center; justify-content: space-between; font-size: 13.5px; box-shadow: 0 10px 30px -10px rgba(0,0,0,.4); }
+.snack.anim { animation: up .3s cubic-bezier(.2,.8,.2,1); }
+.snack button { color: var(--accent); font-weight: 700; padding: 4px 6px; filter: brightness(1.25); }
+@keyframes up { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.scrim { position: absolute; inset: 0; background: var(--scrim); z-index: 30; }
+.scrim.anim { animation: fadeIn .2s ease-out; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 31; background: var(--surface); border-radius: 22px 22px 0 0; padding: 8px 16px 30px; max-height: 88%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.sheet.anim { animation: sheetUp .32s cubic-bezier(.2,.8,.2,1); }
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+.grab { width: 38px; height: 5px; border-radius: 3px; background: var(--line); align-self: center; flex: none; }
+.sheet .sh { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sheet .sh h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.sentence { margin: 0; font: 500 25px/1.25 var(--font-display); text-wrap: balance; }
+.sentence mark { white-space: nowrap; background: var(--accent-soft); color: var(--accent); border-radius: 6px; padding: 0 5px; }
+.notice { background: var(--surface-2); border-radius: 12px; padding: 12px; font-size: 13.5px; display: flex; flex-direction: column; gap: 8px; }
+.actsheet { display: flex; flex-direction: column; }
+.actsheet button { padding: 15px 4px; font-size: 16px; font-weight: 500; border-top: 1px solid var(--line); text-align: left; min-height: 52px; }
+.actsheet button:first-child { border-top: 0; }
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; }
+.cal .wd { font-size: 11px; color: var(--ink-3); padding: 4px 0; }
+.cal button, .cal span.d { height: 44px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cal span.d { color: var(--ink-3); opacity: .45; font-weight: 500; }
+.cal button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.cal button i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.cal button i.s-rev { background: var(--ink-3); } .cal button i.s-plan { background: var(--up); } .cal button i.s-skip { background: transparent; border: 1px dashed var(--ink-3); } .cal button i.s-none { background: transparent; }
+.calnav { display: flex; justify-content: space-between; align-items: center; }
+.calnav b { font-size: 15px; }
+.legendrow { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 11.5px; color: var(--ink-3); }
+
+.alert { position: absolute; z-index: 41; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 280px; background: var(--surface); border-radius: 16px; text-align: center; overflow: hidden; box-shadow: 0 20px 60px -20px rgba(0,0,0,.5); }
+.alert.anim { animation: pop .22s ease-out; }
+@keyframes pop { from { transform: translate(-50%, -50%) scale(1.08); opacity: 0; } to { transform: translate(-50%, -50%); opacity: 1; } }
+.alert .ab { padding: 18px 16px 14px; display: flex; flex-direction: column; gap: 6px; }
+.alert h2 { margin: 0; font-size: 16.5px; font-weight: 600; }
+.alert p { margin: 0; font-size: 13px; color: var(--ink-2); }
+.alert .aa { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); }
+.alert .aa button { padding: 13px 8px; font-size: 16px; color: var(--accent); min-height: 46px; text-align: center; }
+.alert .aa button + button { border-left: 1px solid var(--line); font-weight: 600; }
+.alert .aa button.destr { color: var(--danger); }
+.alert .err { color: var(--danger); font-size: 13px; }
+
+.lock { position: absolute; inset: 0; z-index: 50; background: radial-gradient(120% 70% at 30% 10%, var(--lock-a), var(--lock-b)); color: #fff; display: flex; flex-direction: column; align-items: center; padding: 70px 14px 30px; gap: 4px; }
+.lock.anim { animation: fadeIn .25s ease-out; }
+.lock .ld { font-size: 17px; font-weight: 500; opacity: .85; }
+.lock .lt { font: 600 84px/1 var(--font-ui); letter-spacing: -.03em; }
+.lock .notif { margin-top: 38px; width: 100%; background: rgba(255,255,255,.16); backdrop-filter: blur(12px); border-radius: 18px; padding: 12px 14px; display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; text-align: left; color: #fff; }
+.lock.anim .notif { animation: drop .45s .25s cubic-bezier(.2,.8,.2,1) both; }
+.lock .appic { width: 36px; height: 36px; border-radius: 9px; background: #0C6A63; display: grid; place-items: center; font-weight: 700; font-size: 17px; color: #fff; }
+.lock .nh { display: flex; justify-content: space-between; font-size: 12.5px; opacity: .75; }
+.lock .nt { display: block; font-weight: 600; font-size: 15px; }
+.lock .nb { display: block; font-size: 14px; opacity: .92; }
+.lock .lfoot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 12.5px; opacity: .8; }
+.lock .clear { color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 7px 14px; }
+
+/* ---------- Sahi-owned screens (simplified) ---------- */
+.sahihead { flex: none; background: var(--surface); border-bottom: 1px solid var(--line); padding: 8px 16px 12px; }
+.sahihead h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+.sahihead p { margin: 2px 0 0; font-size: 12px; color: var(--ink-3); }
+.prow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 14px; }
+.prow .t { font-weight: 500; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.prow .s { font-size: 12px; color: var(--ink-3); }
+.prow .rt { display: flex; align-items: center; gap: 10px; }
+.reflect { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 6px 11px; min-height: 34px; }
+.owned { font-size: 11.5px; color: var(--ink-3); text-align: center; padding: 6px 0 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; transition-duration: .001ms !important; }
+}
+
+/* demo rail moves into a sheet on smaller screens */
+@media (max-width: 920px) {
+  .stage { gap: 0; }
+  .demo { display: none; }
+  .demo.open { display: flex; position: fixed; z-index: 100; left: 12px; right: 12px; bottom: 12px; top: auto; width: auto; max-height: 78%; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; box-shadow: 0 20px 60px -10px rgba(0,0,0,.4); }
+  .demo-fab { display: block; position: fixed; z-index: 101; right: 12px; top: calc(50% - 22px); padding: 10px 12px; border-radius: 12px; background: var(--ink); color: var(--bg); font-weight: 600; font-size: 12.5px; opacity: .88; box-shadow: 0 6px 20px -6px rgba(0,0,0,.4); }
+}
+@media (max-width: 560px) {
+  .stage { display: block; padding: 0; height: 100%; min-height: 0; }
+  .device-wrap { width: 100% !important; height: 100% !important; }
+  .device { position: static; width: 100%; height: 100%; padding: 0; border-radius: 0; transform: none !important; box-shadow: none; background: var(--bg); }
+  .phone { border-radius: 0; }
+  .statusbar, .home-ind { display: none; }
+  .tabbar { padding-bottom: 4px; }
+  .lock { padding-top: 40px; }
+  .demo-fab { top: 38%; right: 0; padding: 12px 6px; border-radius: 10px 0 0 10px; writing-mode: vertical-rl; font-size: 11.5px; opacity: .8; }
+}
+</style>
+</head>
+<body>
+<div class="stage">
+  <aside class="demo" id="demo" aria-label="Prototype controls"></aside>
+  <div class="device-wrap" id="deviceWrap">
+    <div class="device" id="device"><div class="phone" id="app" aria-live="polite"></div></div>
+  </div>
+</div>
+<button class="demo-fab" id="demoFab" type="button" aria-controls="demo" aria-expanded="false">Demo</button>
+<noscript>This prototype needs JavaScript.</noscript>
+<script>
+'use strict';
+/* =========================================================================
+   Sahi Mirror app prototype. Sample data only: every trade, price and P&L
+   below is generated for the demo and is not a real account.
+   ========================================================================= */
+
+// ---------- utilities ----------
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function gauss(r) { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+const pick = (r, arr) => arr[Math.floor(r() * arr.length)];
+const r05 = p => Math.round(p * 20) / 20;
+const MINUS = '−';
+const nf0 = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+const nf2 = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function inr(n, signed = true) { const v = Math.round(n); const s = '₹' + nf0.format(Math.abs(v)); if (!signed) return s; return (v < 0 ? MINUS : v > 0 ? '+' : '') + s; }
+const px = p => nf2.format(p);
+const pxS = p => (Math.abs(p - Math.round(p)) < 0.001 ? nf0.format(p) : nf2.format(p));
+const fx = x => (Number.isInteger(x) ? String(x) : x.toFixed(1));
+function tm(min) { const h = Math.floor(min / 60), m = min % 60; return (h % 12 || 12) + ':' + String(m).padStart(2, '0') + ' ' + (h >= 12 ? 'pm' : 'am'); }
+function tmParts(min) { const s = tm(min).split(' '); return { t: s[0], ap: s[1] }; }
+const hm = (h, m) => h * 60 + m;
+const minWord = n => (n === 1 ? '1 minute' : n + ' minutes');
+function dur(m) { if (m < 60) return m + ' min'; const h = Math.floor(m / 60), r = m % 60; return h + ' hr' + (r ? ' ' + r + ' min' : ''); }
+const andJoin = a => (a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]);
+const vibrate = () => { try { navigator.vibrate && navigator.vibrate(12); } catch (e) { /* not available */ } };
+
+// ---------- calendar ----------
+const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WDL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MO = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MOL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const dParse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+const dStr = d => d.toISOString().slice(0, 10);
+const dAdd = (s, n) => { const d = dParse(s); d.setUTCDate(d.getUTCDate() + n); return dStr(d); };
+const dLabel = s => { const d = dParse(s); return WD[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MO[d.getUTCMonth()]; };
+const dLong = s => { const d = dParse(s); return WDL[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MOL[d.getUTCMonth()]; };
+const TODAY = '2026-10-12';
+const HOLIDAYS = new Set(['2026-09-14', '2026-10-02']);
+const isTradingDay = s => { const w = dParse(s).getUTCDay(); return w !== 0 && w !== 6 && !HOLIDAYS.has(s); };
+const EARLIEST = dAdd(TODAY, -90);
+const TRADING_DAYS = (() => { const out = []; for (let s = '2026-06-15'; s <= TODAY; s = dAdd(s, 1)) if (isTradingDay(s)) out.push(s); return out; })();
+const prevTradingDay = s => { const i = TRADING_DAYS.indexOf(s); return TRADING_DAYS[i - 1]; };
+function niftyExpiry(s) { let d = s; while (dParse(d).getUTCDay() !== 2) d = dAdd(d, 1); return d; }
+function bankExpiry(s) {
+  const lastTue = (y, m) => { let d = new Date(Date.UTC(y, m + 1, 0)); while (d.getUTCDay() !== 2) d.setUTCDate(d.getUTCDate() - 1); return dStr(d); };
+  const d = dParse(s); let e = lastTue(d.getUTCFullYear(), d.getUTCMonth());
+  if (e < s) e = lastTue(d.getUTCFullYear(), d.getUTCMonth() + 1);
+  return e;
+}
+const expLabel = s => { const d = dParse(s); return String(d.getUTCDate()).padStart(2, '0') + ' ' + MO[d.getUTCMonth()].toUpperCase(); };
+
+// ---------- instruments and trades ----------
+const EQ_PX = { RELIANCE: 1418, HDFCBANK: 982, INFY: 1526, SBIN: 862, TCS: 3110 };
+const mkOpt = (und, date, strike, cp) => ({ name: `${und} ${expLabel(und === 'NIFTY' ? niftyExpiry(date) : bankExpiry(date))} ${strike} ${cp}`, type: 'opt', lot: und === 'NIFTY' ? 65 : 30, usual: 1 });
+const mkEq = sym => ({ name: sym, type: 'eq', lot: 1, usual: 150 });
+const sizeX = t => (t.inst.type === 'opt' ? t.lots : t.qty) / t.inst.usual;
+const sizeLabel = t => (t.inst.type === 'opt' ? (t.lots === 1 ? '1 lot' : t.lots + ' lots') : t.qty + ' shares');
+const SESS0 = 555, SESSN = 375; // 9:15 am, 375 one-minute candles
+
+function mkTrade(id, date, inst, side, size, entryMin, entry, exitMin, exit, exitKind, origin, stops, event) {
+  const t = { id, date, inst, side, entryMin, entry, exitMin, exit, exitKind, origin, stops: stops || [], event: event || null };
+  if (inst.type === 'opt') { t.lots = size; t.qty = size * inst.lot; } else { t.qty = size; t.lots = null; }
+  t.charges = Math.round(40 + (entry + exit) * t.qty * (inst.type === 'opt' ? 0.0012 : 0.00035));
+  t.net = Math.round((exit - entry) * t.qty * (side === 'Buy' ? 1 : -1) - t.charges);
+  return t;
+}
+
+// Flags are computed from order facts with the default thresholds (Section 10.3). Past days keep these flags.
+const FLAG_ORDER = ['revenge', 'widened', 'nostop', 'size', 'burst', 'opening', 'event'];
+const FLAG_NAME = { revenge: 'Revenge entry', size: 'Size spike', nostop: 'No stop', widened: 'Stop widened or removed', opening: 'Opening rush', burst: 'Trade burst', event: 'Event exposure' };
+const MISMATCH = ['revenge', 'widened', 'nostop', 'size', 'burst'];
+const DEF = { revenge: 5, size: 2, nostop: 1, opening: 570, burstN: 3, burstM: 10 };
+function computeFlags(trades) {
+  trades.sort((a, b) => a.entryMin - b.entryMin);
+  trades.forEach(t => {
+    const f = [], facts = {};
+    let loss = null;
+    trades.forEach(o => { if (o !== t && o.net < 0 && o.exitMin <= t.entryMin && (!loss || o.exitMin > loss.exitMin)) loss = o; });
+    if (loss && t.entryMin - loss.exitMin <= DEF.revenge) { f.push('revenge'); facts.gap = Math.max(1, t.entryMin - loss.exitMin); facts.prevLoss = loss.net; }
+    facts.sizeX = sizeX(t); if (facts.sizeX >= DEF.size) f.push('size');
+    const placed = t.stops.find(s => s.kind === 'place');
+    if (!placed || placed.min - t.entryMin > DEF.nostop) f.push('nostop');
+    if (t.stops.some(s => (s.kind === 'move' || s.kind === 'cancel') && s.inLoss)) f.push('widened');
+    if (t.entryMin < DEF.opening) f.push('opening');
+    const burst = trades.filter(o => o.entryMin <= t.entryMin && o.entryMin > t.entryMin - DEF.burstM);
+    if (burst.length >= DEF.burstN) { f.push('burst'); facts.burstN = burst.length; facts.burstM = Math.max(1, t.entryMin - burst[0].entryMin); }
+    if (t.event) f.push('event');
+    t.flags = FLAG_ORDER.filter(k => f.includes(k));
+    t.facts = facts;
+  });
+  return trades;
+}
+
+// Hand-written sample day for "today" (Mon 12 Oct 2026).
+function todayTrades(scenario) {
+  const D = TODAY, N = (s, cp) => mkOpt('NIFTY', D, s, cp), B = (s, cp) => mkOpt('BANKNIFTY', D, s, cp), P = (m, p) => ({ min: m, price: p, kind: 'place' });
+  if (scenario === 'none') return [];
+  if (scenario === 'plan') return computeFlags([
+    mkTrade('t-plan-1', D, B(56500, 'PE'), 'Buy', 1, hm(10, 5), 312.00, hm(10, 31), 289.60, 'stop', 'Chart', [P(hm(10, 5), 290)]),
+    mkTrade('t-plan-2', D, mkEq('RELIANCE'), 'Sell', 150, hm(12, 40), 1418.60, hm(13, 25), 1409.20, 'manual', 'Watchlist', [P(hm(12, 40), 1426)]),
+    mkTrade('t-plan-3', D, N(25250, 'CE'), 'Buy', 1, hm(14, 6), 41.20, hm(14, 48), 47.35, 'manual', 'Chart', [P(hm(14, 6), 36)]),
+  ]);
+  return computeFlags([
+    mkTrade('t-1', D, N(25150, 'CE'), 'Buy', 1, hm(9, 21), 118.40, hm(9, 48), 129.85, 'manual', 'Option chain', [P(hm(9, 21), 104)]),
+    mkTrade('t-2', D, B(56500, 'PE'), 'Buy', 1, hm(10, 5), 312.00, hm(10, 31), 289.60, 'stop', 'Chart', [P(hm(10, 5), 290)]),
+    mkTrade('t-3', D, B(56400, 'PE'), 'Buy', 2, hm(10, 34), 298.00, hm(11, 20), 241.50, 'manual', 'Option chain', []),
+    mkTrade('t-4', D, N(25100, 'PE'), 'Buy', 2, hm(11, 36), 96.50, hm(12, 5), 76.80, 'stop', 'Scanner', [P(hm(11, 36), 88), { min: hm(11, 52), price: 78, kind: 'move', inLoss: true, mkt: 89.40 }]),
+    mkTrade('t-5', D, mkEq('RELIANCE'), 'Sell', 150, hm(12, 40), 1418.60, hm(13, 25), 1409.20, 'manual', 'Watchlist', [P(hm(12, 40), 1426)]),
+    mkTrade('t-6', D, N(25200, 'CE'), 'Buy', 3, hm(14, 2), 64.00, hm(14, 31), 81.50, 'manual', 'Chart', []),
+    mkTrade('t-7', D, N(25250, 'CE'), 'Buy', 1, hm(14, 6), 41.20, hm(14, 20), 36.00, 'stop', 'Chart', [P(hm(14, 6), 36)]),
+    mkTrade('t-8', D, N(25200, 'PE'), 'Buy', 1, hm(14, 9), 58.70, hm(14, 40), 52.00, 'stop', 'Chart', [P(hm(14, 9), 52)]),
+  ]);
+}
+
+// Generated history for earlier days, seeded by date so it is the same on every load.
+const DAY_KIND = { '2026-10-09': 'plan', '2026-10-07': 'none', '2026-09-30': 'plan', '2026-09-18': 'none' };
+function genDay(date) {
+  const kind = DAY_KIND[date] || 'random';
+  if (kind === 'none') return [];
+  const r = rng(hashStr('day' + date));
+  const plan = kind === 'plan';
+  const n = plan ? 3 : (r() < 0.06 ? 0 : 3 + Math.floor(r() * 5));
+  const spot = 24850 + Math.round(350 * Math.sin(TRADING_DAYS.indexOf(date) / 7) / 50) * 50;
+  const trades = []; let prev = null;
+  for (let i = 0; i < n; i++) {
+    let entryMin, intents = 0;
+    if (!prev) entryMin = plan ? hm(9, 40) + Math.floor(r() * 40) : hm(9, 17) + Math.floor(r() * 75);
+    else if (!plan && prev.net < 0 && r() < 0.5) { entryMin = prev.exitMin + 1 + Math.floor(r() * 4); intents++; }
+    else if (!plan && r() < 0.07) { entryMin = prev.entryMin + 2 + Math.floor(r() * 3); intents++; }
+    else entryMin = Math.max(prev.exitMin, prev.entryMin) + 8 + Math.floor(r() * 50);
+    if (entryMin > hm(14, 55)) break;
+    const u = r(); let inst, entry, side = 'Buy', size;
+    const spike = !plan && r() < 0.15; if (spike) intents++;
+    if (u < 0.55) { inst = mkOpt('NIFTY', date, spot + (Math.floor(r() * 5) - 2) * 50, r() < 0.5 ? 'CE' : 'PE'); entry = r05(55 + r() * 110); size = spike ? (r() < 0.6 ? 2 : 3) : 1; }
+    else if (u < 0.86) { inst = mkOpt('BANKNIFTY', date, Math.round(spot * 2.25 / 100) * 100 + (Math.floor(r() * 5) - 2) * 100, r() < 0.5 ? 'CE' : 'PE'); entry = r05(180 + r() * 260); size = spike ? 2 : 1; }
+    else { const sym = pick(r, Object.keys(EQ_PX)); inst = mkEq(sym); entry = r05(EQ_PX[sym] * (1 + (r() - 0.5) * 0.04)); side = r() < 0.5 ? 'Buy' : 'Sell'; size = spike ? 300 : pick(r, [100, 150, 200]); }
+    const opt = inst.type === 'opt', dir = side === 'Buy' ? 1 : -1;
+    const noStop = !plan && r() < 0.13; if (noStop) intents++;
+    const widen = !plan && !noStop && r() < 0.2; if (widen) intents++;
+    const loss = r() < (plan ? 0.34 : Math.min(0.85, 0.42 + 0.18 * intents));
+    const hold = 6 + Math.floor(r() * 50);
+    const dist = opt ? entry * (0.08 + r() * 0.07) : entry * (0.004 + r() * 0.004);
+    const stop1 = r05(entry - dir * dist);
+    const stops = noStop ? [] : [{ min: entryMin + (r() < 0.85 ? 0 : 1), price: stop1, kind: 'place' }];
+    let exit, exitKind = 'manual', exitMin = Math.min(entryMin + hold, hm(15, 20));
+    if (loss) {
+      if (widen) {
+        const mm = entryMin + Math.max(2, Math.floor(hold * 0.4)); const stop2 = r05(stop1 - dir * dist * (0.8 + r() * 0.6));
+        stops.push({ min: mm, price: stop2, kind: 'move', inLoss: true, mkt: r05(stop1 + dir * dist * 0.15) });
+        exit = r05(stop2 - dir * dist * r() * 0.12); exitKind = 'stop'; exitMin = Math.max(exitMin, mm + 3);
+      } else if (!noStop && r() < 0.6) { exit = r05(stop1 - dir * dist * r() * 0.05); exitKind = 'stop'; }
+      else exit = r05(entry - dir * dist * (noStop ? 0.5 + r() * 2 : 0.2 + r() * 0.6));
+    } else exit = r05(entry + dir * entry * (opt ? 0.04 + r() * 0.16 : 0.002 + r() * 0.008));
+    let event = null;
+    if (!plan && opt && r() < 0.015) { event = 'the last hour of expiry'; exitMin = Math.max(exitMin, hm(14, 40)); }
+    const origin = opt ? pick(r, ['Option chain', 'Option chain', 'Chart', 'Chart', 'Scanner', 'Watchlist', 'Basket']) : pick(r, ['Watchlist', 'Chart', 'Scanner']);
+    prev = mkTrade('t-' + date.slice(5) + '-' + (i + 1), date, inst, side, size, entryMin, entry, exitMin, Math.max(0.05, exit), exitKind, origin, stops, event);
+    trades.push(prev);
+  }
+  return computeFlags(trades);
+}
+
+// ---------- day model ----------
+const dayCache = {};
+function dayTrades(date) {
+  const key = date === TODAY ? date + ':' + state.scenario : date;
+  if (!dayCache[key]) dayCache[key] = date === TODAY ? todayTrades(state.scenario) : genDay(date);
+  return dayCache[key];
+}
+function tradeById(id) {
+  const m = /^t-(\d\d-\d\d)-/.exec(id);
+  const date = m ? '2026-' + m[1] : TODAY;
+  return dayTrades(date).find(t => t.id === id) || null;
+}
+function worthIds(trades) {
+  const flagged = trades.filter(t => t.flags.length).sort((a, b) => b.flags.length - a.flags.length || a.entryMin - b.entryMin);
+  const top = flagged.slice(0, 3);
+  const prof = flagged.filter(t => t.net > 0);
+  if (top.length === 3 && prof.length && !top.some(t => t.net > 0)) top[2] = prof[0];
+  return top.map(t => t.id);
+}
+function dayMeta(date) {
+  const trades = dayTrades(date);
+  const worth = worthIds(trades);
+  return { trades, worth, kept: trades.filter(t => !t.flags.length).length, net: trades.reduce((a, t) => a + t.net, 0), flags: trades.reduce((a, t) => a + t.flags.length, 0) };
+}
+const reviewed = t => !!state.reviews[t.id];
+function dayStatus(date) {
+  if (date === TODAY && state.clock !== 'after') return 'pending';
+  const m = dayMeta(date);
+  if (!m.trades.length) return 'none';
+  if (!m.flags) return 'plan';
+  if (m.worth.every(id => state.reviews[id])) return 'rev';
+  if (state.skipped[date]) return 'skip';
+  return 'open';
+}
+const STATUS_TEXT = { open: 'Not reviewed', rev: 'Reviewed', plan: 'Followed plan', skip: 'Skipped', none: 'No trades', pending: 'Not ready' };
+const statusChip = s => `<span class="status s-${s}">${STATUS_TEXT[s]}</span>`;
+function isHidden(t) { return dayMeta(t.date).worth.includes(t.id) && !reviewed(t); }
+const latestDay = () => (state.clock === 'after' ? TODAY : prevTradingDay(TODAY));
+function sessions() { const end = TRADING_DAYS.indexOf(latestDay()); return TRADING_DAYS.slice(end - 29, end + 1); }
+function sessionTrades() { return sessions().flatMap(d => dayTrades(d)); }
+function builtAt(date) { if (date === TODAY) return '3:52 pm'; const r = rng(hashStr('b' + date)); return '3:' + (41 + Math.floor(r() * 14)) + ' pm'; }
+
+// Seeded reflections for past days (so history looks lived in).
+function seedReflections() {
+  const reviews = {}, skipped = {};
+  const force = { '2026-10-08': 'rev', '2026-10-06': 'skip', '2026-10-05': 'rev', '2026-10-01': 'open', '2026-10-09': 'rev' };
+  TRADING_DAYS.forEach(d => {
+    if (d === TODAY) return;
+    const trades = genDay(d); if (!trades.length) return;
+    const r = rng(hashStr('seed' + d));
+    const u = r(); const kind = force[d] || (u < 0.7 ? 'rev' : u < 0.85 ? 'skip' : 'open');
+    if (kind === 'skip') skipped[d] = true;
+    if (kind !== 'rev') return;
+    worthIds(trades).forEach(id => {
+      const t = trades.find(x => x.id === id);
+      const g = guessFor(t); const v = r();
+      const reason = v < 0.55 ? g : v < 0.7 ? 'Gut' : v < 0.82 ? 'Recover loss' : v < 0.9 ? null : 'Breakout';
+      const rev = { reason, guessKept: reason === g };
+      const mm = mainMismatch(t);
+      if (reason && ['Setup', 'Breakout', 'News'].includes(reason) && mm && r() < 0.7) rev.answer = pick(r, ['FOMO', 'Revenge', 'Plan', 'Bored']);
+      reviews[id] = rev;
+    });
+  });
+  return { reviews, skipped };
+}
+
+// ---------- AI observation templates (system computes every number; this only phrases them) ----------
+const guessFor = t => (t.origin === 'Scanner' ? 'Breakout' : 'Setup');
+const mainMismatch = t => t.flags.find(f => MISMATCH.includes(f)) || null;
+function hist(flag) {
+  const ts = sessionTrades().filter(t => t.flags.includes(flag));
+  const out = { n: ts.length, lost: ts.filter(t => t.net < 0).length, won: ts.filter(t => t.net > 0).length };
+  if (flag === 'widened') out.past = ts.filter(t => { const p = t.stops.find(s => s.kind === 'place'); if (!p || t.net >= 0) return false; return t.side === 'Buy' ? t.exit < p.price : t.exit > p.price; }).length;
+  return out;
+}
+function flagPhrase(f, t) {
+  const x = t.facts;
+  return {
+    revenge: `came ${minWord(x.gap)} after a loss`, size: `was ${fx(x.sizeX)}× your usual size`, nostop: 'had no stop',
+    widened: 'had its stop moved while in loss', opening: `came ${t.entryMin - SESS0} minutes after the open`,
+    burst: `was one of ${x.burstN} entries in ${minWord(x.burstM)}`, event: `was held into ${t.event}`,
+  }[f];
+}
+function obsText(t) {
+  const rev = state.reviews[t.id] || {}, reason = rev.reason, f = t.flags, pnl = t.net;
+  if (!f.length) {
+    const p = t.stops.find(s => s.kind === 'place');
+    const lead = reason ? `You picked ${reason}, placed` : 'You placed';
+    return `${lead} a stop at ${pxS(p.price)} and exited ${t.exitKind === 'stop' ? 'there' : 'at ' + pxS(t.exit)}. ${pnl < 0 ? 'This loss stayed inside your plan.' : 'This trade stayed inside your plan.'}`;
+  }
+  const main = f[0], h = hist(main), H = h.n >= 10;
+  if (pnl > 0) {
+    let s = `This one made ${inr(pnl, false)}. It also ${andJoin(f.slice(0, 2).map(k => flagPhrase(k, t)))}.`;
+    if (H) s += ` Of your trades like this, ${h.won} of ${h.n} ended in profit.`;
+    return s;
+  }
+  const lossTxt = `It ended with a net loss of ${inr(-pnl, false)}.`;
+  switch (main) {
+    case 'revenge': {
+      const ex = []; if (f.includes('size')) ex.push(`at ${fx(t.facts.sizeX)}× your usual size`); if (f.includes('nostop')) ex.push('with no stop');
+      return `You entered ${minWord(t.facts.gap)} after a ${inr(-t.facts.prevLoss, false)} loss${ex.length ? ', ' + ex.join(', ') : ''}.` + (H ? ` Of your last ${h.n} trades like this, ${h.lost} ended in loss.` : '');
+    }
+    case 'widened': {
+      const p = t.stops.find(s => s.kind === 'place'), m = t.stops.find(s => s.kind === 'move' || s.kind === 'cancel');
+      const lead = reason ? `You picked ${reason} and placed` : 'You placed';
+      return `${lead} a stop at ${pxS(p.price)}, then moved it to ${pxS(m.price)} while in loss.` + (H ? ` In ${h.past} of your ${h.n} trades with a widened stop, the loss ran past your first stop.` : '');
+    }
+    case 'nostop': return `You held this trade for ${dur(t.exitMin - t.entryMin)} with no stop${f.includes('size') ? `, at ${fx(t.facts.sizeX)}× your usual size` : ''}. ${lossTxt}` + (H ? ` Of your last ${h.n} trades with no stop, ${h.lost} ended in loss.` : '');
+    case 'size': return `This trade was ${fx(t.facts.sizeX)}× your usual size. ${lossTxt}` + (H ? ` Of your last ${h.n} trades at this size, ${h.lost} ended in loss.` : '');
+    case 'burst': return `This was one of ${t.facts.burstN} entries in ${minWord(t.facts.burstM)}. ${lossTxt}` + (H ? ` Of your last ${h.n} trades in a burst, ${h.lost} ended in loss.` : '');
+    case 'opening': return `You entered at ${tm(t.entryMin)}, ${t.entryMin - SESS0} minutes after the open. ${lossTxt}` + (H ? ` Of your last ${h.n} trades before 9:30 am, ${h.lost} ended in loss.` : '');
+    default: return `You held this position into ${t.event}. ${lossTxt}`;
+  }
+}
+function questionFor(t, reason) {
+  if (!['Setup', 'Breakout', 'News'].includes(reason)) return null;
+  const m = mainMismatch(t); if (!m) return null; const x = t.facts;
+  return {
+    revenge: `You picked ${reason}. You entered ${minWord(x.gap)} after a loss. What happened?`,
+    widened: `You picked ${reason}. Your stop moved while in loss. What happened?`,
+    nostop: `You picked ${reason}. This trade had no stop. What happened?`,
+    size: `You picked ${reason}. Size was ${fx(x.sizeX)}× your usual. What happened?`,
+    burst: `You picked ${reason}. This was one of ${x.burstN} entries in ${minWord(x.burstM)}. What happened?`,
+  }[m];
+}
+const PATTERN_PHRASE = { revenge: 'Trades entered soon after a loss', size: 'Trades at 2× your usual size or more', nostop: 'Trades with no stop', widened: 'Trades with a widened stop', opening: 'Trades before 9:30 am', burst: 'Trades in a burst', event: 'Trades held into events' };
+
+// ---------- rules ----------
+const RULE_DEF = {
+  revenge: { min: 1, max: 60, step: 1, def: 10, text: v => [`No new entry for `, `${v} minutes`, ` after a loss`], range: '1 to 60 minutes' },
+  size: { min: 1, max: 5, step: 0.5, def: 1.5, text: v => [`Keep size at or under `, `${v.toFixed(1)}×`, ` my usual`], range: '1.0× to 5.0×, in steps of 0.5' },
+  nostop: { min: 1, max: 5, step: 1, def: 1, text: v => [`Place a stop within `, minWord(v), ` of every entry`], range: '1 to 5 minutes' },
+  widened: { text: () => ['Never widen or remove a stop while in loss'] },
+  opening: { min: 556, max: 630, step: 1, def: 570, time: true, text: v => [`No entries before `, tm(v), ''], range: '9:16 am to 10:30 am' },
+  burst: { min: 1, max: 5, step: 1, def: 2, text: v => [`No more than `, `${v} entries`, ` in 10 minutes`], range: '1 to 5 entries' },
+  event: { text: () => ['Exit before scheduled events'] },
+};
+const ruleText = r => RULE_DEF[r.flag].text(r.value).join('');
+function ruleBroken(rule, t, trades) {
+  const v = rule.value;
+  switch (rule.flag) {
+    case 'revenge': return trades.some(o => o !== t && o.net < 0 && o.exitMin <= t.entryMin && t.entryMin - o.exitMin < v);
+    case 'size': return sizeX(t) > v;
+    case 'nostop': { const p = t.stops.find(s => s.kind === 'place'); return !p || p.min - t.entryMin > v; }
+    case 'widened': return t.flags.includes('widened');
+    case 'opening': return t.entryMin < v;
+    case 'burst': return trades.filter(o => o.entryMin <= t.entryMin && o.entryMin > t.entryMin - 10).length > v;
+    default: return !!t.event;
+  }
+}
+const ruleActiveOn = (rule, date) => date > rule.since;
+function ruleCheck(rule, date) {
+  const trades = dayTrades(date);
+  const broke = trades.filter(t => ruleBroken(rule, t, trades));
+  return { total: trades.length, kept: trades.length - broke.length, broke };
+}
+function ruleSince(rule) {
+  let total = 0, kept = 0;
+  TRADING_DAYS.forEach(d => { if (ruleActiveOn(rule, d) && d <= latestDay()) { const c = ruleCheck(rule, d); total += c.total; kept += c.kept; } });
+  return { total, kept };
+}
+const keptText = c => (c.total === 0 ? 'No trades' : c.kept === c.total ? `Kept on all ${c.total} trades` : `Kept on ${c.kept} of ${c.total} trades`);
+
+// ---------- settings definitions ----------
+const FLAG_SET = {
+  revenge: { min: 1, max: 30, step: 1, def: 5, parts: v => ['New entry within ', minWord(v), ' of a loss'], range: '1 to 30 minutes' },
+  size: { min: 1.5, max: 5, step: 0.5, def: 2, parts: v => ['Size at ', v.toFixed(1) + '×', ' my 20-day usual or more'], range: '1.5× to 5.0×' },
+  nostop: { min: 1, max: 10, step: 1, def: 1, parts: v => ['No stop within ', minWord(v), ' of a fill'], range: '1 to 10 minutes' },
+  widened: { parts: () => ['Stop moved further away, or cancelled, while in loss'] },
+  opening: { min: 556, max: 630, step: 1, def: 570, time: true, parts: v => ['Entries before ', tm(v), ''], range: '9:16 am to 10:30 am' },
+  burst: { min: 2, max: 10, step: 1, def: 3, min2: 5, max2: 30, def2: 10, parts: (v, m) => ['', v + ' or more entries', ' within ', minWord(m)], range: 'Entries 2 to 10, minutes 5 to 30' },
+  event: { parts: () => ['Held into results, RBI policy or the last hour of expiry'] },
+};
+const FLAG_DEFN = {
+  revenge: 'A new entry after a realised loss on any position.',
+  size: 'Position size compared with your 20-day median for that instrument type.',
+  nostop: 'No stop-loss, bracket or GTT stop attached after entry.',
+  widened: 'Stop-loss moved further from entry, or cancelled, while the position was in loss.',
+  opening: 'An entry soon after the 9:15 am open.',
+  burst: 'Several entries in a short window.',
+  event: 'Position held into a scheduled event: company results, RBI policy, or the last hour of expiry.',
+};
+const REASONS = ['Setup', 'Breakout', 'News', 'Tip', 'Gut', 'Recover loss'];
+const ANSWERS = ['Plan', 'FOMO', 'Revenge', 'Bored', 'Tip', 'Other'];
+
+// ---------- state ----------
+const STORE = 'sahi-mirror-proto-v2';
+function freshState() {
+  const seeds = seedReflections();
+  return {
+    clock: 'after', scenario: 'flagged', online: true, theme: 'auto',
+    tab: 'mirror', stacks: { watchlist: [{ s: 'watchlist' }], orders: [{ s: 'orders' }], positions: [{ s: 'positions' }], mirror: [{ s: 'mirror' }], account: [{ s: 'account' }] },
+    seg: 'day', selDay: null, firstRun: true, perm: 'unasked',
+    settings: { mirror: true, push: false, banner: true, flags: { revenge: { on: true, v: 5 }, size: { on: true, v: 2 }, nostop: { on: true, v: 1 }, widened: { on: true }, opening: { on: true, v: 570 }, burst: { on: true, v: 3, m: 10 }, event: { on: true } }, reasons: Object.fromEntries(REASONS.map(r => [r, true])) },
+    reviews: seeds.reviews, skipped: seeds.skipped,
+    rules: [{ id: 'r1', flag: 'revenge', value: 10, added: '2026-09-24', since: '2026-09-24' }],
+    feedback: {}, hidden: {}, bannerDismissed: false, todayOpened: false,
+    sheet: null, alert: null, snack: null, lock: false, recallSel: {}, range: {}, ptLimit: 50, calMonth: null,
+  };
+}
+let state;
+try { const raw = localStorage.getItem(STORE); state = raw ? Object.assign(freshState(), JSON.parse(raw)) : freshState(); } catch (e) { state = freshState(); }
+state.sheet = null; state.alert = null; state.snack = null; state.lock = false;
+function persist() {
+  try { const { sheet, alert, snack, lock, ...keep } = state; localStorage.setItem(STORE, JSON.stringify(keep)); } catch (e) { /* storage unavailable: prototype still works for this visit */ }
+}
+
+// ---------- icons ----------
+const I = {
+  back: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  gear: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  cal: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+  x: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  up: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 10v10H4V10h3zm0 0l4-7c1.5 0 2.5 1 2.2 2.6L12.6 9H19a2 2 0 0 1 2 2.3l-1.3 7A2 2 0 0 1 17.7 20H7"/></svg>',
+  down: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M17 14V4h3v10h-3zm0 0l-4 7c-1.5 0-2.5-1-2.2-2.6l.6-3.4H5a2 2 0 0 1-2-2.3l1.3-7A2 2 0 0 1 6.3 4H17"/></svg>',
+  more: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
+  lock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  flag: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',
+  spark: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg>',
+  chev: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  left: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  right: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
+  wifi: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 8.5a15 15 0 0 1 20 0M5.5 12a10 10 0 0 1 13 0M9 15.5a5 5 0 0 1 6 0M3 3l18 18"/></svg>',
+  tabWatch: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
+  tabOrders: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>',
+  tabPos: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  tabMirror: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="10" rx="6.5" ry="8"/><path d="M12 18v4M9 22h6M9.5 6.5l-2 3"/></svg>',
+  tabAcct: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+};
+const fchip = (f, ro) => (ro ? `<span class="fchip ro">${I.flag}${FLAG_NAME[f]}</span>` : `<button type="button" class="fchip" data-act="flagInfo" data-flag="${f}" aria-label="${FLAG_NAME[f]}. Tap for what this flag means">${I.flag}${FLAG_NAME[f]}</button>`);
+
+// ---------- navigation helpers ----------
+const stack = () => state.stacks[state.tab];
+const topRoute = () => { const s = stack(); return s[s.length - 1]; };
+const scrollMem = {};
+function push(route) { delete scrollMem[routeKey(route)]; stack().push(route); }
+function pop() { const s = stack(); if (s.length > 1) s.pop(); }
+function currentDay() {
+  let d = state.selDay || (state.clock === 'market' ? prevTradingDay(TODAY) : TODAY);
+  if (d === TODAY && state.clock === 'market') d = prevTradingDay(TODAY);
+  return d;
+}
+function routeKey(r) {
+  if (!r) return '';
+  if (r.s === 'mirror') return 'mirror:' + state.seg + ':' + (state.seg === 'day' ? currentDay() : '');
+  if (r.s === 'trade') return 'trade:' + r.id;
+  if (r.s === 'pt') return 'pt:' + r.flag;
+  return r.s;
+}
+const clockMin = () => ({ market: hm(11, 20), building: hm(15, 42), after: hm(16, 5) }[state.clock]);
+const clockShort = () => ({ market: '11:20', building: '3:42', after: '4:05' }[state.clock]);
+const builtToday = () => state.clock === 'after' && state.settings.mirror;
+
+function pushStatus() {
+  const s = state.settings;
+  if (state.clock === 'market') return { ok: false, why: 'Market hours: Mirror sends nothing between 9:15 am and 3:30 pm.' };
+  if (state.clock === 'building') return { ok: false, why: "Today's Mirror is still being built. The push goes out once it's ready." };
+  if (!s.mirror) return { ok: false, why: 'Mirror is turned off in Settings.' };
+  if (!dayTrades(TODAY).length) return { ok: false, why: 'No trades today, so there is nothing to review and no push.' };
+  if (state.perm !== 'granted') return { ok: false, why: state.perm === 'denied' ? 'Notifications are blocked in phone settings.' : 'Notifications not allowed yet. Answer the first-run card, or set permission to Allowed below.' };
+  if (!s.push) return { ok: false, why: 'The Mirror ready notification is turned off in Settings.' };
+  return { ok: true };
+}
+function pushBody() {
+  const m = dayMeta(TODAY);
+  if (!m.flags) return 'You followed your plan today.';
+  return `${m.worth.length === 1 ? '1 trade' : m.worth.length + ' trades'} worth a look from today. Takes about 2 minutes.`;
+}
+function bannerVisible() {
+  return state.clock === 'after' && state.settings.mirror && state.settings.banner && !state.bannerDismissed && !state.todayOpened && dayTrades(TODAY).length > 0 && !state.lock && state.tab !== 'mirror';
+}
+
+// ---------- chart ----------
+const candleCache = {};
+function candlesFor(t) {
+  if (candleCache[t.id]) return candleCache[t.id];
+  const r = rng(hashStr('px' + t.id));
+  const opt = t.inst.type === 'opt', vol = opt ? 0.009 : 0.0009, dir = t.side === 'Buy' ? 1 : -1;
+  const eI = t.entryMin - SESS0, xI = t.exitMin - SESS0;
+  const anchors = [{ i: 0, p: t.entry * (1 + (r() - 0.45) * 0.22) }, { i: eI, p: t.entry }, { i: xI, p: t.exit }, { i: SESSN - 1, p: t.exit * (1 + (r() - 0.5) * 0.22) }];
+  t.stops.forEach(s => { if (s.mkt != null) anchors.push({ i: s.min - SESS0, p: s.mkt }); });
+  anchors.sort((a, b) => a.i - b.i);
+  const c = new Array(SESSN).fill(null);
+  for (let k = 0; k < anchors.length - 1; k++) {
+    const A = anchors[k], B = anchors[k + 1], L = B.i - A.i;
+    if (L <= 0) { c[A.i] = A.p; continue; }
+    const w = [0]; const sd = vol * (A.p + B.p) / 2;
+    for (let j = 1; j <= L; j++) w.push(w[j - 1] + gauss(r) * sd);
+    for (let j = 0; j <= L; j++) c[A.i + j] = A.p + (B.p - A.p) * j / L + (w[j] - w[L] * j / L);
+  }
+  const stopAt = i => { let s = null; for (const e of t.stops) if (e.min - SESS0 <= i) s = e.kind === 'cancel' ? null : e.price; return s; };
+  const gapOf = s => Math.abs(t.entry - s) * 0.06 + (opt ? 0.1 : 0.2);
+  for (let i = eI + 1; i < xI; i++) { const s = stopAt(i); if (s != null) c[i] = dir > 0 ? Math.max(c[i], s + gapOf(s)) : Math.min(c[i], s - gapOf(s)); }
+  c[eI] = t.entry; c[xI] = t.exit;
+  for (let i = 0; i < SESSN; i++) c[i] = Math.max(c[i], opt ? 0.5 : 1);
+  const out = [];
+  for (let i = 0; i < SESSN; i++) {
+    const o = i ? c[i - 1] : c[0] * (1 + (r() - 0.5) * 0.01), cl = c[i], sp = vol * cl * 0.6;
+    let h = Math.max(o, cl) + Math.abs(gauss(r)) * sp, l = Math.min(o, cl) - Math.abs(gauss(r)) * sp;
+    if (i >= eI && i < xI) { const s = stopAt(i); if (s != null) { if (dir > 0) l = Math.max(l, s + 0.05); else h = Math.min(h, s - 0.05); } }
+    if (i === xI && t.exitKind === 'stop') { if (dir > 0) l = Math.min(l, t.exit); else h = Math.max(h, t.exit); }
+    l = Math.max(0.05, Math.min(l, o, cl)); h = Math.max(h, o, cl);
+    out.push({ i, o, h, l, c: cl });
+  }
+  return (candleCache[t.id] = out);
+}
+function niceStep(x) { const p = Math.pow(10, Math.floor(Math.log10(x))); const m = x / p; return (m < 1.5 ? 1 : m < 3 ? 2 : m < 7 ? 5 : 10) * p; }
+const chartInfo = {};
+function chartSvg(t, revealed, range) {
+  const all = candlesFor(t), eI = t.entryMin - SESS0, xI = t.exitMin - SESS0;
+  let series;
+  if (range === 'day') {
+    series = [];
+    for (let b = 0; b < SESSN; b += 5) {
+      let sl = all.slice(b, b + 5); if (!revealed) sl = sl.filter(c => c.i <= eI);
+      if (!sl.length) { series.push({ i: b, empty: true }); continue; }
+      series.push({ i: b, o: sl[0].o, c: sl[sl.length - 1].c, h: Math.max(...sl.map(c => c.h)), l: Math.min(...sl.map(c => c.l)) });
+    }
+  } else {
+    const a = Math.max(0, eI - 30), b = Math.min(SESSN - 1, xI + 15);
+    series = all.slice(a, b + 1).map(c => (revealed || c.i <= eI ? c : { i: c.i, empty: true }));
+  }
+  const step = range === 'day' ? 5 : 1, first = series[0].i;
+  const W = 358, H = 184, L = 6, R = 44, T = 12, B = 22, n = series.length, cw = (W - L - R) / n;
+  const xOf = i => L + cw * ((i - first) / step) + cw / 2;
+  const vis = series.filter(c => !c.empty);
+  const vals = vis.flatMap(c => [c.h, c.l]).concat([t.entry]);
+  const initStop = t.stops.find(s => s.kind === 'place' && s.min - t.entryMin <= 1);
+  if (initStop) vals.push(initStop.price);
+  if (revealed) { vals.push(t.exit); t.stops.forEach(s => vals.push(s.price)); }
+  let lo = Math.min(...vals), hi = Math.max(...vals); const padv = (hi - lo) * 0.1 || 1; lo -= padv; hi += padv;
+  const yOf = p => T + (hi - p) / (hi - lo) * (H - T - B);
+  const id = 'c' + t.id.replace(/[^a-z0-9]/gi, '');
+  let g = '';
+  const stp = niceStep((hi - lo) / 4);
+  for (let p = Math.ceil(lo / stp) * stp; p <= hi; p += stp) { const y = yOf(p); g += `<line class="cgrid" x1="${L}" x2="${W - R + 4}" y1="${y}" y2="${y}"/><text class="ct" x="${W - R + 8}" y="${y + 3}">${pxS(Math.round(p * 100) / 100)}</text>`; }
+  const tick = range === 'day' ? 60 : 15;
+  for (const c of series) { const m = c.i + SESS0; if (m % tick === 0) { const x = xOf(c.i); g += `<text class="ct" x="${x}" y="${H - 6}" text-anchor="middle">${tm(m).replace(/ (am|pm)/, '')}</text>`; } }
+  let k = '';
+  const bw = Math.max(1, Math.min(7, cw * 0.62));
+  for (const c of vis) {
+    const x = xOf(c.i), up = c.c >= c.o, y1 = yOf(Math.max(c.o, c.c)), y2 = yOf(Math.min(c.o, c.c));
+    k += `<line class="${up ? 'wu' : 'wd'}" x1="${x}" x2="${x}" y1="${yOf(c.h)}" y2="${yOf(c.l)}" stroke-width="1"/><rect class="${up ? 'cu' : 'cd'}" x="${x - bw / 2}" y="${y1}" width="${bw}" height="${Math.max(1, y2 - y1)}"/>`;
+  }
+  const eX = range === 'day' ? xOf(Math.floor(eI / 5) * 5) : xOf(eI);
+  const xX = range === 'day' ? xOf(Math.floor(xI / 5) * 5) : xOf(xI);
+  let s = '';
+  const segs = [];
+  t.stops.forEach((st, j) => {
+    if (st.kind === 'cancel') return;
+    const nxt = t.stops[j + 1]; const startI = st.min - SESS0; const endI = nxt ? nxt.min - SESS0 : xI;
+    segs.push({ p: st.price, a: startI, b: endI, move: st.kind === 'move' });
+  });
+  const xi = i => (range === 'day' ? xOf(Math.floor(i / 5) * 5) : xOf(i));
+  segs.forEach((sg, j) => {
+    if (!revealed && j > 0) return;
+    const x1 = xi(sg.a), x2 = revealed ? xi(sg.b) : eX + cw * 2, y = yOf(sg.p);
+    s += `<line class="cstop" x1="${x1}" x2="${Math.max(x2, x1 + 6)}" y1="${y}" y2="${y}"/><rect class="cmtbg" x="${W - R + 2}" y="${y - 7}" width="${R - 2}" height="13" rx="3"/><text class="cstopt" x="${W - R + 5}" y="${y + 3}">SL ${pxS(sg.p)}</text>`;
+    if (sg.move && revealed) s += `<path class="cdiam" d="M${x1} ${y - 5}l5 5-5 5-5-5z"/>`;
+  });
+  let mk = `<circle class="cmark" cx="${eX}" cy="${yOf(t.entry)}" r="5"/>`;
+  const eLabelY = yOf(t.entry) - 10 < T + 6 ? yOf(t.entry) + 18 : yOf(t.entry) - 10;
+  mk += `<text class="cmt" x="${Math.min(eX, W - R - 60)}" y="${eLabelY}" text-anchor="${eX < 40 ? 'start' : 'middle'}">Entry ${pxS(t.entry)}</text>`;
+  if (revealed) {
+    const yx = yOf(t.exit), lY = yx - 10 < T + 6 ? yx + 18 : yx - 10;
+    mk += `<circle class="cmark2" cx="${xX}" cy="${yx}" r="5"/><text class="cmt" x="${Math.min(Math.max(xX, 30), W - R - 34)}" y="${lY}" text-anchor="middle">Exit ${pxS(t.exit)}</text>`;
+  }
+  let mask = '';
+  if (!revealed) {
+    const mx = eX + cw / 2 + 1, mw = W - R - mx;
+    if (mw > 10) {
+      mask = `<defs><pattern id="h${id}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="chatch" x1="0" y1="0" x2="0" y2="7"/></pattern></defs><rect class="cmask" x="${mx}" y="${T - 6}" width="${mw}" height="${H - T - B + 6}"/><rect x="${mx}" y="${T - 6}" width="${mw}" height="${H - T - B + 6}" fill="url(#h${id})"/>`;
+      const cx = mx + mw / 2;
+      mask += mw > 120
+        ? `<text class="cmaskt" x="${cx}" y="${(H - B) / 2}" text-anchor="middle">Rest of the session shows</text><text class="cmaskt" x="${cx}" y="${(H - B) / 2 + 15}" text-anchor="middle">after you answer</text>`
+        : `<text class="cmaskt" x="${cx}" y="${(H - B) / 2}" text-anchor="middle">Hidden</text>`;
+    }
+  }
+  chartInfo[id] = { pts: vis.map(c => ({ x: xOf(c.i), c: c.c, m: c.i + SESS0 })), W, H, T, B, yOf };
+  const lbl = revealed
+    ? `Chart. Entry at ${tm(t.entryMin)} at ${pxS(t.entry)}. ${t.stops.map(st => st.kind === 'place' ? `Stop placed at ${pxS(st.price)}.` : st.kind === 'move' ? `Stop moved to ${pxS(st.price)} at ${tm(st.min)}.` : `Stop cancelled at ${tm(st.min)}.`).join(' ')} Exit at ${tm(t.exitMin)} at ${pxS(t.exit)}.`
+    : `Chart. Entry at ${tm(t.entryMin)} at ${pxS(t.entry)}. Rest of the session hidden until you answer.`;
+  return `<div class="chart" data-chart="${id}"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(lbl)}">${g}${s}${k}${mask}${mk}<line class="cx" id="x${id}" x1="0" x2="0" y1="${T}" y2="${H - B}" visibility="hidden"/></svg></div>`;
+}
+function wireCharts() {
+  document.querySelectorAll('.chart[data-chart]').forEach(el => {
+    const info = chartInfo[el.dataset.chart]; if (!info || !info.pts.length) return;
+    const svg = el.querySelector('svg'), line = svg.querySelector('.cx');
+    let tip = null, active = false, timer = null;
+    const show = ev => {
+      const rect = svg.getBoundingClientRect(); const x = (ev.clientX - rect.left) / rect.width * info.W;
+      let best = info.pts[0]; for (const p of info.pts) if (Math.abs(p.x - x) < Math.abs(best.x - x)) best = p;
+      line.setAttribute('x1', best.x); line.setAttribute('x2', best.x); line.setAttribute('visibility', 'visible');
+      if (!tip) { tip = document.createElement('div'); tip.className = 'ctip'; el.appendChild(tip); }
+      tip.style.left = (best.x / info.W * 100) + '%'; tip.textContent = `${tm(best.m)} · ${px(best.c)}`;
+    };
+    const hide = () => { active = false; clearTimeout(timer); line.setAttribute('visibility', 'hidden'); if (tip) { tip.remove(); tip = null; } };
+    el.addEventListener('pointerdown', ev => { timer = setTimeout(() => { active = true; show(ev); }, ev.pointerType === 'mouse' ? 0 : 280); });
+    el.addEventListener('pointermove', ev => { if (active || ev.pointerType === 'mouse' && ev.buttons) { active = true; show(ev); } });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(e => el.addEventListener(e, hide));
+  });
+}
+
+// ---------- shared fragments ----------
+function navBar(title, sub, right) {
+  return `<header class="nav"><button type="button" class="back" data-act="back" aria-label="Back">${I.back}</button><div class="ttl"><b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div><div class="right">${right || ''}</div></header>`;
+}
+function mirrorHeader() {
+  return `<header class="mhead"><div class="row1"><h1>Mirror</h1><button type="button" class="iconbtn" data-act="openSettings" aria-label="Mirror settings">${I.gear}</button></div>
+  <div class="seg" role="tablist" aria-label="Mirror views"><button type="button" role="tab" aria-selected="${state.seg === 'day'}" data-act="seg" data-v="day">Day</button><button type="button" role="tab" aria-selected="${state.seg === 'patterns'}" data-act="seg" data-v="patterns">Patterns</button></div></header>`;
+}
+function offlineBar() { return state.online ? '' : `<div class="offline" role="status">${I.wifi} You're offline. Showing saved data.</div>`; }
+function tradeRow(t, mode, lead) {
+  const hid = isHidden(t);
+  const L = lead || (() => { const p = tmParts(t.entryMin); return `${p.t}<small>${p.ap}</small>`; })();
+  return `<li><button type="button" class="row" data-act="openTrade" data-id="${t.id}" data-mode="${mode}">
+    <span class="lead">${L}</span>
+    <span class="main"><span class="t">${esc(t.inst.name)}</span><span class="s">${t.side} · ${sizeLabel(t)}${mode === 'pattern' ? ' · ' + statusChip(reviewed(t) ? 'rev' : t.flags.length ? 'open' : 'plan') : ' · ' + t.origin}</span></span>
+    <span class="trail"><span class="pnl ${hid ? 'hid' : ''}">${hid ? 'Hidden' : inr(t.net)}</span>${t.flags.length && !hid ? `<span class="fcount">${t.flags.length} flag${t.flags.length > 1 ? 's' : ''}</span>` : ''}</span>
+  </button></li>`;
+}
+
+// ---------- S2 Mirror: Day ----------
+function dayStrip(sel) {
+  const idx = TRADING_DAYS.indexOf(TODAY); const days = TRADING_DAYS.slice(idx - 9, idx + 1);
+  const chips = days.map(d => {
+    const dt = dParse(d), isT = d === TODAY, locked = isT && state.clock === 'market';
+    const st = locked ? 'pending' : (isT && state.clock === 'building') ? 'pending' : dayStatus(d);
+    const dotCls = { open: 's-open', rev: 's-rev', plan: 's-plan', skip: 's-skip', none: 's-none', pending: 's-none' }[st];
+    return `<button type="button" class="dchip" data-act="pickDay" data-d="${d}" aria-pressed="${d === sel}" ${locked ? 'disabled' : ''} aria-label="${dLong(d)}${locked ? ', opens at 3:30 pm' : ', ' + STATUS_TEXT[st]}"><small>${isT ? 'Today' : WD[dt.getUTCDay()]}</small><b>${dt.getUTCDate()}</b>${locked ? '<span class="opens">Opens<br>3:30 pm</span>' : `<i class="${dotCls}"></i>`}</button>`;
+  }).join('');
+  return `<div class="strip-wrap"><div class="strip" id="strip">${chips}</div><button type="button" class="calbtn" data-act="openCal" aria-label="Pick a day">${I.cal}</button></div>`;
+}
+function firstRunCard() {
+  const asked = state.perm !== 'unasked';
+  return `<section class="card firstrun"><h3>Your day, after the close</h3><p>Mirror shows your day back to you after 3:30 pm. Pick why you took a trade, then see what happened. It never tells you what to trade.</p>
+  ${asked ? `<div class="acts"><button type="button" class="btn sm primary" data-act="firstRunDone">Got it</button></div>` : `<div class="acts"><button type="button" class="btn sm primary" data-act="askPerm">Turn on notifications</button><button type="button" class="btn sm tertiary" data-act="firstRunDone">Not now</button></div><p class="quiet">One notification on days you trade. Never during market hours.</p>`}</section>`;
+}
+function s2() {
+  const day = currentDay(), m = dayMeta(day);
+  let body = dayStrip(day);
+  if (state.clock === 'market') body += `<div class="note">Today's Mirror opens after 3:30 pm. Showing ${dLong(day)}.</div>`;
+  if (state.firstRun) body += firstRunCard();
+  let sticky = '';
+  if (!m.trades.length) {
+    const last = [...TRADING_DAYS].reverse().find(d => d < day && dayTrades(d).length);
+    body += `<section class="card empty"><h3>No trades on ${dLabel(day)}.</h3><p>Mirror builds a day only when you trade.</p>${last ? `<button type="button" class="btn sm secondary" data-act="pickDay" data-d="${last}">Go to your last trading day</button>` : ''}</section>`;
+  } else if (day === TODAY && state.clock === 'building') {
+    body += `<section class="card building"><span class="spin" aria-hidden="true"></span><div><b>Your Mirror is being built.</b><div class="quiet">It's usually ready by 4:00 pm.</div></div></section>`;
+    body += `<section class="sec"><div class="sec-h"><h3>All trades (${m.trades.length})</h3></div><ul class="list card">${m.trades.map(t => `<li><div class="row"><span class="lead">${tmParts(t.entryMin).t}<small>${tmParts(t.entryMin).ap}</small></span><span class="main"><span class="t">${esc(t.inst.name)}</span><span class="s">${t.side} · ${sizeLabel(t)} · ${t.origin}</span></span><span class="trail"><span class="pnl hid">Hidden</span></span></div></li>`).join('')}</ul></section>`;
+  } else {
+    const st = dayStatus(day);
+    const allFlagFree = !m.flags;
+    body += `<section class="card daycard" aria-label="Day summary">
+      <div class="top"><span class="eyebrow">${dLabel(day)}</span>${statusChip(st)}</div>
+      <h2 class="headline">${allFlagFree ? `Plan kept on <em>all ${m.trades.length}</em> trades` : `Plan kept on <em>${m.kept} of ${m.trades.length}</em> trades`}</h2>
+      <dl class="vals"><div><dt>Trades</dt><dd>${m.trades.length}</dd></div><div><dt>Net P&amp;L after charges</dt><dd>${inr(m.net)}</dd></div><div><dt>Flags</dt><dd>${m.flags}</dd></div></dl>
+      <div class="foot"><span class="quiet">Built at ${builtAt(day)}</span>${(st === 'open') ? `<button type="button" class="btn sm tertiary" data-act="skipDay">${day === TODAY ? 'Skip today' : 'Skip this day'}</button>` : ''}</div>
+    </section>`;
+    const rules = state.rules.filter(r => ruleActiveOn(r, day));
+    if (rules.length) {
+      body += `<section class="sec"><div class="sec-h"><h3>Rule check-in</h3></div><div class="card rules">${rules.map(r => {
+        const c = ruleCheck(r, day);
+        const links = c.broke.slice(0, 3).map(t => `<button type="button" class="link" data-act="openTrade" data-id="${t.id}" data-mode="rule">See the trade that broke it${c.broke.length > 1 ? ' · ' + tm(t.entryMin) : ''}</button>`).join('');
+        return `<div class="rrow"><span class="rt">${esc(ruleText(r))}</span><span class="rr">${keptText(c)}</span>${links}</div>`;
+      }).join('')}</div></section>`;
+    }
+    if (m.worth.length) {
+      body += `<section class="sec"><div class="sec-h"><h3>Worth a look</h3><span class="quiet">Picked by flags, not by P&amp;L</span></div>${m.worth.map(id => {
+        const t = m.trades.find(x => x.id === id), hid = !reviewed(t);
+        const chips = t.flags.slice(0, 3).map(f => fchip(f)).join('') + (t.flags.length > 3 ? `<span class="more">+${t.flags.length - 3}</span>` : '');
+        return `<div class="tcard" role="group"><button type="button" class="r1" data-act="openTrade" data-id="${t.id}" data-mode="worth" style="width:100%"><span class="inst">${esc(t.inst.name)}</span>${statusChip(hid ? 'open' : 'rev')}</button>
+          <button type="button" class="sub" data-act="openTrade" data-id="${t.id}" data-mode="worth" style="text-align:left">${t.side} · ${sizeLabel(t)} · ${tm(t.entryMin)}</button>
+          <div class="r3">${hid ? `<button type="button" class="hiddenline" data-act="openTrade" data-id="${t.id}" data-mode="worth">${I.lock} Hidden until you recall</button>` : `<div class="chips">${chips}</div><span class="pnl">${inr(t.net)}</span>`}</div></div>`;
+      }).join('')}</section>`;
+      const left = m.worth.filter(id => !state.reviews[id]);
+      if (left.length) {
+        const started = left.length < m.worth.length;
+        sticky = `<div class="sticky"><button type="button" class="btn primary full stack" data-act="startReview"><span>${started ? 'Continue review' : 'Start review'}</span><span class="sub">${left.length} ${left.length === 1 ? 'trade' : 'trades'} · about ${Math.max(1, Math.round(left.length * 0.7))} min</span></button></div>`;
+      }
+    }
+    body += `<section class="sec"><div class="sec-h"><h3>All trades (${m.trades.length})</h3></div><ul class="list card">${m.trades.map(t => tradeRow(t, 'single')).join('')}</ul></section>`;
+  }
+  return { html: mirrorHeader() + offlineBar() + `<div class="scroll" data-key="${routeKey(topRoute())}"><div class="content">${body}</div></div>` + sticky, sticky: !!sticky };
+}
+function paused(kind) {
+  return { html: mirrorHeader() + `<div class="scroll" data-key="paused"><div class="content"><section class="card empty"><h3>Mirror is off.</h3><p>Turn it on in Settings to see your ${kind}.</p><button type="button" class="btn sm secondary" data-act="openSettings">Settings</button></section></div></div>` };
+}
+
+// ---------- S3 Trade Reflection ----------
+function s3(route) {
+  const t = tradeById(route.id);
+  if (!t) return { html: navBar('Trade') + `<div class="scroll"><div class="content"><section class="card empty"><h3>This trade isn't available.</h3><button type="button" class="btn sm secondary" data-act="back">Go to Mirror</button></section></div></div>` };
+  if (t.date === TODAY && state.clock !== 'after') {
+    const building = state.clock === 'building';
+    return { html: navBar('Mirror') + `<div class="scroll" data-key="bc"><div class="content"><section class="card empty" style="margin-top:40px"><h3>${building ? "Today's Mirror is being built." : 'Mirror opens after 3:30 pm.'}</h3><p>${building ? "It's usually ready by 4:00 pm." : 'Nothing from Mirror shows during market hours.'}</p><button type="button" class="btn primary" data-act="goMirror">Go to Mirror</button></section></div></div>` };
+  }
+  const rev = state.reviews[t.id], revealed = !!rev;
+  const m = dayMeta(t.date), worthMode = route.mode === 'worth';
+  const n = m.worth.indexOf(t.id) + 1;
+  const range = state.range[t.id] || 'window';
+  const progress = worthMode && n ? `<span class="pill" aria-label="Trade ${n} of ${m.worth.length}">${n} of ${m.worth.length}</span>` : '';
+  let h = navBar(t.inst.name, `${t.side} · ${sizeLabel(t)} · ${tm(t.entryMin)}`, progress) + offlineBar();
+  let body = `<section class="chartp"><div class="top"><span class="legend">${dLabel(t.date)} · ${range === 'day' ? '5-minute candles' : '1-minute candles'}</span><div class="seg sm" role="tablist" aria-label="Chart range"><button type="button" role="tab" aria-selected="${range === 'window'}" data-act="range" data-id="${t.id}" data-v="window">Trade window</button><button type="button" role="tab" aria-selected="${range === 'day'}" data-act="range" data-id="${t.id}" data-v="day">Full day</button></div></div>${chartSvg(t, revealed, range)}</section>`;
+  const stop0 = t.stops.find(s => s.kind === 'place' && s.min - t.entryMin <= 1);
+  const x = sizeX(t);
+  const isNew = revealed && state.justRevealed === t.id;
+  const facts = [['Entry time', tm(t.entryMin)], ['Entry price', '₹' + px(t.entry)], ['Size', t.inst.type === 'opt' ? `${sizeLabel(t)} (${t.qty} qty)` : sizeLabel(t)], ['Size vs usual', x === 1 ? 'Your usual' : `${fx(x)}× your usual`], ['Stop at entry', stop0 ? '₹' + px(stop0.price) : 'None'], ['Origin', t.origin]];
+  const rfacts = [['Exit time', tm(t.exitMin)], ['Exit price', '₹' + px(t.exit)], ['Holding time', dur(t.exitMin - t.entryMin)], ['Net P&L after charges', inr(t.net)]];
+  const factsHtml = `<dl class="card facts">${facts.map(([a, b]) => `<div><dt>${a}</dt><dd>${esc(b)}</dd></div>`).join('')}${revealed ? rfacts.map(([a, b]) => `<div class="${isNew ? 'new' : ''}"><dt>${a}</dt><dd>${esc(b)}</dd></div>`).join('') : ''}</dl>`;
+  let inner = revealed ? factsHtml : '';
+  let sticky = '';
+  if (!revealed) {
+    const opts = REASONS.filter(r => state.settings.reasons[r]).concat(['Other']);
+    const guess = guessFor(t);
+    const sel = state.recallSel[t.id] !== undefined ? state.recallSel[t.id] : (opts.includes(guess) ? guess : null);
+    inner += `<section class="card recall"><h2>Why did you take this trade?</h2><div class="rchips" role="radiogroup" aria-label="Reason">${opts.map(r => `<button type="button" class="rchip" role="radio" aria-checked="${sel === r}" data-act="reason" data-id="${t.id}" data-v="${r}">${r}${r === guess ? '<small>Sahi\'s guess</small>' : ''}</button>`).join('')}</div><p class="helper">${I.lock} Your result shows after you answer.</p></section>` + `<h4 class="blk-h" style="margin:4px 0 -6px">What you knew at entry</h4>` + factsHtml;
+    sticky = `<div class="sticky"><button type="button" class="btn tertiary full sm" data-act="dontRemember" data-id="${t.id}">I don't remember</button><button type="button" class="btn primary full" data-act="confirmReason" data-id="${t.id}" ${sel ? '' : 'disabled'}>Confirm reason</button>${state.online ? '' : '<span class="helper" style="justify-content:center">Will sync when you\'re online</span>'}</div>`;
+  } else {
+    const reason = rev.reason;
+    const did = didList(t);
+    inner += `<div class="reveal" id="revealAnchor">
+      <section><h4 class="blk-h">Flags</h4>${t.flags.length ? `<div class="chips">${t.flags.map(f => fchip(f)).join('')}</div>` : '<p class="quiet" style="margin:0;font-size:14px">No flags on this trade</p>'}</section>
+      <section class="card saiddid"><div class="said"><span class="lbl">You said</span><span class="v">${reason ? esc(reason) : 'Not answered'}</span></div>
+        <div class="did"><span class="lbl">You did</span><ol class="tl">${did.map(d => `<li class="${d.key ? 'key' : ''}"><time>${d.time || ''}</time><span class="dot"></span><span>${esc(d.text)}</span></li>`).join('')}</ol></div></section>
+      ${obsBlock('t:' + t.id, t.flags[0] || 'plan', obsText(t), false)}
+      ${questionBlock(t, reason)}
+      <details class="card hist"><summary>Order history ${I.chev}</summary><ol>${orderHistory(t).map(o => `<li><time>${o.time}</time><span>${esc(o.text)}</span></li>`).join('')}</ol></details>
+    </div>`;
+    const main = t.flags[0];
+    const ruleFor = main && state.rules.find(r => r.flag === main);
+    let left = '';
+    if (main && ruleFor) left = `<div class="ruleon">${I.check} Rule active</div>`;
+    else if (main && state.rules.length < 5) left = `<button type="button" class="btn secondary" data-act="makeRule" data-flag="${main}">Make this a rule</button>`;
+    let right = '';
+    if (worthMode && n) {
+      const remaining = m.worth.filter(id => id !== t.id && !state.reviews[id]);
+      right = remaining.length ? `<button type="button" class="btn primary" data-act="nextTrade" data-id="${t.id}">Next trade</button>` : `<button type="button" class="btn primary" data-act="doneReview" data-d="${t.date}">Done</button>`;
+    }
+    if (left || right) sticky = `<div class="sticky">${left && right ? `<div class="pair">${left}${right}</div>` : (left || right).replace('class="btn ', 'class="btn full ')}</div>`;
+  }
+  body += `<div class="content" style="padding-top:14px">${inner}</div>`;
+  return { html: h + `<div class="scroll" data-key="${routeKey(route)}">${body}</div>` + sticky, sticky: !!sticky };
+}
+function didList(t) {
+  const out = [], verb = t.side === 'Buy' ? 'Bought' : 'Sold';
+  out.push({ time: tm(t.entryMin), text: `${verb} ${sizeLabel(t)} at ${pxS(t.entry)}` });
+  const p = t.stops.find(s => s.kind === 'place');
+  if (!p) out.push({ text: 'No stop placed', key: true });
+  else out.push({ time: p.min !== t.entryMin ? tm(p.min) : '', text: `Stop placed at ${pxS(p.price)}`, key: p.min - t.entryMin > 1 });
+  t.stops.filter(s => s.kind !== 'place').forEach(s => out.push({ time: tm(s.min), text: s.kind === 'move' ? `Stop moved to ${pxS(s.price)}${s.inLoss ? ' while in loss' : ''}` : 'Stop cancelled while in loss', key: !!s.inLoss }));
+  out.push({ time: tm(t.exitMin), text: t.exitKind === 'stop' ? `Stop hit, exited at ${pxS(t.exit)}` : `Exited at ${pxS(t.exit)}` });
+  return out.slice(0, 5);
+}
+function orderHistory(t) {
+  const r = rng(hashStr('oh' + t.id)), sec = () => String(Math.floor(r() * 60)).padStart(2, '0');
+  const ts = m => { const p = tmParts(m); return `${p.t}:${sec()} ${p.ap}`; };
+  const q = t.inst.type === 'opt' ? `${sizeLabel(t)}` : `${t.qty} shares`;
+  const out = [{ m: t.entryMin, text: `${t.side} ${q} · Filled at ${px(t.entry)}` }];
+  t.stops.forEach(s => out.push({ m: s.min, text: s.kind === 'place' ? `Stop-loss order · Placed at ${px(s.price)}` : s.kind === 'move' ? `Stop-loss order · Modified to ${px(s.price)}` : 'Stop-loss order · Cancelled' }));
+  out.push({ m: t.exitMin, text: t.exitKind === 'stop' ? `Stop-loss triggered · Filled at ${px(t.exit)}` : `${t.side === 'Buy' ? 'Sell' : 'Buy'} ${q} · Filled at ${px(t.exit)}` });
+  return out.sort((a, b) => a.m - b.m).map(o => ({ time: ts(o.m), text: o.text }));
+}
+function obsBlock(key, type, text, compact) {
+  const hidKey = key.startsWith('p:') ? 'pattern:' + type : type;
+  if (state.hidden[hidKey]) return `<section class="card obs hiddenobs"><p class="txt">You've hidden summaries like this. <button type="button" class="link" data-act="unhide" data-k="${hidKey}" style="display:inline;padding:0">Undo</button></p></section>`;
+  const fb = state.feedback[key] || '';
+  return `<section class="${compact ? '' : 'card '}obs" ${compact ? 'style="padding:0"' : ''}><span class="lab">${I.spark} AI summary of your own trades. Not investment advice.</span><p class="${compact ? 'obsline' : 'txt'}">${esc(text)}</p>
+   <div class="acts"><button type="button" aria-label="Useful" aria-pressed="${fb === 'up'}" data-act="thumbUp" data-k="${key}">${I.up}</button><button type="button" aria-label="Not useful" aria-pressed="${fb.startsWith('down')}" data-act="thumbDown" data-k="${key}">${I.down}</button><span class="sp"></span><button type="button" aria-label="More options" data-act="obsMenu" data-k="${key}" data-type="${hidKey}" data-flag="${type}">${I.more}</button></div></section>`;
+}
+function questionBlock(t, reason) {
+  const q = questionFor(t, reason); if (!q) return '';
+  const rev = state.reviews[t.id] || {};
+  const note = rev.note || '';
+  return `<section class="card q"><p class="qt">${esc(q)}</p><div class="achips" role="radiogroup" aria-label="What happened">${ANSWERS.map(a => `<button type="button" class="achip" role="radio" aria-checked="${rev.answer === a}" data-act="answer" data-id="${t.id}" data-v="${a}">${a}</button>`).join('')}</div>
+    ${rev.answer ? `<span class="savedtag">${I.check} Saved</span>` : ''}
+    <textarea class="note-in" id="note-${t.id}" data-note="${t.id}" maxlength="280" placeholder="Add a note (optional)" aria-label="Note" autocapitalize="sentences">${esc(note)}</textarea>
+    <div class="note-meta"><span class="nstat" id="nstat-${t.id}">${note ? 'Saved' : ''}</span><span id="ncount-${t.id}">${note.length >= 240 ? note.length + ' / 280' : ''}</span></div></section>`;
+}
+
+// ---------- S4 Mirror: Patterns ----------
+function patternStats() {
+  const ts = sessionTrades(); const base = ts.filter(t => !t.flags.length);
+  const by = {}; FLAG_ORDER.forEach(f => { const x = ts.filter(t => t.flags.includes(f)); by[f] = { n: x.length, lost: x.filter(t => t.net < 0).length, net: x.reduce((a, t) => a + t.net, 0) }; });
+  return { total: ts.length, flagged: ts.length - base.length, base: { n: base.length, won: base.filter(t => t.net > 0).length, lost: base.filter(t => t.net < 0).length, net: base.reduce((a, t) => a + t.net, 0) }, by };
+}
+function s4() {
+  const P = patternStats(), last = latestDay();
+  let body = '';
+  if (state.clock !== 'after') body += `<div class="note">As of ${dLong(last)}. Today's trades join after the close.</div>`;
+  body += `<section class="summary"><h2>Last 30 sessions: ${P.total} trades, ${P.flagged} with flags</h2><span class="quiet">Updated after the ${dLabel(last)} close</span></section>`;
+  if (P.total < 10) {
+    body += `<section class="card empty"><h3>Patterns appear after more trades.</h3><p>You have ${P.total} so far.</p></section>`;
+    return { html: mirrorHeader() + offlineBar() + `<div class="scroll" data-key="${routeKey(topRoute())}"><div class="content">${body}</div></div>` };
+  }
+  const bLoss = P.base.n ? Math.round(P.base.lost / P.base.n * 100) : 0;
+  body += `<section class="card pcard base"><h3>Trades with no flags</h3><dl class="vals"><div><dt>Trades</dt><dd>${P.base.n}</dd></div><div><dt>Ended in profit</dt><dd>${P.base.won} of ${P.base.n}</dd></div><div><dt>Net P&amp;L after charges</dt><dd>${inr(P.base.net)}</dd></div></dl></section>`;
+  const cards = FLAG_ORDER.filter(f => P.by[f].n >= 10).sort((a, b) => P.by[a].net - P.by[b].net);
+  if (!cards.length) body += `<section class="card empty"><h3>${P.flagged ? 'No patterns yet.' : 'No flagged trades in your last 30 sessions.'}</h3>${P.flagged ? '<p>A pattern appears once 10 trades share a flag.</p>' : ''}</section>`;
+  else body += `<section class="sec"><div class="sec-h"><h3>Patterns</h3><span class="quiet">Costliest first</span></div>${cards.map(f => {
+    const s = P.by[f], pct = Math.round(s.lost / s.n * 100), rule = state.rules.find(r => r.flag === f);
+    const obs = `${PATTERN_PHRASE[f]} ended in loss ${s.lost} of ${s.n} times. Trades with no flags did so ${P.base.lost} of ${P.base.n} times.`;
+    return `<article class="card pcard"><div>${fchip(f)}</div><dl class="vals"><div><dt>Trades</dt><dd>${s.n}</dd></div><div><dt>Ended in loss</dt><dd>${s.lost} of ${s.n}</dd></div><div><dt>Net P&amp;L after charges</dt><dd>${inr(s.net)}</dd></div></dl>
+      <div class="bars" aria-hidden="true"><div class="bar"><span>This pattern</span><span class="tr"><span class="fl" style="width:${pct}%"></span></span><span class="pc">${pct}%</span></div><div class="bar base-b"><span>No flags</span><span class="tr"><span class="fl" style="width:${bLoss}%"></span></span><span class="pc">${bLoss}%</span></div></div>
+      ${obsBlock('p:' + f, f, obs, true)}
+      <div class="acts"><button type="button" class="btn sm secondary" data-act="viewTrades" data-flag="${f}">View trades</button>${rule ? `<span class="status s-rev">Rule active</span>` : state.rules.length < 5 ? `<button type="button" class="btn sm tertiary" data-act="makeRule" data-flag="${f}" ${state.online ? '' : 'disabled'}>Make this a rule</button>` : ''}</div></article>`;
+  }).join('')}</section>`;
+  const building = FLAG_ORDER.filter(f => P.by[f].n > 0 && P.by[f].n < 10);
+  if (building.length) body += `<section class="sec"><div class="sec-h"><h3>Building patterns</h3></div><div class="card">${building.map(f => `<div class="prog"><span>${FLAG_NAME[f]}</span><span class="c">${P.by[f].n} of 10 trades</span><span class="tr"><span class="fl" style="width:${P.by[f].n * 10}%"></span></span></div>`).join('')}</div></section>`;
+  body += `<section class="sec"><div class="sec-h"><h3>Your rules</h3><span class="quiet">${state.rules.length} of 5</span></div>`;
+  if (state.rules.length >= 5) body += `<div class="note">You can have up to 5 rules. Edit or remove one to add another.</div>`;
+  if (!state.rules.length) body += `<div class="card empty"><p>No rules yet. Add one from any pattern or trade.</p></div>`;
+  else body += [...state.rules].reverse().map(r => {
+    const notYet = r.since >= last;
+    const lastS = notYet ? null : ruleCheck(r, last); const since = notYet ? null : ruleSince(r);
+    return `<article class="card rcard"><div class="top"><span class="rt">${esc(ruleText(r))}</span><button type="button" class="btn sm tertiary" data-act="editRule" data-id="${r.id}" ${state.online ? '' : 'disabled'}>Edit</button></div>
+      <dl><dt>Added</dt><dd>${dLabel(r.added)}</dd><dt>Last session</dt><dd>${notYet ? 'Checked after the next close' : keptText(lastS)}</dd><dt>Since added</dt><dd>${notYet ? 'Checked after the next close' : keptText(since)}</dd></dl></article>`;
+  }).join('');
+  body += `</section>`;
+  return { html: mirrorHeader() + offlineBar() + `<div class="scroll" data-key="${routeKey(topRoute())}"><div class="content">${body}</div></div>` };
+}
+
+// ---------- S6 Pattern Trades ----------
+function s6(route) {
+  const f = route.flag; const ts = sessionTrades().filter(t => t.flags.includes(f)).sort((a, b) => (b.date + b.entryMin).localeCompare(a.date + a.entryMin) || b.entryMin - a.entryMin);
+  const lost = ts.filter(t => t.net < 0).length, net = ts.reduce((a, t) => a + t.net, 0);
+  const shown = ts.slice(0, state.ptLimit);
+  let body = `<p style="margin:0" class="num"><b>${ts.length} trades</b> · ${lost} ended in loss · Net P&amp;L ${inr(net)}</p>`;
+  let cur = '', group = '';
+  shown.forEach(t => {
+    if (t.date !== cur) { if (group) body += `<ul class="list card">${group}</ul>`; group = ''; cur = t.date; body += `<div class="dhead">${dLabel(t.date)}</div>`; }
+    group += tradeRow(t, 'pattern');
+  });
+  if (group) body += `<ul class="list card">${group}</ul>`;
+  if (ts.length > shown.length) body += `<button type="button" class="btn secondary full" data-act="loadMore" ${state.online ? '' : 'disabled'}>Load more</button>`;
+  const rule = state.rules.find(r => r.flag === f);
+  const sticky = `<div class="sticky">${rule ? `<div class="ruleon">${I.check} Rule active: ${esc(ruleText(rule))}</div>` : state.rules.length >= 5 ? `<p class="helper" style="justify-content:center">You can have up to 5 rules.</p>` : `<button type="button" class="btn primary full" data-act="makeRule" data-flag="${f}" ${state.online ? '' : 'disabled'}>Make this a rule</button>`}</div>`;
+  return { html: navBar(FLAG_NAME[f], 'Last 30 sessions') + offlineBar() + `<div class="scroll" data-key="${routeKey(route)}"><div class="content" style="gap:8px;padding-top:14px">${body}</div></div>` + sticky, sticky: true };
+}
+
+// ---------- S5 Mirror Settings ----------
+function stepper(act, key, v, d, fmt, which) {
+  return `<span class="stepper"><button type="button" aria-label="Decrease" data-act="${act}" data-k="${key}" data-dir="-1" data-w="${which || ''}" ${v <= d.min ? 'disabled' : ''}>−</button><output>${fmt(v)}</output><button type="button" aria-label="Increase" data-act="${act}" data-k="${key}" data-dir="1" data-w="${which || ''}" ${v >= d.max ? 'disabled' : ''}>+</button></span>`;
+}
+const toMinStr = v => String(Math.floor(v / 60)).padStart(2, '0') + ':' + String(v % 60).padStart(2, '0');
+function s5() {
+  const S = state.settings, off = !state.online, mOff = !S.mirror;
+  const dis = (extra) => (off || extra ? 'disabled' : '');
+  const saved = k => (state.savedKey === k ? '<span class="saved">Saved</span>' : '');
+  let b = '';
+  if (off) b += `<div class="note">Connect to the internet to change settings.</div>`;
+  b += `<div class="group"><h3>Mirror</h3><div class="card"><div class="srow"><div class="r"><span class="lab">Build my Mirror after each close</span>${saved('mirror')}<button type="button" class="switch" role="switch" aria-checked="${S.mirror}" aria-label="Build my Mirror after each close" data-act="set" data-k="mirror" ${dis()}></button></div><span class="help">When off, Mirror stops building your days. Past days stay available.</span></div></div></div>`;
+  if (mOff) b += `<p class="gnote">Turn Mirror on to change these.</p>`;
+  const denied = state.perm === 'denied';
+  b += `<div class="group"><h3>Notifications</h3><div class="card">
+    <div class="srow ${mOff ? 'dis' : ''}"><div class="r"><span class="lab">Notify me when my Mirror is ready</span>${saved('push')}<button type="button" class="switch" role="switch" aria-checked="${S.push && state.perm === 'granted'}" aria-label="Notify me when my Mirror is ready" data-act="setPush" ${dis(mOff || denied)}></button></div>
+      <span class="help">${denied ? 'Off in phone settings.' : 'One notification on days you trade, after 3:30 pm. Never during market hours.'}</span>${denied ? '<button type="button" class="link" data-act="osSettings">Open phone settings</button>' : ''}</div>
+    <div class="srow ${mOff ? 'dis' : ''}"><div class="r"><span class="lab">Show 'Mirror ready' banner in the app</span>${saved('banner')}<button type="button" class="switch" role="switch" aria-checked="${S.banner}" aria-label="Show Mirror ready banner in the app" data-act="set" data-k="banner" ${dis(mOff)}></button></div></div></div></div>`;
+  const differs = FLAG_ORDER.some(f => { const x = S.flags[f], d = FLAG_SET[f]; return !x.on || (d.def != null && x.v !== d.def) || (f === 'burst' && x.m !== d.def2); });
+  b += `<div class="group"><h3>Flags</h3><div class="card">${FLAG_ORDER.map(f => {
+    const x = S.flags[f], d = FLAG_SET[f], parts = d.parts(x.v, x.m);
+    const sentence = f === 'burst' ? `<b>${parts[1]}</b>${parts[2]}<b>${parts[3]}</b>` : `${parts[0]}${parts[1] ? `<b>${esc(parts[1])}</b>` : ''}${parts[2] || ''}`;
+    let ctrl = '';
+    if (x.on && d.def != null) {
+      if (d.time) ctrl = `<input class="timein" type="time" min="09:16" max="10:30" step="60" value="${toMinStr(x.v)}" data-time="${f}" aria-label="${FLAG_NAME[f]} time" ${dis(mOff)}>`;
+      else if (f === 'burst') ctrl = stepper('flagStep', f, x.v, d, v => v, 'v') + stepper('flagStep', f, x.m, { min: d.min2, max: d.max2 }, v => v + ' min', 'm');
+      else ctrl = stepper('flagStep', f, x.v, d, v => (f === 'size' ? v.toFixed(1) + '×' : v));
+    }
+    return `<div class="srow ${mOff ? 'dis' : ''}"><div class="r"><span class="lab">${FLAG_NAME[f]}</span>${saved('f-' + f)}<button type="button" class="switch" role="switch" aria-checked="${x.on}" aria-label="${FLAG_NAME[f]}" data-act="flagToggle" data-k="${f}" ${dis(mOff)}></button></div><span class="help">${sentence}</span>${ctrl ? `<div class="ctrls">${ctrl}</div>` : ''}</div>`;
+  }).join('')}</div><p class="gnote">Changes apply from the next close. Past days keep their flags.</p>${differs ? `<button type="button" class="link" style="margin-left:4px" data-act="resetFlags" ${dis(mOff)}>Reset to defaults</button>` : ''}</div>`;
+  b += `<div class="group"><h3>Reasons</h3><div class="card">${REASONS.map(r => `<button type="button" class="check" role="checkbox" aria-checked="${S.reasons[r]}" data-act="reasonToggle" data-v="${r}" ${dis(mOff)}><span class="box">${S.reasons[r] ? I.check : ''}</span><span>${r}</span></button>`).join('')}</div>${state.reasonErr ? '<p class="gnote" style="color:var(--danger)">Keep at least 2 reasons.</p>' : ''}<p class="gnote">Other is always shown.</p></div>`;
+  b += `<div class="group"><h3>Your data</h3><div class="card dangerrow"><button type="button" class="btn danger" style="padding:0;min-height:40px" data-act="deleteAll" ${dis()}>Delete all reflections</button><span class="help" style="font-size:12.5px;color:var(--ink-3)">Deletes your reasons, answers and notes. Trades, orders and rules stay.</span></div></div>`;
+  return { html: navBar('Mirror settings') + offlineBar() + `<div class="scroll" data-key="settings"><div class="content" style="padding-top:14px;gap:20px">${b}</div></div>` };
+}
+
+// ---------- Sahi-owned screens (simplified, for entry points only) ----------
+function sahiHead(title, sub) { return `<header class="sahihead"><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</header>`; }
+function positions() {
+  const now = clockMin(), ts = dayTrades(TODAY);
+  const open = ts.filter(t => t.entryMin <= now && t.exitMin > now), closed = ts.filter(t => t.exitMin <= now);
+  const canReflect = builtToday();
+  let b = `<section class="sec"><div class="sec-h"><h3>Open (${open.length})</h3></div>${open.length ? `<div class="card">${open.map(t => `<div class="prow"><span><span class="t">${esc(t.inst.name)}</span><span class="s">${t.side} · ${sizeLabel(t)} · Avg ${px(t.entry)}</span></span></div>`).join('')}</div>` : '<p class="quiet">No open positions.</p>'}</section>`;
+  b += `<section class="sec"><div class="sec-h"><h3>Closed today (${closed.length})</h3></div>${closed.length ? `<div class="card">${closed.map((t, i) => `<div class="prow" style="${i ? 'border-top:1px solid var(--line)' : ''}"><span style="min-width:0"><span class="t">${esc(t.inst.name)}</span><span class="s num">${t.side} · ${sizeLabel(t)} · ${inr(t.net)}</span></span><span class="rt">${canReflect ? `<button type="button" class="reflect" data-act="reflect" data-id="${t.id}">${I.tabMirror.replace(/width="22" height="22"/, 'width="15" height="15"')}Reflect</button>` : ''}</span></div>`).join('')}</div>` : '<p class="quiet">Nothing closed yet today.</p>'}</section>`;
+  b += `<p class="owned">Positions is owned by Sahi trading. Mirror adds only the Reflect action, after the close.</p>`;
+  return { html: sahiHead('Positions', state.clock === 'market' ? 'Market open' : 'Market closed at 3:30 pm') + `<div class="scroll" data-key="positions"><div class="content" style="padding-top:14px">${b}</div></div>` };
+}
+function orders() {
+  const now = clockMin(), ts = dayTrades(TODAY), canReflect = builtToday();
+  const ev = [];
+  ts.forEach(t => { if (t.entryMin <= now) ev.push({ m: t.entryMin, t, entry: true }); if (t.exitMin <= now) ev.push({ m: t.exitMin, t, entry: false }); });
+  ev.sort((a, b) => b.m - a.m);
+  const rows = ev.map((e, i) => `<div class="prow" style="${i ? 'border-top:1px solid var(--line)' : ''}"><span style="min-width:0"><span class="t">${esc(e.t.inst.name)}</span><span class="s num">${tm(e.m)} · ${e.entry ? e.t.side : (e.t.side === 'Buy' ? 'Sell' : 'Buy')} ${sizeLabel(e.t)} · ${px(e.entry ? e.t.entry : e.t.exit)} · Executed</span></span><span class="rt">${canReflect && e.entry ? `<button type="button" class="reflect" data-act="reflect" data-id="${e.t.id}">Reflect</button>` : ''}</span></div>`).join('');
+  return { html: sahiHead('Orders', 'Executed today') + `<div class="scroll" data-key="orders"><div class="content" style="padding-top:14px">${rows ? `<div class="card">${rows}</div>` : '<p class="quiet">No orders today.</p>'}<p class="owned">Orders is owned by Sahi trading.</p></div></div>` };
+}
+function watchlist() {
+  const items = [['NIFTY 50', '25,148.30', '+0.42%'], ['NIFTY BANK', '56,512.85', '−0.18%'], ['RELIANCE', '1,409.20', '−0.61%'], ['HDFCBANK', '981.45', '+0.27%'], ['INFY', '1,526.10', '+1.04%'], ['SBIN', '861.70', '−0.33%']];
+  return { html: sahiHead('Watchlist', 'Sample prices for the prototype') + `<div class="scroll" data-key="watch"><div class="content" style="padding-top:14px"><div class="card">${items.map((x, i) => `<div class="prow" style="${i ? 'border-top:1px solid var(--line)' : ''}"><span class="t">${x[0]}</span><span class="num" style="text-align:right"><b>${x[1]}</b><br><span class="quiet">${x[2]}</span></span></div>`).join('')}</div><p class="owned">Watchlist is owned by Sahi. Shown here so the tab bar works.</p></div></div>` };
+}
+function account() {
+  return { html: sahiHead('Account') + `<div class="scroll" data-key="acct"><div class="content" style="padding-top:14px"><div class="card">${['Profile', 'Funds', 'App settings'].map((x, i) => `<div class="prow" style="${i ? 'border-top:1px solid var(--line)' : ''}"><span class="t">${x}</span><span class="quiet">${I.right}</span></div>`).join('')}<button type="button" class="prow" style="width:100%;border-top:1px solid var(--line)" data-act="acctMirror"><span class="t">Mirror settings</span><span class="quiet">${I.right}</span></button></div><p class="owned">Account is owned by Sahi. Mirror settings are also reachable from the Mirror tab.</p></div></div>` };
+}
+
+// ---------- overlays ----------
+function sheetHtml() {
+  const sh = state.sheet; if (!sh) return '';
+  const anim = sh.fresh ? ' anim' : '';
+  let inner = '';
+  if (sh.type === 'rule') {
+    const d = RULE_DEF[sh.flag], existing = state.rules.find(r => r.flag === sh.flag && r.id !== sh.ruleId);
+    const create = sh.mode === 'create';
+    const parts = d.text(sh.value);
+    inner = `<div class="grab"></div><div class="sh"><h2>${create ? 'Make this a rule' : 'Edit rule'}</h2><button type="button" class="iconbtn" data-act="closeSheet" aria-label="Close" ${sh.submitting ? 'disabled' : ''}>${I.x}</button></div><div>${fchip(sh.flag, true)}</div>`;
+    if (create && existing) {
+      inner += `<div class="notice"><span>You already have a rule for ${FLAG_NAME[sh.flag]}: ${esc(ruleText(existing))}.</span><button type="button" class="btn sm secondary" data-act="editRule" data-id="${existing.id}">Edit existing rule</button></div>`;
+    } else {
+      inner += `<p class="sentence">${esc(parts[0])}${parts[1] ? `<mark>${esc(parts[1])}</mark>` : ''}${esc(parts[2] || '')}</p>`;
+      if (d.def != null) {
+        inner += d.time
+          ? `<div style="display:flex;gap:10px;align-items:center"><input class="timein" style="height:52px;font-size:20px" type="time" min="09:16" max="10:30" step="60" value="${toMinStr(sh.value)}" data-ruletime="1" aria-label="No entries before" ${sh.submitting ? 'disabled' : ''}><span class="quiet">${d.range}</span></div>`
+          : `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${stepper('ruleStep', '', sh.value, d, v => (sh.flag === 'size' ? v.toFixed(1) + '×' : v)).replace('class="stepper"', 'class="stepper lg"')}<span class="quiet">${d.range}</span></div>`;
+      }
+      inner += `<p class="helper" style="margin:0">Mirror shows nothing while you trade. This rule is checked after each close, and the result shows in your next Mirror.</p>`;
+      if (create && state.rules.length >= 5) inner += `<div class="notice">You can have up to 5 rules. Edit or remove one on Patterns first.</div>`;
+      if (!state.online) inner += `<p class="helper" style="margin:0;color:var(--danger)">Connect to the internet to save rules.</p>`;
+      if (sh.error) inner += `<p class="helper" style="margin:0;color:var(--danger)">Couldn't save the rule. Try again.</p>`;
+      const unchanged = !create && sh.value === sh.orig;
+      const disabled = sh.submitting || !state.online || (create && state.rules.length >= 5) || unchanged;
+      inner += `<button type="button" class="btn primary full" data-act="${create ? 'addRule' : 'saveRule'}" ${disabled ? 'disabled' : ''}>${sh.submitting ? '<span class="spin" style="width:18px;height:18px;border-color:rgba(255,255,255,.35);border-top-color:currentColor"></span>' : create ? 'Add rule' : 'Save rule'}</button>`;
+      if (!create) inner += `<button type="button" class="btn danger full sm" data-act="removeRule" ${sh.submitting || !state.online ? 'disabled' : ''}>Remove rule</button>`;
+    }
+  } else if (sh.type === 'flag') {
+    const f = sh.flag, x = state.settings.flags[f], d = FLAG_SET[f];
+    const thr = d.def == null ? 'Any' : f === 'burst' ? `${x.v} or more entries within ${x.m} minutes` : d.parts(x.v).join('');
+    const n = sessionTrades().filter(t => t.flags.includes(f)).length;
+    inner = `<div class="grab"></div><div class="sh"><div>${fchip(f, true)}</div><button type="button" class="iconbtn" data-act="closeSheet" aria-label="Close">${I.x}</button></div><p style="margin:0;font-size:16px">${FLAG_DEFN[f]}</p>
+      <dl class="card facts" style="grid-template-columns:1fr"><div style="border-right:0"><dt>Your threshold</dt><dd>${esc(thr)}${x.on ? '' : ' (flag off)'}</dd></div><div style="border-right:0;border-top:1px solid var(--line)"><dt>In your last 30 sessions</dt><dd>${n} ${n === 1 ? 'trade' : 'trades'}</dd></div></dl>
+      <p class="helper" style="margin:0">A flag is a fact about the order, not a judgement of the trade.</p><button type="button" class="btn secondary full" data-act="flagToSettings">Change in Settings</button>`;
+  } else if (sh.type === 'day') {
+    const month = state.calMonth || TODAY.slice(0, 7); const [y, mo] = month.split('-').map(Number);
+    const firstDow = new Date(Date.UTC(y, mo - 1, 1)).getUTCDay(), days = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+    const lead = (firstDow + 6) % 7; let cells = '';
+    for (let i = 0; i < lead; i++) cells += '<span></span>';
+    for (let d = 1; d <= days; d++) {
+      const s = `${month}-${String(d).padStart(2, '0')}`;
+      const ok = isTradingDay(s) && s >= EARLIEST && s <= TODAY && !(s === TODAY && state.clock === 'market');
+      const st = ok ? (s === TODAY && state.clock === 'building' ? 'pending' : dayStatus(s)) : null;
+      cells += ok ? `<button type="button" data-act="pickDay" data-d="${s}" aria-pressed="${s === currentDay()}" aria-label="${dLong(s)}, ${STATUS_TEXT[st]}">${d}<i class="s-${st === 'pending' ? 'none' : st}"></i></button>` : `<span class="d">${d}</span>`;
+    }
+    const prevOk = month > EARLIEST.slice(0, 7), nextOk = month < TODAY.slice(0, 7);
+    inner = `<div class="grab"></div><div class="sh"><h2>Pick a day</h2><button type="button" class="iconbtn" data-act="closeSheet" aria-label="Close">${I.x}</button></div>
+      <div class="calnav"><button type="button" class="iconbtn" data-act="calMonth" data-dir="-1" aria-label="Previous month" ${prevOk ? '' : 'disabled style="opacity:.3"'}>${I.left}</button><b>${MOL[mo - 1]} ${y}</b><button type="button" class="iconbtn" data-act="calMonth" data-dir="1" aria-label="Next month" ${nextOk ? '' : 'disabled style="opacity:.3"'}>${I.right}</button></div>
+      <div class="cal">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(w => `<span class="wd">${w}</span>`).join('')}${cells}</div>
+      <div class="legendrow"><span><span class="status s-open">Not reviewed</span></span><span><span class="status s-rev">Reviewed</span></span><span><span class="status s-plan">Followed plan</span></span><span><span class="status s-skip">Skipped</span></span></div>
+      <p class="quiet" style="margin:0">Last 90 days. Weekends, market holidays and today during market hours can't be picked.</p>`;
+  } else if (sh.type === 'down') {
+    inner = `<div class="grab"></div><div class="sh"><h2>What was wrong with this summary?</h2></div><div class="actsheet">${['Wrong fact', 'Not useful', 'Felt judgemental'].map(r => `<button type="button" data-act="downReason" data-v="${r}">${r}</button>`).join('')}<button type="button" data-act="closeSheet" style="color:var(--accent);font-weight:600">Cancel</button></div>`;
+  } else if (sh.type === 'obsmenu') {
+    inner = `<div class="grab"></div><p class="helper" style="margin:0;justify-content:center">You'll stop seeing this kind of summary for ${FLAG_NAME[sh.flag] || 'trades that followed your plan'}.</p><div class="actsheet"><button type="button" data-act="hideType" style="color:var(--danger)">Hide summaries like this</button><button type="button" data-act="closeSheet" style="color:var(--accent);font-weight:600">Cancel</button></div>`;
+  }
+  return `<div class="scrim${anim}" data-act="${state.sheet.submitting ? '' : 'closeSheet'}"></div><div class="sheet${anim}" role="dialog" aria-modal="true" id="sheet">${inner}</div>`;
+}
+function alertHtml() {
+  const a = state.alert; if (!a) return '';
+  const anim = a.fresh ? ' anim' : '';
+  if (a.type === 'perm') return `<div class="scrim${anim}" style="z-index:40"></div><div class="alert${anim}" role="alertdialog" aria-modal="true"><div class="ab"><h2>"Sahi" Would Like to Send You Notifications</h2><p>Notifications may include alerts, sounds and icon badges. These can be configured in Settings.</p></div><div class="aa"><button type="button" data-act="perm" data-v="denied">Don't Allow</button><button type="button" data-act="perm" data-v="granted">Allow</button></div></div>`;
+  if (a.type === 'delete') return `<div class="scrim${anim}" style="z-index:40"></div><div class="alert${anim}" role="alertdialog" aria-modal="true"><div class="ab"><h2>Delete all reflections?</h2><p>This deletes every reason, answer and note you've added in Mirror. Your trades, orders and rules stay. This can't be undone.</p>${a.phase === 'deleting' ? '<p><b>Deleting…</b></p>' : ''}${a.phase === 'error' ? '<p class="err">Couldn\'t delete. Try again.</p>' : ''}</div><div class="aa"><button type="button" data-act="alertCancel" ${a.phase === 'deleting' ? 'disabled' : ''}>Cancel</button><button type="button" class="destr" data-act="confirmDelete" ${a.phase === 'deleting' ? 'disabled' : ''}>${a.phase === 'error' ? 'Retry' : 'Delete all'}</button></div></div>`;
+  if (a.type === 'os') return `<div class="scrim${anim}" style="z-index:40"></div><div class="alert${anim}" role="alertdialog" aria-modal="true"><div class="ab"><h2>Phone settings</h2><p>In the real app this opens the phone's notification settings for Sahi. Here you can allow notifications instead.</p></div><div class="aa"><button type="button" data-act="alertCancel">Close</button><button type="button" data-act="perm" data-v="granted">Allow</button></div></div>`;
+  return '';
+}
+function lockHtml() {
+  if (!state.lock) return '';
+  return `<div class="lock${state.lockFresh ? ' anim' : ''}" role="dialog" aria-label="Lock screen"><span class="ld">${dLong(TODAY)}</span><span class="lt">4:05</span>
+    <button type="button" class="notif" data-act="openPush"><span class="appic">S</span><span><span class="nh"><span>SAHI · MIRROR</span><span>now</span></span><span class="nt">Your Mirror is ready</span><span class="nb">${esc(pushBody())}</span></span></button>
+    <div class="lfoot"><span>Tap the notification to open Mirror</span><button type="button" class="clear" data-act="clearPush">Swipe away</button></div></div>`;
+}
+function snackHtml(bottom) {
+  const s = state.snack; if (!s) return '';
+  return `<div class="snack${s.fresh ? ' anim' : ''}" role="status" style="bottom:${bottom}px"><span>${esc(s.text)}</span>${s.undo ? `<button type="button" data-act="undo">Undo</button>` : ''}</div>`;
+}
+
+// ---------- render ----------
+let lastKey = '', lastLen = 0;
+function screenFor(route) {
+  switch (route.s) {
+    case 'mirror': if (!state.settings.mirror) return paused(state.seg === 'day' ? 'days' : 'patterns'); return state.seg === 'day' ? s2() : s4();
+    case 'trade': return s3(route);
+    case 'pt': return s6(route);
+    case 'settings': return s5();
+    case 'positions': return positions();
+    case 'orders': return orders();
+    case 'watchlist': return watchlist();
+    default: return account();
+  }
+}
+function tabBar() {
+  const dot = state.clock === 'after' && state.settings.mirror && !state.todayOpened && dayTrades(TODAY).length > 0;
+  const tabs = [['watchlist', 'Watchlist', I.tabWatch], ['orders', 'Orders', I.tabOrders], ['positions', 'Positions', I.tabPos], ['mirror', 'Mirror', I.tabMirror], ['account', 'Account', I.tabAcct]];
+  return `<nav class="tabbar" aria-label="Sahi">${tabs.map(([k, l, ic]) => `<button type="button" class="tab" data-act="tab" data-v="${k}" ${state.tab === k ? 'aria-current="page"' : ''}>${ic}<span>${l}</span>${k === 'mirror' && dot ? '<span class="dot" aria-label="Today\'s Mirror is ready"></span>' : ''}</button>`).join('')}</nav>`;
+}
+function statusBar() {
+  return `<div class="statusbar"><span class="num">${clockShort()}</span><span class="island"></span><span class="sys"><svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2.5" width="3" height="9.5" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1" opacity="${state.online ? 1 : .3}"/></svg><svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x=".5" y=".5" width="22" height="11" rx="3" stroke="currentColor" opacity=".45"/><rect x="2" y="2" width="16" height="8" rx="1.8" fill="currentColor"/><rect x="23.5" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".45"/></svg></span></div>`;
+}
+function saveScroll() {
+  document.querySelectorAll('#app .scroll[data-key]').forEach(el => { scrollMem[el.dataset.key] = el.scrollTop; });
+  const strip = $('#strip'); if (strip) scrollMem.__strip = strip.scrollLeft;
+}
+function render() {
+  const tr = topRoute();
+  if (state.tab === 'mirror' && state.clock === 'after' && state.settings.mirror && !state.lock && ((tr.s === 'mirror' && state.seg === 'day' && currentDay() === TODAY) || (tr.s === 'trade' && tr.id && tradeById(tr.id) && tradeById(tr.id).date === TODAY))) state.todayOpened = true;
+  applyTheme();
+  saveScroll();
+  const route = topRoute(), key = routeKey(route), len = stack().length;
+  const scr = screenFor(route);
+  const anim = key !== lastKey && len > lastLen ? 'enter' : key !== lastKey && len === lastLen && route.s === 'trade' ? 'fade' : '';
+  lastKey = key; lastLen = len;
+  const showBanner = bannerVisible(); const bAnim = showBanner && !state.bannerShown ? ' anim' : ''; state.bannerShown = showBanner;
+  const banner = showBanner ? `<div class="banner${bAnim}" role="status"><span><b>Your Mirror for today is ready.</b><span>${(() => { const m = dayMeta(TODAY); return m.flags ? `${m.worth.length} ${m.worth.length === 1 ? 'trade' : 'trades'} worth a look.` : 'You followed your plan today.'; })()}</span></span><button type="button" class="open" data-act="openBanner">Open Mirror</button><button type="button" class="x" data-act="dismissBanner" aria-label="Dismiss">${I.x}</button></div>` : '';
+  $('#app').innerHTML = statusBar() + `<div class="view">${banner}<div class="screens"><section class="screen ${anim}">${scr.html}</section></div>${snackHtml(scr.sticky ? 96 : 12)}</div>` + tabBar() + `<div class="home-ind"><span></span></div>` + sheetHtml() + alertHtml() + lockHtml();
+  document.querySelectorAll('#app .scroll[data-key]').forEach(el => { if (scrollMem[el.dataset.key] != null) el.scrollTop = scrollMem[el.dataset.key]; });
+  const strip = $('#strip');
+  if (strip) { const sel = strip.querySelector('[aria-pressed="true"]'); if (scrollMem.__strip != null && !state.stripJump) strip.scrollLeft = scrollMem.__strip; else if (sel) strip.scrollLeft = sel.offsetLeft - strip.clientWidth + sel.offsetWidth + 8; else strip.scrollLeft = strip.scrollWidth; state.stripJump = false; }
+  if (state.scrollReveal) { const a = $('#revealAnchor'), sc = $('#app .scroll'); if (a && sc) sc.scrollTo({ top: sc.scrollTop + a.getBoundingClientRect().top - sc.getBoundingClientRect().top - 12, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); state.scrollReveal = false; }
+  if (state.sheet) state.sheet.fresh = false;
+  if (state.alert) state.alert.fresh = false;
+  if (state.snack) state.snack.fresh = false;
+  state.lockFresh = false; state.justRevealed = null;
+  wireCharts();
+  renderDemo();
+  persist();
+}
+
+// ---------- snackbar ----------
+let snackTimer = null;
+function snack(text, undo) { clearTimeout(snackTimer); state.snack = { text, undo: undo || null, fresh: true }; snackTimer = setTimeout(() => { state.snack = null; render(); }, 5000); }
+
+// ---------- actions ----------
+function openTradeRoute(id, mode) {
+  const t = tradeById(id); if (!t) return;
+  push({ s: 'trade', id, mode: mode === 'worth' ? 'worth' : 'single' });
+}
+function reveal(id, reason) {
+  const t = tradeById(id);
+  state.reviews[id] = { reason, guessKept: reason === guessFor(t) };
+  state.justRevealed = id; state.scrollReveal = true; vibrate();
+}
+let noteTimer = null;
+const A = {
+  tab(el) { const v = el.dataset.v; if (state.tab === v) { state.stacks[v] = state.stacks[v].slice(0, 1); const sc = $('#app .scroll'); if (sc) sc.scrollTop = 0; delete scrollMem[routeKey(state.stacks[v][0])]; } state.tab = v; },
+  back() { pop(); },
+  seg(el) { state.seg = el.dataset.v; },
+  openSettings() { push({ s: 'settings' }); },
+  acctMirror() { state.tab = 'mirror'; state.stacks.mirror = [{ s: 'mirror' }, { s: 'settings' }]; },
+  pickDay(el) { state.selDay = el.dataset.d; state.sheet = null; state.stripJump = true; },
+  openCal() { state.calMonth = currentDay().slice(0, 7); state.sheet = { type: 'day', fresh: true }; },
+  calMonth(el) { const [y, m] = (state.calMonth || TODAY.slice(0, 7)).split('-').map(Number); const d = new Date(Date.UTC(y, m - 1 + Number(el.dataset.dir), 1)); state.calMonth = dStr(d).slice(0, 7); },
+  firstRunDone() { state.firstRun = false; },
+  askPerm() { state.alert = { type: 'perm', fresh: true, from: 'firstrun' }; },
+  perm(el) { const v = el.dataset.v; state.perm = v; state.settings.push = v === 'granted'; state.alert = null; state.firstRun = false; if (v === 'granted') state.savedKey = 'push'; },
+  osSettings() { state.alert = { type: 'os', fresh: true }; },
+  skipDay() { state.skipped[currentDay()] = true; },
+  startReview() { const m = dayMeta(currentDay()); const id = m.worth.find(x => !state.reviews[x]); if (id) openTradeRoute(id, 'worth'); },
+  openTrade(el) { openTradeRoute(el.dataset.id, el.dataset.mode); },
+  reflect(el) { openTradeRoute(el.dataset.id, 'single'); },
+  range(el) { state.range[el.dataset.id] = el.dataset.v; },
+  reason(el) { state.recallSel[el.dataset.id] = el.dataset.v; },
+  confirmReason(el) { const id = el.dataset.id, t = tradeById(id); const opts = REASONS.filter(r => state.settings.reasons[r]).concat(['Other']); const g = guessFor(t); const sel = state.recallSel[id] !== undefined ? state.recallSel[id] : (opts.includes(g) ? g : null); if (sel) reveal(id, sel); },
+  dontRemember(el) { reveal(el.dataset.id, null); },
+  answer(el) { const r = state.reviews[el.dataset.id]; r.answer = el.dataset.v; },
+  nextTrade(el) { const t = tradeById(el.dataset.id), m = dayMeta(t.date); const i = m.worth.indexOf(t.id); const next = m.worth.slice(i + 1).concat(m.worth.slice(0, i)).find(x => !state.reviews[x]); const s = stack(); s[s.length - 1] = { s: 'trade', id: next, mode: 'worth' }; delete scrollMem['trade:' + next]; },
+  doneReview(el) { state.selDay = el.dataset.d; Object.keys(scrollMem).filter(k => k.startsWith('mirror:')).forEach(k => delete scrollMem[k]); state.seg = 'day'; state.stacks[state.tab] = state.tab === 'mirror' ? [{ s: 'mirror' }] : state.stacks[state.tab].slice(0, 1); if (state.tab !== 'mirror') { state.tab = 'mirror'; state.stacks.mirror = [{ s: 'mirror' }]; } },
+  goMirror() { state.tab = 'mirror'; state.stacks.mirror = [{ s: 'mirror' }]; state.selDay = null; state.seg = 'day'; },
+  flagInfo(el) { state.sheet = { type: 'flag', flag: el.dataset.flag, fresh: true }; },
+  flagToSettings() { state.sheet = null; state.tab = 'mirror'; state.stacks.mirror.push({ s: 'settings' }); },
+  closeSheet() { if (state.sheet && state.sheet.submitting) return; state.sheet = null; },
+  thumbUp(el) { const k = el.dataset.k; if (state.feedback[k] === 'up') return; state.feedback[k] = 'up'; snack('Thanks. This helps Mirror improve.'); },
+  thumbDown(el) { state.sheet = { type: 'down', key: el.dataset.k, fresh: true }; },
+  downReason(el) { state.feedback[state.sheet.key] = 'down:' + el.dataset.v; state.sheet = null; snack('Thanks. This helps Mirror improve.'); },
+  obsMenu(el) { state.sheet = { type: 'obsmenu', key: el.dataset.k, hid: el.dataset.type, flag: el.dataset.flag, fresh: true }; },
+  hideType() { const k = state.sheet.hid; state.hidden[k] = true; state.sheet = null; snack('Summaries like this are hidden.', { kind: 'unhide', k }); },
+  unhide(el) { delete state.hidden[el.dataset.k]; },
+  makeRule(el) { const f = el.dataset.flag, d = RULE_DEF[f]; state.sheet = { type: 'rule', mode: 'create', flag: f, value: d.def != null ? d.def : null, fresh: true }; },
+  editRule(el) { const r = state.rules.find(x => x.id === el.dataset.id); state.sheet = { type: 'rule', mode: 'edit', flag: r.flag, ruleId: r.id, value: r.value, orig: r.value, fresh: !state.sheet }; },
+  ruleStep(el) { const sh = state.sheet, d = RULE_DEF[sh.flag]; sh.value = Math.min(d.max, Math.max(d.min, Math.round((sh.value + Number(el.dataset.dir) * d.step) * 10) / 10)); },
+  addRule() { const sh = state.sheet; sh.submitting = true; setTimeout(() => { state.rules.push({ id: 'r' + Date.now(), flag: sh.flag, value: sh.value, added: TODAY, since: TODAY }); state.sheet = null; snack("Rule added. You'll see how it held after the next close."); render(); }, 650); },
+  saveRule() { const sh = state.sheet; sh.submitting = true; setTimeout(() => { const r = state.rules.find(x => x.id === sh.ruleId); r.value = sh.value; r.since = TODAY; state.sheet = null; snack('Rule updated.'); render(); }, 650); },
+  removeRule() { const sh = state.sheet; const i = state.rules.findIndex(x => x.id === sh.ruleId); const [r] = state.rules.splice(i, 1); state.sheet = null; state.tab = 'mirror'; state.stacks.mirror = [{ s: 'mirror' }]; state.seg = 'patterns'; snack('Rule removed.', { kind: 'rule', r, i }); },
+  viewTrades(el) { state.ptLimit = 50; push({ s: 'pt', flag: el.dataset.flag }); },
+  loadMore() { state.ptLimit += 50; },
+  undo() { const u = state.snack && state.snack.undo; if (!u) return; if (u.kind === 'rule') state.rules.splice(u.i, 0, u.r); if (u.kind === 'unhide') delete state.hidden[u.k]; state.snack = null; clearTimeout(snackTimer); },
+  set(el) { const k = el.dataset.k; state.settings[k] = !state.settings[k]; state.savedKey = k; },
+  setPush() { if (state.perm === 'unasked') { state.alert = { type: 'perm', fresh: true }; return; } state.settings.push = !state.settings.push; state.savedKey = 'push'; },
+  flagToggle(el) { const f = el.dataset.k; state.settings.flags[f].on = !state.settings.flags[f].on; state.savedKey = 'f-' + f; },
+  flagStep(el) { const f = el.dataset.k, d = FLAG_SET[f], x = state.settings.flags[f], dir = Number(el.dataset.dir); if (el.dataset.w === 'm') x.m = Math.min(d.max2, Math.max(d.min2, x.m + dir)); else x.v = Math.min(d.max, Math.max(d.min, Math.round((x.v + dir * d.step) * 10) / 10)); state.savedKey = 'f-' + f; },
+  resetFlags() { FLAG_ORDER.forEach(f => { const d = FLAG_SET[f]; state.settings.flags[f] = d.def == null ? { on: true } : f === 'burst' ? { on: true, v: d.def, m: d.def2 } : { on: true, v: d.def }; }); state.savedKey = 'flags'; },
+  reasonToggle(el) { const r = el.dataset.v, S = state.settings.reasons; const on = REASONS.filter(x => S[x]).length; if (S[r] && on <= 2) { state.reasonErr = true; return; } state.reasonErr = false; S[r] = !S[r]; state.savedKey = 'reasons'; },
+  deleteAll() { state.alert = { type: 'delete', phase: 'idle', fresh: true }; },
+  alertCancel() { state.alert = null; },
+  confirmDelete() { state.alert.phase = 'deleting'; setTimeout(() => { Object.values(state.reviews).forEach(r => { r.reason = null; delete r.answer; delete r.note; }); state.recallSel = {}; state.alert = null; snack('Your reflections are deleted. Backups are cleared within 30 days.'); render(); }, 900); },
+  openBanner() { state.bannerDismissed = true; state.tab = 'mirror'; state.stacks.mirror = [{ s: 'mirror' }]; state.seg = 'day'; state.selDay = TODAY; state.stripJump = true; },
+  dismissBanner() { state.bannerDismissed = true; },
+  openPush() { state.lock = false; state.tab = 'mirror'; state.stacks.mirror = [{ s: 'mirror' }]; state.seg = 'day'; state.selDay = TODAY; state.stripJump = true; },
+  clearPush() { state.lock = false; },
+};
+document.getElementById('app').addEventListener('click', ev => {
+  const el = ev.target.closest('[data-act]'); if (!el || el.disabled) return;
+  const act = el.dataset.act; if (!act || !A[act]) return;
+  A[act](el);
+  render();
+  if (state.savedKey) { const k = state.savedKey; setTimeout(() => { if (state.savedKey === k) { state.savedKey = null; if (topRoute().s === 'settings') render(); } }, 1600); }
+});
+document.getElementById('app').addEventListener('input', ev => {
+  const el = ev.target;
+  if (el.dataset.note) {
+    const id = el.dataset.note, st = $('#nstat-' + id), ct = $('#ncount-' + id);
+    if (ct) ct.textContent = el.value.length >= 240 ? el.value.length + ' / 280' : '';
+    if (st) st.textContent = '';
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(() => { const r = state.reviews[id]; if (!r) return; r.note = el.value; persist(); if (st) st.textContent = el.value ? (state.online ? 'Saved' : 'Saved on this phone. Will sync when you\'re online') : ''; }, 1000);
+  }
+});
+document.getElementById('app').addEventListener('change', ev => {
+  const el = ev.target;
+  const parse = v => { const [h, m] = v.split(':').map(Number); return h * 60 + m; };
+  if (el.dataset.time) { const v = parse(el.value || '09:30'); const f = el.dataset.time; if (v >= 556 && v <= 630) { state.settings.flags[f].v = v; state.savedKey = 'f-' + f; } render(); }
+  if (el.dataset.ruletime) { const v = parse(el.value || '09:30'); if (v >= 556 && v <= 630) state.sheet.value = v; render(); }
+});
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape') { if (state.alert && state.alert.phase !== 'deleting') state.alert = null; else if (state.sheet) A.closeSheet(); else if (state.lock) state.lock = false; else return; render(); }
+});
+
+// ---------- demo rail ----------
+function renderDemo() {
+  const ps = pushStatus();
+  const seg = (act, cur, opts) => `<div class="dseg">${opts.map(([v, l]) => `<button type="button" data-demo="${act}" data-v="${v}" aria-pressed="${cur === v}">${l}</button>`).join('')}</div>`;
+  $('#demo').innerHTML = `
+  <div><h1>Sahi Mirror</h1><p class="lede">Clickable app prototype of the post-market trade review. Sample data for Mon 12 Oct 2026; not a real account.</p></div>
+  <div class="dgroup"><span class="dlabel">Phone clock</span>${seg('clock', state.clock, [['market', '11:20 am · market open'], ['building', '3:42 pm · building'], ['after', '4:05 pm · ready']])}</div>
+  <div class="dgroup"><span class="dlabel">Today's trading</span>${seg('scenario', state.scenario, [['flagged', '8 trades, 5 flagged'], ['plan', '3 trades, plan kept'], ['none', 'No trades']])}</div>
+  <div class="dgroup"><span class="dlabel">Mirror ready push</span><button type="button" class="dbtn" data-demo="push">Show push on lock screen</button><div class="dnote">${ps.ok ? 'Push will be sent: ' + esc(pushBody()) : esc(ps.why)}</div>
+    ${seg('perm', state.perm, [['unasked', 'Not asked'], ['granted', 'Allowed'], ['denied', 'Denied']])}</div>
+  <div class="dgroup"><span class="dlabel">Connection and theme</span>${seg('online', String(state.online), [['true', 'Online'], ['false', 'Offline']])}${seg('theme', state.theme, [['auto', 'System'], ['light', 'Light'], ['dark', 'Dark']])}</div>
+  <div class="dgroup"><span class="dlabel">Jump to a surface</span><div class="djump">
+    ${[['S2', 'Day', 's2'], ['S3', 'Recall', 's3r'], ['S3', 'Revealed', 's3v'], ['S4', 'Patterns', 's4'], ['S6', 'Pattern trades', 's6'], ['S5', 'Settings', 's5'], ['B1', 'Make a rule', 'b1'], ['B3', 'Flag details', 'b3'], ['B4', 'Pick a day', 'b4'], ['M2', 'Delete all', 'm2'], ['N2', 'In-app banner', 'n2'], ['—', 'Reflect in Positions', 'pos']].map(([id, l, k]) => `<button type="button" data-demo="jump" data-v="${k}"><b>${id}</b>${l}</button>`).join('')}
+  </div></div>
+  <button type="button" class="dbtn ghost" data-demo="reset">Reset prototype</button>
+  <p class="dfoot">Built from the Sahi Mirror Mobile PRD v2.0 (docs/sahi-mirror-mobile-prd.md). Your taps are saved in this browser only.</p>`;
+}
+function applyTheme() { const r = document.documentElement; if (state.theme === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', state.theme); }
+function ensureAfter() { if (state.clock !== 'after') state.clock = 'after'; state.settings.mirror = true; }
+function firstWorth() { const m = dayMeta(TODAY); return m.worth[0]; }
+const J = {
+  s2() { state.tab = 'mirror'; state.stacks.mirror = [{ s: 'mirror' }]; state.seg = 'day'; state.selDay = null; },
+  s3r() { ensureAfter(); if (state.scenario !== 'flagged') { state.scenario = 'flagged'; } const id = firstWorth(); delete state.reviews[id]; delete state.recallSel[id]; state.tab = 'mirror'; state.seg = 'day'; state.stacks.mirror = [{ s: 'mirror' }, { s: 'trade', id, mode: 'worth' }]; delete scrollMem['trade:' + id]; },
+  s3v() { ensureAfter(); state.scenario = 'flagged'; const id = firstWorth(); if (!state.reviews[id]) state.reviews[id] = { reason: 'Setup', guessKept: true }; state.tab = 'mirror'; state.seg = 'day'; state.stacks.mirror = [{ s: 'mirror' }, { s: 'trade', id, mode: 'worth' }]; },
+  s4() { state.tab = 'mirror'; state.stacks.mirror = [{ s: 'mirror' }]; state.seg = 'patterns'; state.settings.mirror = true; },
+  s6() { J.s4(); const P = patternStats(); const f = FLAG_ORDER.filter(x => P.by[x].n >= 10).sort((a, b) => P.by[a].net - P.by[b].net)[0] || 'revenge'; state.ptLimit = 50; state.stacks.mirror.push({ s: 'pt', flag: f }); },
+  s5() { state.tab = 'mirror'; state.stacks.mirror = [{ s: 'mirror' }, { s: 'settings' }]; },
+  b1() { J.s4(); const f = ['size', 'nostop', 'widened', 'burst', 'opening', 'event', 'revenge'].find(x => !state.rules.some(r => r.flag === x)) || 'revenge'; const d = RULE_DEF[f]; state.sheet = { type: 'rule', mode: 'create', flag: f, value: d.def != null ? d.def : null, fresh: true }; },
+  b3() { J.s2(); state.sheet = { type: 'flag', flag: 'revenge', fresh: true }; },
+  b4() { J.s2(); state.calMonth = currentDay().slice(0, 7); state.sheet = { type: 'day', fresh: true }; },
+  m2() { J.s5(); state.alert = { type: 'delete', phase: 'idle', fresh: true }; },
+  n2() { ensureAfter(); if (state.scenario === 'none') state.scenario = 'flagged'; state.bannerDismissed = false; state.todayOpened = false; state.settings.banner = true; state.tab = 'watchlist'; },
+  pos() { ensureAfter(); if (state.scenario === 'none') state.scenario = 'flagged'; state.tab = 'positions'; state.stacks.positions = [{ s: 'positions' }]; },
+};
+$('#demo').addEventListener('click', ev => {
+  const el = ev.target.closest('[data-demo]'); if (!el) return;
+  const k = el.dataset.demo, v = el.dataset.v;
+  if (k === 'clock') { state.clock = v; state.lock = false; if (v === 'market' && state.selDay === TODAY) state.selDay = null; }
+  if (k === 'scenario') { state.scenario = v; state.selDay = null; Object.keys(state.stacks).forEach(t => { state.stacks[t] = state.stacks[t].slice(0, 1); }); state.todayOpened = state.tab === 'mirror'; }
+  if (k === 'perm') { state.perm = v; state.settings.push = v === 'granted'; }
+  if (k === 'online') state.online = v === 'true';
+  if (k === 'theme') state.theme = v;
+  if (k === 'push') { const ps = pushStatus(); if (ps.ok) { state.lock = true; state.lockFresh = true; state.sheet = null; state.alert = null; } else { snack('No push sent. ' + ps.why); } }
+  if (k === 'jump') { state.sheet = null; state.alert = null; state.lock = false; J[v](); }
+  if (k === 'reset') { try { localStorage.removeItem(STORE); } catch (e) { /* ignore */ } Object.keys(dayCache).forEach(x => delete dayCache[x]); state = freshState(); Object.keys(scrollMem).forEach(x => delete scrollMem[x]); }
+  render();
+  if (window.matchMedia('(max-width: 920px)').matches && k !== 'theme' && k !== 'online' && k !== 'perm') toggleDemo(false);
+});
+function toggleDemo(open) { $('#demo').classList.toggle('open', open); $('#demoFab').setAttribute('aria-expanded', String(open)); $('#demoFab').textContent = open ? 'Close' : 'Demo'; }
+$('#demoFab').addEventListener('click', () => toggleDemo(!$('#demo').classList.contains('open')));
+
+// ---------- phone scaling ----------
+function fit() {
+  const wrap = $('#deviceWrap'), dev = $('#device');
+  if (window.matchMedia('(max-width: 560px)').matches) { wrap.style.width = ''; wrap.style.height = ''; dev.style.transform = ''; return; }
+  const s = Math.min(1, (window.innerHeight - 40) / 868, (window.innerWidth - 40) / 414);
+  dev.style.transform = `scale(${s})`; wrap.style.width = 414 * s + 'px'; wrap.style.height = 868 * s + 'px';
+}
+window.addEventListener('resize', fit);
+fit();
+render();
+</script>
+</body>
+</html>
