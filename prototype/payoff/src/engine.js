@@ -210,14 +210,18 @@ const Engine = (() => {
     return { neg, s: f ? `${g}.${f}` : g };
   };
   const rupees = (n, dec = 0) => { const r = inr(n, dec); return `${r.neg ? '−' : ''}₹${r.s}`; };
-  const signed = (n, dec = 0) => { const v = Math.round(n * 10 ** dec) / 10 ** dec; const r = inr(v, dec); return `${v > 0 ? '+' : v < 0 ? '−' : ''}₹${r.s}`; };
+  // Round half away from zero, so a loss and the matching gain show the same rupees.
+  const signed = (n, dec = 0) => { const v = Math.sign(n) * Math.round(Math.abs(n) * 10 ** dec) / 10 ** dec; const r = inr(v, dec); return `${v > 0 ? '+' : v < 0 ? '−' : ''}₹${r.s}`; };
   const level = n => inr(Math.round(n)).s;
   const px = n => n.toFixed(2);
+  const prem = n => rupees(n, 2);
+  // The index level at a contract's expiry, used to settle it.
+  const settleS = c => pathAt(c.expT, true);
 
   return {
     OPEN, CLOSE, SESSION, YEAR, SQOFF, LOT, TICK, HOLIDAYS, DAYS, TODAY, EXPIRIES, DEFAULT_NOW, S_DEFAULT, PREV_CLOSE, SHOT, BASE_IV, HIST_START,
     tOf, split, fmtT, clock, dayOfT, dateInfo, expiryByKey, bs, solveIv, roundTick, pathAt, contract, price, intrinsic, optionPathAt, candles, tauOf,
-    inr, rupees, signed, level, px, rng
+    inr, rupees, signed, level, px, prem, settleS, rng
   };
 })();
 if (typeof module !== 'undefined') module.exports = Engine;

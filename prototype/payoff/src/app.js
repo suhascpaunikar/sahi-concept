@@ -13,8 +13,16 @@
     clear() { try { Object.keys(localStorage).filter(k => k.startsWith('sahiPayoff.')).forEach(k => localStorage.removeItem(k)); } catch (e) { /* storage blocked */ } }
   };
   const C = (t, k, e) => E.contract(t, k, e);
-  // Replace an element's markup only when it changed, so ticks don't drop focus or hover.
+  // Replace an element's markup only when it changed, so ticks don't drop focus, hover or scroll.
   const setHTML = (el, html) => { if (el._html === html) return false; el._html = html; el.innerHTML = html; return true; };
+  // Rebuild markup but put keyboard focus back on the matching control afterwards.
+  function setHTMLKeepFocus(el, html, keyOf) {
+    const a = document.activeElement;
+    const key = a && el.contains(a) ? keyOf(a) : null;
+    const changed = setHTML(el, html);
+    if (changed && key) { const n = [...el.querySelectorAll('button, [tabindex]')].find(x => keyOf(x) === key); if (n) n.focus(); }
+    return changed;
+  }
   const SHOT_C = C('CE', 22500, '2026-10-27');
   let legId = 1;
   const leg = (c, side, avg, product = 'CARRY', qty = E.LOT) => ({ id: legId++, c, side, qty, avg, product });
@@ -34,6 +42,7 @@
     condor: { name: 'Iron condor · 19 Oct', group: 'Several positions (S3)', opt: C('PE', 22500, '2026-10-19'), legs: () => [leg(C('PE', 22300, '2026-10-19'), 1, 112.1), leg(C('PE', 22500, '2026-10-19'), -1, 171.2), leg(C('CE', 22950, '2026-10-19'), -1, 128.4), leg(C('CE', 23150, '2026-10-19'), 1, 71.9)] },
     straddle: { name: 'Long straddle · 27 Oct 22700', group: 'Several positions (S3)', opt: C('CE', 22700, '2026-10-27'), legs: () => [leg(C('CE', 22700, '2026-10-27'), 1, 338.5), leg(C('PE', 22700, '2026-10-27'), 1, 352.2)] },
     calendar: { name: 'Calendar spread · 22700 Call', group: 'Several positions (S3)', opt: C('CE', 22700, '2026-10-27'), legs: () => [leg(C('CE', 22700, '2026-10-19'), -1, 241.3), leg(C('CE', 22700, '2026-10-27'), 1, 336.1)] },
+    expweek: { name: 'Expiring today + weekly', group: 'Several positions (S3)', opt: C('CE', 22700, '2026-10-19'), legs: () => [leg(C('CE', 22700, '2026-10-13'), -1, 128.6), leg(C('CE', 22700, '2026-10-19'), 1, 236.4)] },
     futures: { name: 'Futures + protective put', group: 'Several positions (S3)', opt: C('PE', 22500, '2026-10-27'), legs: () => [leg(C('FUT', 0, '2026-10-27'), 1, 22640), leg(C('PE', 22500, '2026-10-27'), 1, 262.4)] },
     mixed: { name: 'Intraday + carry-forward', group: 'Several positions (S3)', opt: SHOT_C, legs: () => [leg(C('CE', 22700, '2026-10-13'), 1, 104.3, 'INTRADAY'), leg(C('PE', 22500, '2026-10-19'), -1, 171.2)] }
   };
@@ -45,63 +54,74 @@
     platform: LS.get('platform', isMac ? 'mac' : 'win'),
     clock: 675, pricing: 'live', ticks: true, later: true, orderFail: false,
     scenario: LS.get('scenario', 'single'), product: 'CARRY',
-    legs: [], others: [], realised: 0, opt: SHOT_C, lots: 1, oneTap: true,
+    legs: [], others: [], realised: 0, realisedOther: 0, opt: SHOT_C, lots: 1, oneTap: true,
     sticky: false, peek: false, pin: null, horizon: null, cone: true,
     hover: null, keyPt: null, rowHover: null, noise: 0,
     tipSeen: LS.get('tipSeen', false), hinted: LS.get('hinted', false), demoMin: LS.get('demoMin', innerWidth < 1600),
-    orders: {}, exits: [], events: [], fadeStart: 0, loadingUntil: 0, m1: null, popover: null
+    orders: {}, exits: [], events: [], fadeStart: 0, loadingUntil: 0, m1: null, popover: null, closedBannerHidden: false
   };
 
-  const nowT = () => st.clock >= E.CLOSE ? E.tOf(E.TODAY, E.CLOSE) : E.tOf(E.TODAY, st.clock);
   const closed = () => st.clock >= E.CLOSE;
-  const S0 = () => E.pathAt(nowT(), closed()) + (st.pricing === 'live' ? st.noise : 0);
-  const ltp = c => c.type === 'FUT' ? Math.round(S0() * 20) / 20 : E.roundTick(E.price(c, S0(), nowT()));
+  const nowT = () => closed() ? E.tOf(E.TODAY, E.CLOSE) : E.tOf(E.TODAY, st.clock);
+  // Tick noise only applies while prices are live and ticking during market hours.
+  const ticking = () => st.ticks && st.pricing === 'live' && !closed();
+  const S0 = () => E.pathAt(nowT(), closed()) + (ticking() ? st.noise : 0);
+  const expired = c => c.type !== 'FUT' && c.expT <= nowT();
+  // An unexpired option never trades below one tick.
+  const ltp = c => c.type === 'FUT' ? Math.round(S0() * 20) / 20 : expired(c) ? E.roundTick(E.intrinsic(c, E.settleS(c))) : Math.max(E.TICK, E.roundTick(E.price(c, S0(), nowT())));
   const keyName = () => st.platform === 'mac' ? '⌥' : 'Alt';
   const keyWord = () => st.platform === 'mac' ? 'Option' : 'Alt';
-  const optPrevClose = c => (c === SHOT_C) ? E.SHOT.prevClose : E.roundTick(E.optionPathAt(c, E.tOf(E.TODAY, E.OPEN), true));
+  const optPrevClose = c => (c === SHOT_C) ? E.SHOT.prevClose : Math.max(E.TICK, E.roundTick(E.optionPathAt(c, E.tOf(E.TODAY, E.OPEN), true)));
+  const timeLong = T => E.fmtT(T);
 
+  function squareOffIntraday() {
+    // After the close, intraday positions were squared off at 3:20 pm and their P&L is realised.
+    st.legs = st.legs.filter(l => {
+      if (l.product !== 'INTRADAY') return true;
+      st.realised += l.side * l.qty * (E.price(l.c, E.pathAt(P.SQ_T), P.SQ_T) - l.avg);
+      return false;
+    });
+  }
   function applyScenario() {
     const sc = SCEN[st.scenario] || SCEN.single;
     st.legs = sc.legs(st.product);
     st.others = (sc.others || []).map(o => Object.assign({}, o));
-    st.realised = sc.realised || 0;
+    st.realised = sc.realised || 0; st.realisedOther = 0;
     st.opt = sc.opt;
-    st.pin = null; st.m1 = null; st.orders = {}; st.exits = []; st.horizon = null; st.keyPt = null; st.rowHover = null;
-    // After the close, intraday positions were squared off at 3:20 pm and their P&L is realised.
-    if (closed()) {
-      st.legs = st.legs.filter(l => {
-        if (l.product !== 'INTRADAY') return true;
-        st.realised += l.side * l.qty * (E.price(l.c, E.pathAt(P.SQ_T), P.SQ_T) - l.avg);
-        return false;
-      });
-    }
+    st.pin = null; st.orders = {}; st.exits = []; st.horizon = null; st.keyPt = null; st.rowHover = null;
+    if (closed()) squareOffIntraday();
     closeM1(true);
     rebuildData();
   }
 
   /* ---------- the book Payoff prices ---------- */
+  // legs: open legs that Payoff prices. settled: legs that expired earlier today (shown, not priced).
   function book() {
-    const legs = st.legs.filter(l => l.c.und === 'NIFTY' && l.qty > 0);
-    const b = { legs, nowT: nowT(), S0: S0(), closed: closed(), pretrade: false };
-    if (!legs.length && st.opt) { b.pretrade = true; b.legs = [{ id: 0, c: st.opt, side: 1, qty: st.lots * E.LOT, avg: ltp(st.opt), product: 'CARRY' }]; }
+    const T = nowT();
+    const all = st.legs.filter(l => l.c.und === 'NIFTY' && l.qty > 0);
+    const legs = all.filter(l => !expired(l.c)), settled = all.filter(l => expired(l.c));
+    const b = { legs, settled, all, nowT: T, S0: S0(), closed: closed(), pretrade: false };
+    if (!all.length && st.opt && !expired(st.opt)) { b.pretrade = true; b.legs = [{ id: 0, c: st.opt, side: 1, qty: st.lots * E.LOT, avg: ltp(st.opt), product: 'CARRY' }]; b.all = b.legs; }
     return b;
   }
-  const isS3 = () => st.legs.filter(l => l.c.und === 'NIFTY' && l.qty > 0).length >= 2;
+  const positionCount = () => new Set(st.legs.filter(l => l.c.und === 'NIFTY' && l.qty > 0).map(l => l.c.id)).size;
+  const isS3 = () => positionCount() >= 2;
   const payoffOn = () => st.sticky || st.peek || !!st.pin;
-  const expiredSingle = b => !isS3() && !b.pretrade && b.legs.length === 1 && b.legs[0].c.type !== 'FUT' && b.legs[0].c.expT <= b.nowT;
-  function axisEnd(b) {
-    let end = P.axisEnd(b);
-    if (end == null) return null;
-    return end;
-  }
+  // Nothing left to price: the position (or every position) settled today.
+  const expiredBook = b => !b.pretrade && !b.legs.length && b.settled.length > 0;
+  const expiredSingle = b => expiredBook(b) && !isS3();
+  const axisEnd = b => (b.legs.length ? P.axisEnd(b) : null);
+  // Whether a point in the future zone can be shown: something to price, live-enough prices.
+  const pointable = b => { const e = axisEnd(b); return e != null && e > b.nowT && st.pricing !== 'unavailable'; };
   const otherCount = () => st.others.length;
   const sessionEnd = () => closed() ? (E.TODAY + 2) * E.SESSION : (E.TODAY + 1) * E.SESSION;
+  const firstT = b => Math.ceil((b.nowT + 1) / 3) * 3;
 
   function horizons(b) {
     const end = axisEnd(b);
-    if (end == null) return [];
+    if (end == null || end <= b.nowT) return [];
     const allIntraday = !b.pretrade && b.legs.every(l => l.product === 'INTRADAY');
-    const todayEnd = allIntraday ? Math.max(nowT(), P.SQ_T) : Math.min(end, sessionEnd());
+    const todayEnd = allIntraday ? Math.max(b.nowT, P.SQ_T) : Math.min(end, sessionEnd());
     const list = [{ key: 'today', label: closed() ? 'Next session' : 'Today', T: todayEnd }];
     if (!allIntraday) {
       const seen = new Set();
@@ -111,24 +131,25 @@
     }
     return list;
   }
+  const defaultHorizon = (b, hs) => isS3() ? (hs[1] || hs[0]) : hs[hs.length - 1];
+  // The chip that is selected, or null after the trader zooms or pans by hand.
   function currentHorizon(b) {
     const hs = horizons(b);
-    if (!hs.length) return null;
-    const pick = hs.find(h => h.key === st.horizon);
-    if (pick) return pick;
-    return isS3() ? (hs[1] || hs[0]) : hs[hs.length - 1];
+    if (!hs.length || st.horizon === 'custom') return null;
+    return hs.find(h => h.key === st.horizon) || defaultHorizon(b, hs);
   }
+  function fitHorizon(b) { const hs = horizons(b); if (!hs.length) return null; return hs.find(h => h.key === st.horizon) || defaultHorizon(b, hs); }
   function markers(b) {
     const out = [];
     const end = axisEnd(b);
     if (end == null) return out;
     const byExp = {};
-    b.legs.forEach(l => { if (l.c.expT > nowT() && l.c.expT <= end && !(l.product === 'INTRADAY' && !b.pretrade)) (byExp[l.c.exp.key] = byExp[l.c.exp.key] || { e: l.c.exp, n: 0 }).n++; });
+    b.legs.forEach(l => { if (l.c.expT > b.nowT && l.c.expT <= end && (b.pretrade || l.product !== 'INTRADAY')) (byExp[l.c.exp.key] = byExp[l.c.exp.key] || { e: l.c.exp, n: 0 }).n++; });
     Object.values(byExp).forEach(({ e, n }) => {
       const lbl = `${e.kind} expiry · ${e.info.label}`;
       out.push({ T: e.T, label: lbl, sub: e.movedFrom ? `moved from ${e.movedFrom.label}` : '', tip: `${lbl}${e.movedFrom ? ` · moved from ${e.movedFrom.label} for a holiday` : ''} · ${n} ${n === 1 ? 'leg expires' : 'legs expire'}` });
     });
-    if (!b.pretrade && b.legs.some(l => l.product === 'INTRADAY') && P.SQ_T > nowT()) {
+    if (!b.pretrade && b.legs.some(l => l.product === 'INTRADAY') && P.SQ_T > b.nowT) {
       const n = b.legs.filter(l => l.product === 'INTRADAY').length;
       out.push({ T: P.SQ_T, label: 'Auto square-off · 3:20 pm', sub: '', tip: `Auto square-off · 3:20 pm · ${n} intraday ${n === 1 ? 'position' : 'positions'}` });
     }
@@ -136,22 +157,34 @@
   }
 
   /* ---------- charts ---------- */
+  const COL = { up: '#0b9981', down: '#f23645', upBg: '#0c3a33', downBg: '#3f1820' };
   const idx = new SahiChart($('#idxCanvas'), { tf: 3, dec: 2 });
   const OI = [];
   const opt = new SahiChart($('#optCanvas'), {
     tf: 5, dec: 2, volFrac: 0.1,
-    sub: { frac: 0.26, series: OI, lo: 21e5, hi: 43e5, ticks: [25e5, 30e5, 35e5, 40e5], fmt: v => (v / 1e5).toFixed(0) + 'L', color: '#2e8cf0' }
+    sub: { frac: 0.26, series: OI, lo: 21e5, hi: 43e5, ticks: [25e5, 30e5, 35e5, 40e5], fmt: v => (v / 1e5).toFixed(0) + 'L', color: '#2196f3' }
   });
-  let shownOptId = null;
   const savedViews = { idx: null, opt: null };
 
-  function shownOpt() {
+  // In S2 the option chart switches to the held contract while Payoff is on.
+  function heldSingle() {
     const b = book();
     if (payoffOn() && !isS3() && !b.pretrade && b.legs.length === 1 && b.legs[0].c.type !== 'FUT') return b.legs[0].c;
-    return st.opt;
+    return null;
+  }
+  const shownOpt = () => heldSingle() || st.opt;
+  function buildOI(T) {
+    OI.length = 0;
+    const r = E.rng(5);
+    const t0 = E.tOf(E.TODAY - 3, E.OPEN), t1 = E.tOf(E.TODAY, E.DEFAULT_NOW - E.tOf(E.TODAY, E.OPEN) + E.OPEN);
+    // Shape follows the Sahi screenshot: about 25L rising to 40L, ending at 35L.
+    const A = [[0, 24.4], [0.22, 25.2], [0.4, 26.5], [0.47, 31.5], [0.5, 30.2], [0.62, 33.8], [0.72, 36.2], [0.8, 37.6], [0.86, 40.6], [0.9, 38.4], [0.95, 37.9], [1, 35]];
+    const at = f => { let i = 0; while (i < A.length - 2 && A[i + 1][0] < f) i++; const [fa, va] = A[i], [fb, vb] = A[i + 1]; return va + (vb - va) * Math.max(0, Math.min(1, (f - fa) / (fb - fa))); };
+    for (let t = t0; t <= T; t += 5) { const f = Math.min(1, (t - t0) / (t1 - t0)); OI.push({ T: t, v: (at(f) + (r() - 0.5) * 0.35) * 1e5 }); }
+    OI._T = T;
   }
   function rebuildData() {
-    const T = nowT(), S = S0(), cl = closed();
+    const T = nowT(), S = S0();
     const ic = E.candles(3, E.tOf(E.TODAY - 1, E.OPEN), T, (t, c) => E.pathAt(t, c), 11);
     const last = ic[ic.length - 1];
     if (last) { last.c = S; last.h = Math.max(last.h, S); last.l = Math.min(last.l, S); }
@@ -164,14 +197,7 @@
       if (ol) { ol.c = lp; ol.h = Math.max(ol.h, lp); ol.l = Math.min(ol.l, lp); }
       opt.setData(oc, T, lp);
     } else opt.setData([], T, null);
-    if (!OI.length || OI._T !== T) {
-      OI.length = 0;
-      const r = E.rng(5);
-      let v = 25.5e5;
-      for (let t = E.tOf(E.TODAY - 3, E.OPEN); t <= T; t += 5) { v += (r() - 0.47) * 0.32e5 + Math.sin(t / 90) * 0.05e5; v = Math.max(23e5, Math.min(41.5e5, v)); OI.push({ T: t, v }); }
-      OI._T = T;
-    }
-    if (shownOptId !== (c && c.id)) { shownOptId = c && c.id; }
+    if (OI._T !== T) buildOI(T);
     if (!payoffOn()) defaultViews();
     renderUI();
   }
@@ -184,22 +210,25 @@
   function fitTo(hT) {
     const T = nowT();
     const span = Math.max(15, hT - T);
-    const end = axisEnd(book());
     const t0 = T - Math.max(45, span * 0.28), t1 = hT + span * 0.035;
-    idx.setView(t0, t1); opt.setView(t0, t1);
+    const [a, c] = idx.clampView(t0, t1);
+    idx.setView(a, c); opt.setView(a, c);
   }
+  function refit(b) { const end = axisEnd(b); idx.limitT = opt.limitT = end; const h = fitHorizon(b); if (h) fitTo(h.T); }
   function enterPayoff(source) {
     const b = book();
     savedViews.idx = savedViews.idx || idx.view; savedViews.opt = savedViews.opt || opt.view;
-    const end = axisEnd(b);
-    idx.limitT = end; opt.limitT = end;
-    const h = currentHorizon(b);
-    if (h) fitTo(h.T);
+    if (pointable(b)) refit(b);
     st.fadeStart = performance.now();
-    st.loadingUntil = performance.now() + 240;
-    setTimeout(() => { idx.invalidate(); renderUI(); }, 260);
+    st.loadingUntil = performance.now() + 260;
+    setTimeout(() => { idx.invalidate(); renderUI(); }, 280);
     rebuildData();
-    log('payoff_open', `source=${source}${isS3() ? ` leg_count=${b.legs.length} expiry_count=${new Set(b.legs.map(l => l.c.expKey)).size}` : ''}${b.pretrade ? ' pretrade' : ''}`);
+    // a pointer already resting on the chart gets its readout at once
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (!payoffOn() || !idx.pointer) return;
+      st.hover = zoneAt(idx, idx.pointer); markHinted(st.hover); updateReadout(idx.pointer); idx.invalidate(); opt.invalidate(); renderTable();
+    }));
+    log('payoff_open', `source=${source}${isS3() ? ` leg_count=${b.all.length} expiry_count=${new Set(b.all.map(l => l.c.expKey)).size}` : ''}${b.pretrade ? ' pretrade' : ''}`);
     if (b.pretrade) log('payoff_pretrade_open');
     st.openedAt = performance.now();
   }
@@ -209,6 +238,8 @@
     if (savedViews.opt) opt.setView(savedViews.opt.t0, savedViews.opt.t1);
     savedViews.idx = savedViews.opt = null;
     st.hover = null; st.keyPt = null; st.rowHover = null;
+    if (st.horizon === 'custom') st.horizon = null;
+    clearTimeout(liveTimer); lastLive = ''; $('#live').textContent = '';
     updateReadout(null); hideTip('canvas'); hideTip('el');
     log('payoff_close', `duration=${((performance.now() - (st.openedAt || performance.now())) / 1000).toFixed(1)}s`);
     rebuildData();
@@ -219,14 +250,15 @@
     const is = payoffOn();
     if (!was && is) enterPayoff(source);
     else if (was && !is) exitPayoff();
-    else { rebuildData(); }
+    else rebuildData();
+    refreshTip();
   }
 
   /* ---------- shading and breakevens (cached per view) ---------- */
   let cache = null;
   function payoffGrid(ch, b, coarse) {
     const end = axisEnd(b);
-    const key = [ch.view.t0, ch.view.t1, ch.w, ch.h, ch.yr.lo.toFixed(2), ch.yr.hi.toFixed(2), b.S0.toFixed(2), b.nowT, b.legs.map(l => l.id + ':' + l.qty + ':' + l.avg + ':' + l.c.id).join('|'), coarse].join(',');
+    const key = [ch.view.t0, ch.view.t1, ch.w, ch.h, ch.yr.lo.toFixed(2), ch.yr.hi.toFixed(2), b.S0.toFixed(2), b.nowT, b.legs.map(l => l.id + ':' + l.qty + ':' + l.avg + ':' + l.c.id + ':' + l.product).join('|'), coarse].join(',');
     if (cache && cache.key === key) return cache;
     const T0 = b.nowT, step = coarse ? 6 : 3;
     const x0 = Math.max(0, ch.tToX(T0)), x1 = Math.min(ch.plotW, ch.tToX(end));
@@ -240,13 +272,9 @@
       const profitAtLo = P.pnl(b, lo, T) > 0;
       const segs = [];
       const edges = [lo, ...roots, hi];
-      for (let i = 0; i < edges.length - 1; i++) {
-        const profit = (i % 2 === 0) ? profitAtLo : !profitAtLo;
-        segs.push({ a: edges[i], b: edges[i + 1], profit });
-      }
+      for (let i = 0; i < edges.length - 1; i++) segs.push({ a: edges[i], b: edges[i + 1], profit: (i % 2 === 0) ? profitAtLo : !profitAtLo });
       cols.push({ x, w: Math.min(step, x1 - x), T, roots, segs });
     }
-    // breakeven polylines
     const lines = [];
     let active = [];
     cols.forEach(col => {
@@ -256,58 +284,100 @@
         active = col.roots.map(r => { const l = { pts: [[cx, r]] }; lines.push(l); return l; });
       } else col.roots.forEach((r, i) => active[i].pts.push([cx, r]));
     });
-    // breakevens outside the visible range at the right end, for edge arrows
     const last = cols[cols.length - 1];
-    let outside = [];
-    if (last) {
-      const wide = P.roots(b, last.T, b.S0 * 0.6, b.S0 * 1.4, 5);
-      outside = wide.filter(r => r > hi || r < lo);
-    }
     const anyRoot = cols.some(c => c.roots.length);
     const sign = last ? (P.pnl(b, (lo + hi) / 2, last.T) > 0 ? 'Profit' : 'Loss') : null;
-    cache = { key, cols, lines, last, outside, anyRoot, sign, end, x0, x1 };
+    cache = { key, cols, lines, last, anyRoot, sign, end, x0, x1, lo, hi, pStep };
     return cache;
   }
 
   /* ---------- canvas helpers ---------- */
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  // Draw (or with o.measure, only measure) a label pill; returns its rect.
   function pill(ctx, x, y, lines, o = {}) {
     lines = Array.isArray(lines) ? lines : [lines];
-    ctx.font = o.font || '600 11px Inter, system-ui, sans-serif';
-    const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + (o.padX || 14);
+    const font0 = o.font || '600 11px Inter, system-ui, sans-serif';
+    ctx.font = font0;
+    let w = 0;
+    lines.forEach((l, i) => { ctx.font = i === 0 ? font0 : '500 10.5px Inter, system-ui, sans-serif'; w = Math.max(w, ctx.measureText(l).width); });
+    w += (o.padX || 14);
     const lh = o.lh || 15, h = lines.length * lh + 7;
     let x0 = o.align === 'right' ? x - w : o.align === 'center' ? x - w / 2 : x;
     let y0 = o.valign === 'bottom' ? y - h : o.valign === 'middle' ? y - h / 2 : y;
     if (o.clampW) x0 = Math.max(2, Math.min(o.clampW - w - 2, x0));
+    if (o.clampH) y0 = Math.max(o.clampH[0], Math.min(o.clampH[1] - h, y0));
+    const r = { x: x0, y: y0, w, h };
+    if (o.measure) return r;
     ctx.fillStyle = o.bg || 'rgba(20, 25, 34, .94)';
     rr(ctx, x0, y0, w, h, o.r == null ? 5 : o.r); ctx.fill();
     if (o.border) { ctx.strokeStyle = o.border; ctx.lineWidth = 1; ctx.stroke(); }
     ctx.textBaseline = 'middle';
     lines.forEach((l, i) => {
       ctx.fillStyle = i === 0 ? (o.fg || '#e9ecf1') : (o.fg2 || '#a7afbc');
-      ctx.font = i === 0 ? (o.font || '600 11px Inter, system-ui, sans-serif') : '500 10.5px Inter, system-ui, sans-serif';
+      ctx.font = i === 0 ? font0 : '500 10.5px Inter, system-ui, sans-serif';
       ctx.fillText(l, x0 + (o.padX || 14) / 2, y0 + 4 + lh * i + lh / 2);
     });
-    return { x: x0, y: y0, w, h };
+    return r;
+  }
+  const overlaps = (r, list, pad = 3) => list.some(t => r.x < t.x + t.w + pad && r.x + r.w + pad > t.x && r.y < t.y + t.h + pad && r.y + r.h + pad > t.y);
+  // Try each candidate position; draw the first one that collides with nothing already placed.
+  function placePill(ctx, taken, cands, lines, o, plotW) {
+    let chosen = null;
+    for (const cd of cands) {
+      const r = pill(ctx, cd.x, cd.y, lines, Object.assign({}, o, cd, { measure: true, clampW: plotW }));
+      if (!overlaps(r, taken)) { chosen = cd; break; }
+    }
+    if (!chosen && o.required === false) return null;
+    chosen = chosen || cands[cands.length - 1];
+    const r = pill(ctx, chosen.x, chosen.y, lines, Object.assign({}, o, chosen, { clampW: plotW }));
+    taken.push(r);
+    return r;
   }
   const hits = { idx: [], opt: [] };
   const alpha = () => Math.min(1, (performance.now() - st.fadeStart) / 220);
+  function dot(ctx, x, y, color, r) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#12161d'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1; }
+
+  /* ---------- index chart: S1 indicators from the screenshot ---------- */
+  const EM50 = 22545, EM20 = 22487, OI_SUPPORT = 22700;
+  function drawS1Indicators(ctx, ch) {
+    const band = (lvl, color, fill) => {
+      const y = Math.round(ch.pToY(lvl)) + 0.5;
+      if (y < 0 || y > ch.mainH) return;
+      ctx.fillStyle = fill; ctx.fillRect(0, y - 9, ch.plotW, 18);
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ch.plotW, y); ctx.stroke(); ctx.lineWidth = 1;
+    };
+    band(EM50, '#e5484d', 'rgba(229,72,77,.10)');
+    band(EM20, '#f0a020', 'rgba(240,160,32,.10)');
+    const y = Math.round(ch.pToY(OI_SUPPORT)) + 0.5;
+    if (y > 0 && y < ch.mainH) {
+      ctx.strokeStyle = 'rgba(40,188,208,.7)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ch.plotW, y); ctx.stroke(); ctx.setLineDash([]);
+      pill(ctx, 100, y, 'OI Support', { valign: 'middle', font: '500 10.5px Inter, system-ui, sans-serif', bg: 'rgba(18,22,29,.95)', fg: '#7fd7e4', border: 'rgba(40,188,208,.5)', padX: 10, lh: 12 });
+    }
+  }
+  idx.on('axis', (ctx, ch) => {
+    if (payoffOn()) return;
+    [[EM50, '50.0%', '#e5484d'], [EM20, '20.0%', '#d98a12']].forEach(([lvl, t, c]) => { const y = ch.pToY(lvl); if (y > 8 && y < ch.mainH - 8) ch.tag(ch.plotW, y, t, c, '#fff'); });
+  });
 
   /* ---------- index chart overlays ---------- */
   idx.on('extraRange', ch => {
-    if (!payoffOn() || st.pricing === 'unavailable') return null;
-    const b = book(); const end = axisEnd(b); if (end == null) return null;
+    const b = book();
+    if (!payoffOn()) return [Math.min(EM20 - 10, b.S0), Math.max(OI_SUPPORT + 10, b.S0)];
+    if (!pointable(b)) return null;
+    const end = axisEnd(b);
     const tR = Math.min(end, ch.view.t1);
     const half = P.coneHalf(b.S0, E.BASE_IV, b.nowT, tR);
     return [b.S0 - half * 1.05, b.S0 + half * 1.05];
   });
+  idx.on('skipDay', T => payoffOn() && markers(book()).some(m => Math.abs(m.T - T) < 1));
+  opt.on('skipDay', T => payoffOn() && markers(book()).some(m => Math.abs(m.T - T) < 1));
   idx.on('below', (ctx, ch) => {
     hits.idx = [];
-    if (!payoffOn()) return;
+    if (!payoffOn()) { drawS1Indicators(ctx, ch); return; }
     const b = book();
     const end = axisEnd(b);
-    if (end == null || expiredSingle(b)) return;
+    if (end == null || end <= b.nowT) return;
     const a = alpha(); if (a < 1) ch.invalidate();
     ctx.globalAlpha = a;
     const nx = ch.tToX(b.nowT), ex = ch.tToX(end);
@@ -321,7 +391,6 @@
     const stale = st.pricing === 'delayed';
     ctx.fillStyle = stale ? 'rgba(160,170,190,.08)' : css('--profit-tint');
     g.cols.forEach(c => c.segs.forEach(s => { if (s.profit) { const y1 = ch.pToY(s.b), y2 = ch.pToY(s.a); ctx.fillRect(c.x, y1, c.w + 0.5, y2 - y1); } }));
-    // expected-move cone
     if (st.cone) {
       const xs = [];
       for (let x = nx; x <= Math.min(ex, ch.plotW); x += 4) xs.push(x);
@@ -333,94 +402,110 @@
       ctx.strokeStyle = stale ? '#7d8596' : css('--cone'); ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]);
       [up, dn].forEach(line => { ctx.beginPath(); line.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); });
       ctx.setLineDash([]); ctx.lineWidth = 1;
-      // label the cone part-way along its upper edge, clear of the expiry labels at the top right
-      const li = Math.floor(up.length * 0.5), [lx, ly] = up[li] || [0, 0];
-      if (ly > ch.o.padTop + 30) { ctx.font = '500 10.5px Inter, system-ui, sans-serif'; ctx.fillStyle = stale ? '#7d8596' : css('--cone'); ctx.textAlign = 'center'; ctx.fillText('Typical move (1 SD)', lx, ly - 9); ctx.textAlign = 'left'; }
-    }
+      ch._coneUp = up;
+    } else ch._coneUp = null;
     ctx.globalAlpha = 1;
   });
   idx.on('above', (ctx, ch) => {
-    if (!payoffOn()) { drawExitMarkers(ctx, ch, 'idx'); return; }
+    const taken = [];
+    ch._taken = taken;
+    if (!payoffOn()) { drawExitMarkers(ctx, ch, 'idx', taken); return; }
     const b = book();
     const end = axisEnd(b);
-    if (end == null) return;
-    const a = alpha();
-    ctx.globalAlpha = a;
+    if (end == null || end <= b.nowT) return;
+    ctx.globalAlpha = alpha();
     const stale = st.pricing === 'delayed';
     const nx = ch.tToX(b.nowT);
     const topY = ch.o.padTop;
-    // markers
+    const plotBottom = ch.mainH * (1 - ch.o.volFrac);
+    const beCol = stale ? '#8a92a3' : css('--breakeven');
+    const g = st.pricing !== 'unavailable' ? payoffGrid(ch, b, !!ch.drag) : null;
+    if (g) {
+      // lines first, so every label below sits on top of them
+      ctx.strokeStyle = beCol; ctx.lineWidth = 1.8;
+      g.lines.forEach(l => { if (l.pts.length < 2) return; ctx.beginPath(); l.pts.forEach(([x, p], i) => i ? ctx.lineTo(x, ch.pToY(p)) : ctx.moveTo(x, ch.pToY(p))); ctx.stroke(); });
+      ctx.lineWidth = 1;
+    }
+    // top row: Now first, then each marker, moving down a row when labels would collide
+    ctx.strokeStyle = '#71809a'; ctx.beginPath(); ctx.moveTo(Math.round(nx) + 0.5, topY - 4); ctx.lineTo(Math.round(nx) + 0.5, ch.mainH); ctx.stroke();
+    placePill(ctx, taken, [{ x: nx + 5, y: topY + 4 }, { x: nx - 5, y: topY + 4, align: 'right' }], closed() ? 'Now · last close' : 'Now', { bg: 'rgba(30,36,48,.95)', border: '#3a4558' }, ch.plotW);
     markers(b).forEach(m => {
       const x = Math.round(ch.tToX(m.T)) + 0.5;
-      if (x < 0 || x > ch.plotW) return;
+      if (x < 0 || x > ch.plotW + 1) return;
       ctx.strokeStyle = '#8b95a8'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(x, topY - 4); ctx.lineTo(x, ch.mainH); ctx.stroke(); ctx.setLineDash([]);
-      const r = pill(ctx, x - 6, topY + 4, m.sub ? [m.label, m.sub] : m.label, { align: 'right', bg: 'rgba(30,36,48,.95)', border: '#3a4558', clampW: ch.plotW });
-      hits.idx.push(Object.assign(r, { tip: m.tip }));
+      const lines = m.sub ? [m.label, m.sub] : m.label;
+      const cands = [];
+      for (let row = 0; row < 4; row++) { const y = topY + 4 + row * 40; cands.push({ x: x - 6, y, align: 'right' }, { x: x + 6, y }); }
+      const r = placePill(ctx, taken, cands, lines, { bg: 'rgba(30,36,48,.95)', border: '#3a4558' }, ch.plotW);
+      hits.idx.push(Object.assign({}, r, { tip: m.tip }));
     });
-    // Now line
-    if (!expiredSingle(b)) {
-      ctx.strokeStyle = '#71809a'; ctx.beginPath(); ctx.moveTo(Math.round(nx) + 0.5, topY - 4); ctx.lineTo(Math.round(nx) + 0.5, ch.mainH); ctx.stroke();
-      pill(ctx, nx + 5, topY + 4, closed() ? 'Now · last close' : 'Now', { bg: 'rgba(30,36,48,.95)', border: '#3a4558' });
-    }
-    if (st.pricing === 'unavailable' || expiredSingle(b)) { ctx.globalAlpha = 1; return; }
-    const g = payoffGrid(ch, b, !!ch.drag);
-    const beCol = stale ? '#8a92a3' : css('--breakeven');
-    ctx.strokeStyle = beCol; ctx.lineWidth = 1.8;
-    g.lines.forEach(l => { if (l.pts.length < 2) return; ctx.beginPath(); l.pts.forEach(([x, p], i) => i ? ctx.lineTo(x, ch.pToY(p)) : ctx.moveTo(x, ch.pToY(p))); ctx.stroke(); });
-    ctx.lineWidth = 1;
-    // labels at the right end of the zone shown
-    const allIntraday = !b.pretrade && b.legs.every(l => l.product === 'INTRADAY');
-    const hz = currentHorizon(b);
-    let lc = g.last;
-    if (hz && hz.T < end && ch.tToX(hz.T) <= g.x1 + 1) lc = g.cols.filter(c => c.T <= hz.T + 0.5).pop() || g.last;
-    const lcT = lc ? lc.T : end;
-    const atAxisEnd = lcT >= end - 0.5;
-    const endWord = atAxisEnd ? (allIntraday ? 'at 3:20 pm' : 'at expiry') : `at ${E.fmtT(Math.round(lcT / ch.o.tf) * ch.o.tf)}`.replace(/, \w{3} /, ', ');
-    const lx = lc ? lc.x + lc.w : g.x1;
-    if (g.last) {
-      const used = [];
-      lc.roots.slice().sort((p, q) => q - p).forEach(r => {
-        let y = ch.pToY(r) - 4;
-        while (used.some(u => Math.abs(u - y) < 22)) y += 22;
-        used.push(y);
-        const box = pill(ctx, lx - 6, y, `Breakeven ${E.level(r)} ${endWord}`, { align: 'right', valign: 'bottom', fg: beCol, bg: 'rgba(16,20,28,.92)', border: stale ? '#4a5263' : 'rgba(242,184,75,.45)' });
-        hits.idx.push(Object.assign(box, { tip: 'Breakeven: the Nifty level where this position’s P&L is zero at each time' }));
+    if (g) {
+      // breakeven labels at the selected chip's time, or at the right end of the zone shown
+      const allIntraday = !b.pretrade && b.legs.every(l => l.product === 'INTRADAY');
+      const hz = currentHorizon(b);
+      let labelT = g.last ? g.last.T : end, lx = g.x1;
+      if (hz && ch.tToX(hz.T) <= ch.plotW + 1 && ch.tToX(hz.T) >= nx) { labelT = hz.T; lx = ch.tToX(hz.T); }
+      else if (g.last) labelT = Math.min(end, Math.round(g.last.T / ch.o.tf) * ch.o.tf);
+      const atAxisEnd = labelT >= end - 0.5;
+      const endWord = atAxisEnd ? (allIntraday ? 'at 3:20 pm' : 'at expiry') : `at ${E.fmtT(labelT)}`;
+      const rootsAt = labelT > b.nowT ? P.roots(b, labelT, g.lo, g.hi, g.pStep) : [];
+      const beTip = isS3() ? 'Breakeven: the Nifty level where your book’s total P&L is zero at each time' : 'Breakeven: the Nifty level where this position’s P&L is zero at each time';
+      rootsAt.slice().sort((p, q) => q - p).forEach(r => {
+        const y = ch.pToY(r);
+        const cands = [{ x: lx - 6, y: y - 4, valign: 'bottom', align: 'right' }, { x: lx - 6, y: y + 4, align: 'right' }, { x: lx - 140, y: y - 4, valign: 'bottom', align: 'right' }, { x: lx - 140, y: y + 4, align: 'right' }];
+        const box = placePill(ctx, taken, cands, `Breakeven ${E.level(r)} ${endWord}`, { fg: beCol, bg: 'rgba(16,20,28,.94)', border: stale ? '#4a5263' : 'rgba(242,184,75,.45)', clampH: [topY, plotBottom] }, ch.plotW);
+        hits.idx.push(Object.assign({}, box, { tip: beTip }));
       });
-      // edge arrows
-      g.outside.forEach(r => {
-        const up = r > ch.yr.hi;
-        pill(ctx, g.x1 - 6, up ? topY + 34 : ch.mainH * (1 - ch.o.volFrac) - 8, `Breakeven ${E.level(r)} ${up ? '↑' : '↓'}`, { align: 'right', valign: up ? 'top' : 'bottom', fg: beCol, bg: 'rgba(16,20,28,.92)', border: 'rgba(242,184,75,.35)' });
-      });
-      // Profit / Loss labels
-      const col = g.cols[Math.floor(g.cols.length * 0.62)];
-      if (col) {
-        const big = want => col.segs.filter(s => s.profit === want).sort((p, q) => (q.b - q.a) - (p.b - p.a))[0];
-        [[true, 'Profit', stale ? '#8a92a3' : css('--up-2')], [false, 'Loss', stale ? '#8a92a3' : '#e57a89']].forEach(([want, text, color]) => {
-          const s = big(want);
-          if (!s) return;
-          const y1 = ch.pToY(s.b), y2 = ch.pToY(s.a);
-          if (y2 - y1 < 26) return;
-          const yc = Math.max(topY + 64, Math.min(ch.mainH - 26, (y1 + y2) / 2));
-          if (yc < y1 + 8 || yc > y2 - 8) return;
-          ctx.font = '600 12px Inter, system-ui, sans-serif'; ctx.fillStyle = color; ctx.textAlign = 'center';
-          ctx.fillText(text, col.x, yc); ctx.textAlign = 'left';
+      // breakevens beyond the visible range, at the same time as the labels
+      if (labelT > b.nowT) {
+        P.roots(b, labelT, b.S0 * 0.6, b.S0 * 1.4, 5).filter(r => r > ch.yr.hi || r < ch.yr.lo).forEach(r => {
+          const up = r > ch.yr.hi;
+          const y = up ? topY + 50 : plotBottom - 8;
+          placePill(ctx, taken, [{ x: lx - 6, y, align: 'right', valign: up ? 'top' : 'bottom' }, { x: lx - 6, y: up ? y + 26 : y - 26, align: 'right', valign: up ? 'top' : 'bottom' }], `Breakeven ${E.level(r)} ${endWord} ${up ? '↑' : '↓'}`, { fg: beCol, bg: 'rgba(16,20,28,.94)', border: 'rgba(242,184,75,.35)' }, ch.plotW);
         });
       }
-      if (!g.anyRoot && !g.outside.length) pill(ctx, nx + 8, topY + 34, `${g.sign} at every level shown`, { fg: g.sign === 'Profit' ? css('--up-2') : '#e57a89', bg: 'rgba(16,20,28,.92)', border: '#3a4558' });
-      else if (!g.anyRoot) pill(ctx, nx + 8, topY + 34, `${g.sign} at every level shown`, { fg: g.sign === 'Profit' ? css('--up-2') : '#e57a89', bg: 'rgba(16,20,28,.92)', border: '#3a4558' });
-    }
-    // hovered table row: that leg's strike
-    if (st.rowHover && st.rowHover.c.type !== 'FUT') {
-      const y = Math.round(ch.pToY(st.rowHover.c.strike)) + 0.5;
-      if (y > topY && y < ch.mainH) {
-        ctx.strokeStyle = '#9fb4d8'; ctx.setLineDash([1.5, 3]); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ch.plotW, y); ctx.stroke(); ctx.setLineDash([]);
-        pill(ctx, 8, y - 2, `${st.rowHover.c.strike} ${st.rowHover.c.type === 'CE' ? 'Call' : 'Put'} strike`, { valign: 'bottom', fg: '#cfdcf4' });
+      // cone label on a flatter part of the upper edge, with a background so the dashes don't cross it
+      if (st.cone && ch._coneUp && ch._coneUp.length > 3) {
+        const up = ch._coneUp;
+        const cands = [0.82, 0.68, 0.92, 0.55].map(f => { const [x, y] = up[Math.floor((up.length - 1) * f)]; return { x, y: y - 6, align: 'center', valign: 'bottom' }; }).filter(c => c.y > topY + 20);
+        if (cands.length) placePill(ctx, taken, cands, 'Typical move (1 SD)', { font: '500 10.5px Inter, system-ui, sans-serif', fg: stale ? '#9aa2b2' : '#f2a6b4', bg: 'rgba(18,22,29,.9)', padX: 10, lh: 12, required: false }, ch.plotW);
       }
+      // Profit and Loss labels, in the largest region of a column that is clear of other labels
+      if (g.cols.length) {
+        [[true, 'Profit', stale ? '#8a92a3' : css('--up-2')], [false, 'Loss', stale ? '#8a92a3' : '#f0828f']].forEach(([want, text, color]) => {
+          for (const f of [0.62, 0.45, 0.76, 0.3, 0.88]) {
+            const col = g.cols[Math.floor(g.cols.length * f)];
+            if (!col) continue;
+            const s = col.segs.filter(q => q.profit === want).sort((p, q) => (q.b - q.a) - (p.b - p.a))[0];
+            if (!s) break;
+            const y1 = Math.max(topY + 8, ch.pToY(s.b)), y2 = Math.min(plotBottom - 4, ch.pToY(s.a));
+            if (y2 - y1 < 26) continue;
+            const yc = (y1 + y2) / 2;
+            ctx.font = '600 12px Inter, system-ui, sans-serif';
+            const w = ctx.measureText(text).width + 8;
+            const r = { x: col.x - w / 2, y: yc - 9, w, h: 18 };
+            if (overlaps(r, taken)) continue;
+            taken.push(r);
+            ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(text, col.x, yc); ctx.textAlign = 'left';
+            break;
+          }
+        });
+        if (!g.anyRoot) placePill(ctx, taken, [{ x: nx + 8, y: topY + 50 }, { x: nx + 8, y: topY + 90 }, { x: nx + 8, y: plotBottom - 30 }], `${g.sign} at every level shown`, { fg: g.sign === 'Profit' ? css('--up-2') : '#f0828f', bg: 'rgba(16,20,28,.94)', border: '#3a4558' }, ch.plotW);
+      }
+      // hovered table row: that leg's strike
+      if (st.rowHover && st.rowHover.c.type !== 'FUT') {
+        const y = Math.round(ch.pToY(st.rowHover.c.strike)) + 0.5;
+        if (y > topY && y < ch.mainH) {
+          ctx.strokeStyle = '#9fb4d8'; ctx.setLineDash([1.5, 3]); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ch.plotW, y); ctx.stroke(); ctx.setLineDash([]);
+          placePill(ctx, taken, [{ x: 8, y: y - 2, valign: 'bottom' }, { x: 8, y: y + 2 }], `${st.rowHover.c.strike} ${st.rowHover.c.type === 'CE' ? 'Call' : 'Put'} strike`, { fg: '#cfdcf4' }, ch.plotW);
+        }
+      }
+      // the hovered or keyboard point
+      const pt = st.hover && st.hover.T ? st.hover : null;
+      if (pt) dot(ctx, ch.tToX(pt.T), ch.pToY(pt.S), '#ffffff', 3.5);
     }
-    drawExitMarkers(ctx, ch, 'idx');
-    // hovered or keyboard point, and the pin
-    const pt = st.hover && st.hover.T ? st.hover : null;
-    if (pt) dot(ctx, ch.tToX(pt.T), ch.pToY(pt.S), '#ffffff', 3.5);
+    drawExitMarkers(ctx, ch, 'idx', taken);
     if (st.pin) {
       const x = ch.tToX(st.pin.T), y = ch.pToY(st.pin.S);
       ctx.strokeStyle = '#ffd98a'; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, ch.mainH); ctx.stroke(); ctx.setLineDash([]);
@@ -429,143 +514,193 @@
     }
     ctx.globalAlpha = 1;
   });
-  function dot(ctx, x, y, color, r) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#0d1118'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1; }
-  function drawExitMarkers(ctx, ch, which) {
+  // After drawing, keep the first-run hint clear of the labels just placed.
+  idx.on('top', (ctx, ch) => placeHint(ch));
+  function drawExitMarkers(ctx, ch, which, taken) {
     st.exits.forEach(x0 => {
       const x = Math.round(ch.tToX(x0.T)) + 0.5;
       if (x < 0 || x > ch.plotW) return;
       ctx.strokeStyle = '#f5a524'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x, ch.o.padTop); ctx.lineTo(x, ch.mainH); ctx.stroke(); ctx.lineWidth = 1;
-      const r = pill(ctx, x + 5, ch.mainH - 40, x0.label, { bg: '#3a2a0e', fg: '#ffd98a', border: '#7a5a1c' });
-      hits[which].push(Object.assign(r, { tip: x0.tip }));
+      const y = ch.mainH * (1 - ch.o.volFrac) - 30;
+      const r = placePill(ctx, taken || [], [{ x: x + 5, y }, { x: x - 5, y, align: 'right' }, { x: x + 5, y: y - 30 }], x0.label, { bg: '#3a2a0e', fg: '#ffd98a', border: '#7a5a1c' }, ch.plotW);
+      hits[which].push(Object.assign({}, r, { tip: x0.tip }));
     });
   }
   idx.on('timeLabel', T => E.fmtT(Math.max(0, Math.round(T / 3) * 3)));
   idx.on('crosshair', (ctx, ch, p) => {
     if (!payoffOn()) return;
-    const b = book(); const end = axisEnd(b);
+    const end = axisEnd(book());
     if (end == null) return;
-    const T = ch.xToT(p.x);
-    if (T > end + 1) return false;
+    if (ch.xToT(p.x) > end + 1) return false;
+  });
+  // In the future zone the crosshair snaps to the same 5-point level the readout uses (BR-16).
+  idx.on('crossY', (ch, p) => {
+    const z = payoffOn() ? zoneAt(ch, p) : null;
+    if (z && z.T) return { y: ch.pToY(z.S), label: E.level(z.S) };
+    return null;
   });
 
   /* ---------- option chart overlays (S2) ---------- */
   opt.on('extraRange', ch => {
-    if (!payoffOn() || isS3() || st.pricing === 'unavailable') return null;
-    const b = book(); const end = axisEnd(b);
-    if (end == null || !b.legs.length) return null;
-    const l = b.legs[0];
-    if (l.c !== shownOpt()) return null;
-    const vals = [l.avg];
-    const tR = Math.min(end, ch.view.t1);
-    for (let k = 1; k <= 4; k++) {
-      const T = b.nowT + (tR - b.nowT) * k / 4;
-      const half = P.coneHalf(b.S0, E.BASE_IV, b.nowT, T);
-      vals.push(P.legValue(l, b.S0, T, b), P.legValue(l, b.S0 + half * 0.5, T, b), P.legValue(l, b.S0 - half * 0.5, T, b));
+    const b = book();
+    const shown = shownOpt();
+    const vals = [];
+    st.legs.filter(l => l.c === shown).forEach(l => { const o = st.orders[l.id] || {}; if (o.tp) vals.push(o.tp); if (o.sl) vals.push(o.sl); });
+    if (payoffOn() && !isS3() && pointable(b)) {
+      const end = axisEnd(b);
+      const l = b.legs[0];
+      if (l && l.c === shown) {
+        vals.push(l.avg);
+        const tR = Math.min(end, ch.view.t1);
+        for (let k = 1; k <= 6; k++) {
+          const T = b.nowT + (tR - b.nowT) * k / 6;
+          const half = P.coneHalf(b.S0, E.BASE_IV, b.nowT, T) * 0.8;
+          vals.push(P.legValue(l, b.S0, T, b), P.legValue(l, b.S0 + half, T, b), P.legValue(l, b.S0 - half, T, b));
+        }
+      }
     }
+    if (!vals.length) return null;
     return [Math.max(0, Math.min(...vals)), Math.max(...vals)];
   });
   opt.on('below', (ctx, ch) => {
     hits.opt = [];
     if (!payoffOn() || isS3()) return;
-    const b = book(); const end = axisEnd(b);
-    if (end == null || expiredSingle(b)) return;
+    const b = book();
+    if (!pointable(b) && st.pricing !== 'unavailable') return;
+    const end = axisEnd(b);
+    if (end == null || end <= b.nowT) return;
     const nx = ch.tToX(b.nowT), ex = ch.tToX(end);
     ctx.globalAlpha = alpha();
     ctx.fillStyle = css('--future-tint'); ctx.fillRect(nx, 0, ex - nx, ch.mainH);
     ctx.globalAlpha = 1;
   });
   opt.on('above', (ctx, ch) => {
+    const taken = [];
     const b = book();
     const shown = shownOpt();
-    // existing position pills on the option chart
+    const inPayoff = payoffOn() && !isS3();
+    // existing position pills (S1). In Payoff the Paid line takes their place for the held leg.
     st.legs.filter(l => l.c === shown).forEach(l => {
-      const y = Math.round(ch.pToY(l.avg)) + 0.5;
-      if (y < ch.o.padTop || y > ch.mainH) return;
-      const p = l.side * l.qty * (ltp(l.c) - l.avg);
-      ctx.strokeStyle = l.side > 0 ? 'rgba(35,193,165,.55)' : 'rgba(236,74,94,.55)'; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ch.plotW, y); ctx.stroke(); ctx.setLineDash([]);
-      pill(ctx, 70, y, `${l.side > 0 ? 'B' : 'S'} ${l.qty} @ ${l.avg.toFixed(2)}  ${E.signed(p)}`, { valign: 'middle', bg: l.side > 0 ? '#0f3a33' : '#3f1820', fg: '#fff', border: l.side > 0 ? '#1fa48e' : '#ec4a5e' });
       const o = st.orders[l.id] || {};
-      [['tp', 'TP', '#1fa48e'], ['sl', 'SL', '#ec4a5e']].forEach(([k, lab, colr]) => {
+      [['tp', 'TP', COL.up], ['sl', 'SL', COL.down]].forEach(([k, lab, colr]) => {
         if (!o[k]) return;
         const yy = Math.round(ch.pToY(o[k])) + 0.5;
         if (yy < ch.o.padTop || yy > ch.mainH) return;
         ctx.strokeStyle = colr; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(ch.plotW, yy); ctx.stroke(); ctx.setLineDash([]);
-        pill(ctx, ch.plotW - 8, yy, `${lab} ${o[k].toFixed(2)}`, { align: 'right', valign: 'middle', bg: colr, fg: '#fff' });
+        taken.push(pill(ctx, ch.plotW - 8, yy, `${lab} ${o[k].toFixed(2)}`, { align: 'right', valign: 'middle', bg: colr, fg: '#fff' }));
       });
+      if (inPayoff) return;
+      const y = Math.round(ch.pToY(l.avg)) + 0.5;
+      if (y < ch.o.padTop || y > ch.mainH) return;
+      const p = l.side * l.qty * (ltp(l.c) - l.avg);
+      ctx.strokeStyle = l.side > 0 ? 'rgba(11,153,129,.6)' : 'rgba(242,54,69,.6)'; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ch.plotW, y); ctx.stroke(); ctx.setLineDash([]);
+      taken.push(pill(ctx, 70, y, `${l.side > 0 ? 'B' : 'S'} ${l.qty} @ ${l.avg.toFixed(2)}  ${E.signed(p)}`, { valign: 'middle', bg: l.side > 0 ? COL.upBg : COL.downBg, fg: '#fff', border: l.side > 0 ? COL.up : COL.down }));
     });
-    if (!payoffOn() || isS3()) { drawExitMarkers(ctx, ch, 'opt'); return; }
+    if (!inPayoff) { drawExitMarkers(ctx, ch, 'opt', taken); return; }
     const end = axisEnd(b);
-    if (end == null || expiredSingle(b)) return;
+    if (end == null || end <= b.nowT) return;
     const l = b.legs[0];
     if (!l || l.c !== shown) return;
     ctx.globalAlpha = alpha();
     const stale = st.pricing === 'delayed';
-    const nx = ch.tToX(b.nowT), topY = ch.o.padTop;
+    const nx = ch.tToX(b.nowT), topY = ch.o.padTop, plotBottom = ch.mainH * (1 - ch.o.volFrac);
     markers(b).forEach(m => {
       const x = Math.round(ch.tToX(m.T)) + 0.5;
-      if (x < 0 || x > ch.plotW) return;
+      if (x < 0 || x > ch.plotW + 1) return;
       ctx.strokeStyle = '#8b95a8'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(x, topY); ctx.lineTo(x, ch.mainH); ctx.stroke(); ctx.setLineDash([]);
     });
     ctx.strokeStyle = '#71809a'; ctx.beginPath(); ctx.moveTo(Math.round(nx) + 0.5, topY); ctx.lineTo(Math.round(nx) + 0.5, ch.mainH); ctx.stroke();
-    pill(ctx, nx + 5, topY + 4, closed() ? 'Now · last close' : 'Now', { bg: 'rgba(30,36,48,.95)', border: '#3a4558' });
+    taken.push(pill(ctx, nx + 5, topY + 4, closed() ? 'Now · last close' : 'Now', { bg: 'rgba(30,36,48,.95)', border: '#3a4558' }));
     if (st.pricing === 'unavailable') { ctx.globalAlpha = 1; return; }
-    // paid line
+    // paid / sold at / last price line
     const yP = Math.round(ch.pToY(l.avg)) + 0.5;
     ctx.strokeStyle = '#c9d0dc'; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(0, yP); ctx.lineTo(ch.plotW, yP); ctx.stroke(); ctx.setLineDash([]);
-    pill(ctx, Math.max(nx + 8, 8), yP + 4, b.pretrade ? `Last price ₹${l.avg.toFixed(2)}` : l.side > 0 ? `Paid ₹${l.avg.toFixed(2)}` : `Sold at ₹${l.avg.toFixed(2)}`, { fg: '#e9ecf1' });
-    // flat case
+    const paidTxt = b.pretrade ? `Last price ${E.prem(l.avg)}` : l.side > 0 ? `Paid ${E.prem(l.avg)}` : `Sold at ${E.prem(l.avg)}`;
+    placePill(ctx, taken, [{ x: 8, y: yP + 4 }, { x: 8, y: yP - 4, valign: 'bottom' }], paidTxt, { fg: '#e9ecf1' }, ch.plotW);
+    // flat case: premium over time if the index stays where it is
     const pts = [];
     for (let x = nx; x <= Math.min(ch.tToX(end), ch.plotW); x += 3) pts.push([x, P.legValue(l, b.S0, Math.min(end, ch.xToT(x)), b)]);
     ctx.strokeStyle = stale ? '#7d8596' : '#a48bff'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]); ctx.beginPath();
     pts.forEach(([x, v], i) => i ? ctx.lineTo(x, ch.pToY(v)) : ctx.moveTo(x, ch.pToY(v))); ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1;
-    if (pts.length > 2) { const [lx, lv] = pts[pts.length - 1]; pill(ctx, lx - 4, ch.pToY(lv) - 6, `If Nifty stays at ${E.level(b.S0)}`, { align: 'right', valign: 'bottom', fg: stale ? '#9aa2b2' : '#cbbcff' }); }
-    // marker for the hovered (or pinned) time
+    // (the flat-case label is placed after the marker, which matters more)
+    // marker for the hovered or pinned time; with neither, the current premium at Now
     const pt = st.pin || (st.hover && st.hover.T ? st.hover : null);
+    const clampY = y => Math.max(topY + 6, Math.min(plotBottom - 6, y));
     if (pt) {
       const d = P.legDetail(l, pt.S, pt.T, b);
-      const x = ch.tToX(pt.T), y = ch.pToY(d.value);
+      const x = ch.tToX(pt.T), yRaw = ch.pToY(d.value), y = clampY(yRaw);
       ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(x, topY); ctx.lineTo(x, ch.mainH); ctx.stroke(); ctx.setLineDash([]);
-      if (!d.uncertain && d.hi > d.lo) {
+      const hasRange = !d.uncertain && E.roundTick(d.hi) - E.roundTick(d.lo) >= E.TICK;
+      if (hasRange) {
         ctx.strokeStyle = stale ? '#8a92a3' : '#ffd98a'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(x, ch.pToY(d.hi)); ctx.lineTo(x, ch.pToY(d.lo)); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x - 5, ch.pToY(d.hi)); ctx.lineTo(x + 5, ch.pToY(d.hi)); ctx.moveTo(x - 5, ch.pToY(d.lo)); ctx.lineTo(x + 5, ch.pToY(d.lo)); ctx.stroke();
+        const yh = clampY(ch.pToY(d.hi)), yl = clampY(ch.pToY(d.lo));
+        ctx.beginPath(); ctx.moveTo(x, yh); ctx.lineTo(x, yl); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x - 5, yh); ctx.lineTo(x + 5, yh); ctx.moveTo(x - 5, yl); ctx.lineTo(x + 5, yl); ctx.stroke();
         ctx.lineWidth = 1;
       }
       dot(ctx, x, y, stale ? '#c0c6d2' : '#ffd98a', 4.5);
-      const timeTxt = E.fmtT(pt.T, E.dayOfT(pt.T) !== E.dayOfT(b.nowT)).replace(/, (\w{3}) (\d+) (\w{3})$/, ', $1 $2 $3');
-      const lines = [`₹${d.value.toFixed(2)} at ${timeTxt}`, d.uncertain ? 'Too uncertain to price' : `₹${d.lo.toFixed(2)} to ₹${d.hi.toFixed(2)}`];
-      const right = x + 12 + 190 > ch.plotW;
-      const box = pill(ctx, right ? x - 12 : x + 12, y - 10, lines, { align: right ? 'right' : 'left', valign: 'bottom', bg: 'rgba(23,29,39,.97)', border: '#3a4558', fg: stale ? '#9aa2b2' : '#fff' });
-      const pnlTxt = `${E.signed(d.pnl)} on ${l.qty}`;
-      pill(ctx, right ? x - 12 : x + 12, box.y + box.h + 4, pnlTxt, { align: right ? 'right' : 'left', bg: stale ? '#2a303b' : d.pnl >= 0 ? '#0f3a33' : '#3f1820', fg: stale ? '#9aa2b2' : '#fff', border: stale ? '#3a4558' : d.pnl >= 0 ? '#1fa48e' : '#ec4a5e' });
+      if (yRaw !== y) { ctx.fillStyle = '#ffd98a'; ctx.font = '700 11px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(yRaw < y ? '▲' : '▼', x, yRaw < y ? y - 10 : y + 12); ctx.textAlign = 'left'; }
+      const timeTxt = E.fmtT(pt.T, E.dayOfT(pt.T) !== E.dayOfT(b.nowT) || closed());
+      const shownV = b.pretrade ? d.value : E.roundTick(d.value);
+      const shownPnl = b.pretrade ? d.pnl : l.side * l.qty * (shownV - l.avg);
+      const lines = [`${E.prem(shownV)} at ${timeTxt}`, d.uncertain ? 'Too uncertain to price' : hasRange ? `${E.prem(d.lo)} to ${E.prem(d.hi)}` : null].filter(Boolean);
+      const tagTxt = `${E.signed(shownPnl)} on ${l.qty}`;
+      // the price box and its P&L tag move together: right of the point, left of it, then below it
+      const both = [{ dx: 12, align: 'left', up: true }, { dx: -12, align: 'right', up: true }, { dx: 12, align: 'left', up: false }, { dx: -12, align: 'right', up: false }];
+      let chosen = null;
+      for (const c of both) {
+        const box = pill(ctx, x + c.dx, c.up ? y - 10 : y + 10, lines, { align: c.align, valign: c.up ? 'bottom' : 'top', measure: true, clampW: ch.plotW, clampH: [topY, plotBottom - 30] });
+        const tag = pill(ctx, x + c.dx, box.y + box.h + 4, tagTxt, { align: c.align, measure: true, clampW: ch.plotW });
+        if (!overlaps(box, taken) && !overlaps(tag, taken)) { chosen = c; break; }
+      }
+      chosen = chosen || both[x + 12 + 200 > ch.plotW ? 1 : 0];
+      const box = pill(ctx, x + chosen.dx, chosen.up ? y - 10 : y + 10, lines, { align: chosen.align, valign: chosen.up ? 'bottom' : 'top', bg: 'rgba(23,29,39,.97)', border: '#3a4558', fg: stale ? '#9aa2b2' : '#fff', clampW: ch.plotW, clampH: [topY, plotBottom - 30] });
+      taken.push(box, { x: box.x, y: box.y + box.h + 4, w: box.w, h: 22 });
+      pill(ctx, x + chosen.dx, box.y + box.h + 4, tagTxt, { align: chosen.align, clampW: ch.plotW, bg: stale ? '#2a303b' : shownPnl >= 0 ? COL.upBg : COL.downBg, fg: stale ? '#9aa2b2' : '#fff', border: stale ? '#3a4558' : shownPnl >= 0 ? COL.up : COL.down });
+    } else {
+      const cur = ltp(l.c), y = clampY(ch.pToY(cur));
+      dot(ctx, nx, y, '#ffd98a', 4.5);
+      const pnlNow = b.pretrade ? 0 : l.side * l.qty * (cur - l.avg);
+      const box = pill(ctx, nx + 12, y - 10, `${E.prem(cur)} now`, { valign: 'bottom', bg: 'rgba(23,29,39,.97)', border: '#3a4558', fg: '#fff', clampH: [topY + 26, plotBottom - 30], clampW: ch.plotW });
+      if (!b.pretrade) pill(ctx, nx + 12, box.y + box.h + 4, `${E.signed(pnlNow)} on ${l.qty}`, { bg: pnlNow >= 0 ? COL.upBg : COL.downBg, fg: '#fff', border: pnlNow >= 0 ? COL.up : COL.down, clampW: ch.plotW });
     }
-    drawExitMarkers(ctx, ch, 'opt');
+    if (pts.length > 2) { const [lx, lv] = pts[pts.length - 1]; placePill(ctx, taken, [{ x: lx - 4, y: ch.pToY(lv) - 6, align: 'right', valign: 'bottom' }, { x: lx - 4, y: ch.pToY(lv) + 6, align: 'right' }], `If Nifty stays at ${E.level(b.S0)}`, { fg: stale ? '#9aa2b2' : '#cbbcff', clampH: [topY, plotBottom], required: false }, ch.plotW); }
+    drawExitMarkers(ctx, ch, 'opt', taken);
     ctx.globalAlpha = 1;
   });
   opt.on('timeLabel', T => E.fmtT(Math.max(0, Math.round(T / 5) * 5)));
 
   /* ---------- pointer and keyboard on the index chart ---------- */
-  const snapT = (T, b) => { const end = axisEnd(b); return Math.max(b.nowT + 3, Math.min(end, Math.round(T / 3) * 3)); };
+  const snapT = (T, b) => { const end = axisEnd(b); return Math.max(firstT(b), Math.min(end, Math.round(T / 3) * 3)); };
   const snapS = S => Math.round(S / 5) * 5;
+  const clampS = S => Math.max(snapS(idx.yr.lo + 5), Math.min(snapS(idx.yr.hi - 5), S));
   function zoneAt(ch, p) {
     if (!payoffOn()) return null;
-    const b = book(); const end = axisEnd(b);
-    if (end == null || expiredSingle(b) || st.pricing === 'unavailable') return null;
+    const b = book();
+    if (!pointable(b)) return null;
+    const end = axisEnd(b);
     if (p.x > ch.plotW || p.y > ch.mainH || p.y < ch.o.padTop - 6) return null;
     const T = ch.xToT(p.x);
     if (T <= b.nowT) return { past: true };
     if (T > end + 1.5) return null;
     return { T: snapT(T, b), S: snapS(ch.yToP(p.y)) };
   }
-  let pinDrag = false;
+  function markHinted(z) {
+    if (!z || !z.T || st.hinted) return;
+    st.hinted = true; LS.set('hinted', true);
+    const hn = $('#hint'); if (hn) hn.remove();
+  }
+  let pinDrag = null;
   idx.on('hover', (ch, p) => {
     const hit = hits.idx.find(h => p.x >= h.x && p.x <= h.x + h.w && p.y >= h.y && p.y <= h.y + h.h);
     if (hit) showCanvasTip(ch, hit); else hideTip('canvas');
-    if (pinDrag) { const z = zoneAt(ch, p); if (z && z.T) { st.pin = z; log('payoff_pin_move'); } }
     const z = zoneAt(ch, p);
+    if (pinDrag) {
+      if (z && z.T && (z.T !== st.pin.T || z.S !== st.pin.S)) { st.pin = z; pinDrag.moved = true; scheduleD1(); }
+    }
     st.keyPt = null;
     st.hover = z;
-    if (z && z.T && !st.hinted) { st.hinted = true; LS.set('hinted', true); }
+    markHinted(z);
     if (z && z.T) sampleHover(z);
     if (st.pin) {
       const px = ch.tToX(st.pin.T), py = ch.pToY(st.pin.S);
@@ -579,28 +714,43 @@
   idx.on('down', (ch, p) => {
     if (st.pin) {
       const px = ch.tToX(st.pin.T), py = ch.pToY(st.pin.S);
-      if (Math.hypot(p.x - px, p.y - py) < 10) { pinDrag = true; return false; }
+      if (Math.hypot(p.x - px, p.y - py) < 10) { pinDrag = { moved: false }; return false; }
     }
   });
-  window.addEventListener('mouseup', () => { if (pinDrag) { pinDrag = false; renderD1(); } });
+  window.addEventListener('mouseup', () => { if (pinDrag) { if (pinDrag.moved) log('payoff_pin_move'); pinDrag = null; renderD1(); renderTable(); } });
+  let d1Raf = 0;
+  function scheduleD1() { if (d1Raf) return; d1Raf = requestAnimationFrame(() => { d1Raf = 0; renderD1(); renderTable(); }); }
   idx.on('click', (ch, p) => {
     if (!st.later) return;
     const z = zoneAt(ch, p);
     if (!z || !z.T) return;
     placePin(z);
   });
-  idx.on('viewchange', (ch, dragging) => {
+  idx.on('viewchange', (ch, dragging, byUser) => {
     if (!payoffOn()) return;
+    if (byUser && st.horizon !== 'custom') { st.horizon = 'custom'; renderStrip(book()); }
     opt.setView(ch.view.t0, ch.view.t1);
     if (!dragging) cache = null;
     renderD1();
   });
-  opt.on('viewchange', ch => { if (payoffOn() && !isS3()) idx.setView(ch.view.t0, ch.view.t1); });
+  opt.on('viewchange', (ch, dragging, byUser) => {
+    if (!payoffOn() || isS3()) return;
+    if (byUser && st.horizon !== 'custom') { st.horizon = 'custom'; renderStrip(book()); }
+    idx.setView(ch.view.t0, ch.view.t1);
+  });
   opt.on('hover', (ch, p) => {
     const hit = hits.opt.find(h => p.x >= h.x && p.x <= h.x + h.w && p.y >= h.y && p.y <= h.y + h.h);
     if (hit) showCanvasTip(ch, hit); else hideTip('canvas');
   });
   opt.on('leave', () => hideTip('canvas'));
+  // Keyboard: focusing the chart puts the point one candle after Now at the current level (PRD S2/S3).
+  $('#idxCanvas').addEventListener('focus', () => {
+    if (!payoffOn() || st.pin || st.keyPt || !$('#idxCanvas').matches(':focus-visible')) return;
+    const b = book();
+    if (!pointable(b)) return;
+    st.keyPt = st.hover = { T: firstT(b), S: snapS(b.S0) };
+    updateReadout(null); idx.invalidate(); opt.invalidate(); renderTable();
+  });
 
   let sampleT = 0;
   function sampleHover(z) {
@@ -608,71 +758,87 @@
     if (now - sampleT < 2500) return;
     sampleT = now;
     const b = book();
-    log('payoff_hover', `sampled tte=${((P.axisEnd(b) - z.T) / E.SESSION).toFixed(1)}d dist=${Math.round(z.S - b.S0)}`);
+    log('payoff_hover', `sampled tte=${((axisEnd(b) - z.T) / E.SESSION).toFixed(1)}d dist=${Math.round(z.S - b.S0)}`);
   }
   function placePin(z) {
+    if (!st.later || !pointable(book()) || !z || !z.T) return;
     const first = !st.pin;
     st.pin = { T: z.T, S: z.S };
     log(first ? 'payoff_pin_place' : 'payoff_pin_move');
     renderUI();
     idx.invalidate(); opt.invalidate();
-    if (first) setTimeout(() => { const f = $('.d1 button'); if (f) f.focus(); }, 30);
+    if (first) setTimeout(() => { const f = $('#d1 [data-act]') || $('#d1x'); if (f) f.focus(); }, 30);
   }
   function removePin(returnFocus = true) {
     if (!st.pin) return;
-    st.pin = null;
+    const was = st.pin;
     log('payoff_pin_close');
-    setPayoff(() => {}, 'pin');
-    if (returnFocus) $('#idxCanvas').focus();
+    setPayoff(() => { st.pin = null; }, 'pin');
+    if (payoffOn()) { st.keyPt = st.hover = { T: was.T, S: was.S }; updateReadout(null); idx.invalidate(); opt.invalidate(); renderTable(); }
+    if (returnFocus) $(payoffOn() ? '#idxCanvas' : '#payoffBtn').focus();
   }
 
   function moveKeyPoint(dx, dy) {
-    const b = book(); const end = axisEnd(b);
-    if (end == null || expiredSingle(b)) return;
+    const b = book();
+    if (!pointable(b)) return;
+    const end = axisEnd(b);
     // With a pin placed, the arrow keys move the pin (D1); otherwise they move the focused point.
-    const base = st.pin || st.keyPt || { T: b.nowT, S: snapS(b.S0) };
-    let T = base.T + dx * 3, S = base.S + dy;
-    if (!st.pin && !st.keyPt) { T = b.nowT + 3; S = snapS(b.S0); }
-    T = Math.max(b.nowT + 3, Math.min(end, T));
-    const pt = { T, S };
-    if (st.pin) { st.pin = pt; log('payoff_pin_move'); renderD1(); renderTable(); }
+    const seed = { T: firstT(b) - 3, S: snapS(b.S0) };
+    const base = st.pin || st.keyPt || (st.hover && st.hover.T ? st.hover : null);
+    const from = base || seed;
+    let T = Math.round((from.T + dx * 3) / 3) * 3;
+    if (!base && dx === 0) T = firstT(b);
+    T = Math.max(firstT(b), Math.min(end, T));
+    const pt = { T, S: clampS(from.S + dy) };
+    if (st.pin) { st.pin = pt; log('payoff_pin_move'); renderD1(); }
     else { st.keyPt = pt; st.hover = pt; }
+    markHinted(pt);
     keepPointInView(pt);
     updateReadout(null);
     idx.invalidate(); opt.invalidate(); renderTable();
   }
   function keepPointInView(pt) {
     const v = idx.view, span = v.t1 - v.t0;
-    if (pt.T > v.t1 - span * 0.04 || pt.T < v.t0) { const [a, c] = idx.clampView(pt.T - span * 0.7, pt.T + span * 0.3); idx.setView(a, c); opt.setView(a, c); }
+    if (pt.T > v.t1 - span * 0.04 || pt.T < v.t0) { const [a, c] = idx.clampView(pt.T - span * 0.7, pt.T + span * 0.3); idx.setView(a, c); opt.setView(a, c); st.horizon = 'custom'; renderStrip(book()); }
   }
 
   /* ---------- hold-to-peek and other keys ---------- */
   let altDown = false;
   const typing = t => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+  const ARROWS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 5], ArrowDown: [0, -5] };
   window.addEventListener('keydown', e => {
     if (e.key === 'Alt') {
       e.preventDefault(); // stops Windows from moving focus to the browser menu
-      if (e.repeat || typing(e.target) || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      if (e.repeat || typing(e.target) || e.metaKey || e.ctrlKey || e.shiftKey || st.m1) return;
       altDown = true;
-      if (!payoffAvailable()) return;
+      dismissCoach(true);
       if (!st.peek) setPayoff(() => { st.peek = true; }, 'key');
       return;
     }
+    // A modal confirm takes all keyboard input; only Esc (and its own Tab trap) apply.
+    if (st.m1) { if (e.key === 'Escape') onEsc(e); return; }
     if (e.altKey && (e.metaKey || e.ctrlKey) && e.code === 'Digit1') { e.preventDefault(); cancelPeek(); toggleTap(); return; }
-    const arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 5], ArrowDown: [0, -5] };
     if (altDown && e.altKey) {
-      if (arrows[e.key] && st.peek) { e.preventDefault(); const [dx, dy] = arrows[e.key]; moveKeyPoint(dx, dy * (e.shiftKey ? 5 : 1)); return; }
-      if (e.key === 'Enter' && st.peek && st.later && st.keyPt) { e.preventDefault(); placePin(st.keyPt); return; }
-      if (e.key !== 'Shift') { cancelPeek(); }
+      if (ARROWS[e.key] && st.peek) { e.preventDefault(); const [dx, dy] = ARROWS[e.key]; moveKeyPoint(dx, dy * (e.shiftKey ? 5 : 1)); return; }
+      if (e.key === 'Enter' && st.peek) { e.preventDefault(); enterAtPoint(); return; }
+      if (e.key !== 'Shift') cancelPeek();
       return;
     }
     if (e.key === 'Escape') { onEsc(e); return; }
     if (typing(e.target)) return;
     if (payoffOn() && document.activeElement === $('#idxCanvas')) {
-      if (arrows[e.key]) { e.preventDefault(); const [dx, dy] = arrows[e.key]; moveKeyPoint(dx, dy * (e.shiftKey ? 5 : 1)); return; }
-      if (e.key === 'Enter' && st.later) { e.preventDefault(); const pt = st.keyPt || { T: book().nowT + 3, S: snapS(S0()) }; placePin(pt); return; }
+      if (ARROWS[e.key]) { e.preventDefault(); const [dx, dy] = ARROWS[e.key]; moveKeyPoint(dx, dy * (e.shiftKey ? 5 : 1)); return; }
+      if (e.key === 'Enter') { e.preventDefault(); enterAtPoint(); }
     }
   });
+  // Enter pins the focused point, or moves focus into the card when a pin is already placed.
+  function enterAtPoint() {
+    if (!st.later) return;
+    if (st.pin) { const f = $('#d1 [data-act]') || $('#d1x'); if (f) f.focus(); return; }
+    const b = book();
+    if (!pointable(b)) return;
+    placePin(st.keyPt || (st.hover && st.hover.T ? st.hover : { T: firstT(b), S: snapS(b.S0) }));
+  }
   window.addEventListener('keyup', e => {
     if (e.key === 'Alt') { e.preventDefault(); altDown = false; if (st.peek) setPayoff(() => { st.peek = false; }, 'key'); }
   });
@@ -683,65 +849,80 @@
     if (st.popover) { closePopover(); return; }
     if (st.pin) { e.preventDefault(); removePin(); return; }
     if (coachOpen()) { dismissCoach(); return; }
-    if (st.sticky) { setPayoff(() => { st.sticky = false; }, 'esc'); }
+    if (st.sticky) { setPayoff(() => { st.sticky = false; }, 'esc'); $('#payoffBtn').focus(); }
   }
-  const payoffAvailable = () => true; // the charted index (NIFTY50) has listed options
 
   /* ---------- toolbar, buttons ---------- */
+  // One click turns Payoff off whenever the button shows pressed (kept on, or held on by a pin).
   $('#payoffBtn').addEventListener('click', () => {
     dismissCoach(true);
-    setPayoff(() => { st.sticky = !st.sticky; if (!st.sticky) st.pin = null; }, 'button');
+    const on = st.sticky || !!st.pin;
+    setPayoff(() => { if (on) { st.sticky = false; st.pin = null; } else st.sticky = true; }, 'button');
   });
-  function toggleTap() { st.oneTap = !st.oneTap; renderUI(); toast('ok', st.oneTap ? '1-Tap is on. Orders go out instantly.' : '1-Tap is off.'); }
+  function toggleTap() { st.oneTap = !st.oneTap; renderUI(); refreshTip(); toast('ok', st.oneTap ? '1-Tap is on. Orders go out instantly.' : '1-Tap is off.'); }
   $('#tapBtn').addEventListener('click', toggleTap);
-  $('#qMinus').addEventListener('click', () => { st.lots = Math.max(1, st.lots - 1); cache = null; renderUI(); idx.invalidate(); opt.invalidate(); });
-  $('#qPlus').addEventListener('click', () => { st.lots = Math.min(20, st.lots + 1); cache = null; renderUI(); idx.invalidate(); opt.invalidate(); });
+  $('#qMinus').addEventListener('click', () => { st.lots = Math.max(1, st.lots - 1); cache = null; renderUI(); });
+  $('#qPlus').addEventListener('click', () => { st.lots = Math.min(20, st.lots + 1); cache = null; renderUI(); });
   $('#buyBtn').addEventListener('click', () => trade(1));
   $('#sellBtn').addEventListener('click', () => trade(-1));
   $('#cpSwitch').addEventListener('click', () => {
-    if (!st.opt || st.opt.type === 'FUT') return;
-    st.opt = C(st.opt.type === 'CE' ? 'PE' : 'CE', st.opt.strike, st.opt.expKey);
-    cache = null; rebuildData(); if (payoffOn()) { idx.limitT = opt.limitT = axisEnd(book()); }
+    const c = shownOpt();
+    if (!c || c.type === 'FUT') return;
+    if (heldSingle()) { toast('ok', 'Payoff shows your position. Turn Payoff off to switch Call and Put.'); return; }
+    st.opt = C(c.type === 'CE' ? 'PE' : 'CE', c.strike, c.expKey);
+    cache = null; rebuildData(); if (payoffOn()) refit(book());
   });
   $('#railPositions').addEventListener('click', () => openPopover('positions'));
   $('#navPositions').addEventListener('click', () => openPopover('positions'));
   $('#pnlPill').addEventListener('click', () => openPopover('positions'));
   $('#railChain').addEventListener('click', () => openPopover('chain'));
 
+  // The order buttons always trade the contract named in the header beside them.
   function trade(side) {
-    const c = st.opt;
+    const c = shownOpt();
     if (!c) { toast('err', 'Pick a contract from the option chain first.'); return; }
+    if (closed()) { toast('err', `Market closed. Orders open at 9:15 am on ${E.DAYS[E.TODAY + 1].label}.`); return; }
+    if (expired(c)) { toast('err', `${c.label} has expired.`); return; }
     const qty = st.lots * E.LOT, px = ltp(c);
-    const wasS3 = isS3(), wasOn = payoffOn();
-    const ex = st.legs.find(l => l.c === c && l.product === 'INTRADAY') || st.legs.find(l => l.c === c);
+    const before = snapshot();
+    // BR-02: fills in the same contract merge into one position at the average price.
+    const ex = st.legs.find(l => l.c === c);
     if (ex && ex.side !== side) {
       const q = Math.min(ex.qty, qty);
       st.realised += ex.side * q * (px - ex.avg);
       ex.qty -= q;
       if (ex.qty === 0) st.legs = st.legs.filter(l => l !== ex);
       if (qty > q) st.legs.push(leg(c, side, px, 'INTRADAY', qty - q));
-    } else if (ex && ex.side === side && ex.product === 'INTRADAY') {
+    } else if (ex) {
       ex.avg = (ex.avg * ex.qty + px * qty) / (ex.qty + qty); ex.qty += qty;
     } else st.legs.push(leg(c, side, px, 'INTRADAY', qty));
-    toast('ok', `${side > 0 ? 'Bought' : 'Sold'} ${qty} ${c.label} at ₹${px.toFixed(2)}`);
+    toast('ok', `${side > 0 ? 'Bought' : 'Sold'} ${qty} ${c.label} at ${E.prem(px)}`);
     cache = null;
-    afterPositionsChange(wasS3, wasOn);
+    afterPositionsChange(before);
   }
-  function afterPositionsChange(wasS3, wasOn) {
-    if (st.pin && isS3() !== wasS3) st.pin = null;
-    if (wasOn && payoffOn()) { const b = book(); idx.limitT = opt.limitT = axisEnd(b); const h = currentHorizon(b); if (h && isS3() !== wasS3) fitTo(h.T); }
+  const snapshot = () => ({ s3: isS3(), end: axisEnd(book()), on: payoffOn() });
+  function afterPositionsChange(before) {
+    // scheduled exits and targets/stops go with the positions they belong to (BR-21)
+    st.exits = st.exits.map(x => Object.assign({}, x, { legIds: x.legIds.filter(i => st.legs.some(l => l.id === i)) })).filter(x => x.legIds.length);
+    Object.keys(st.orders).forEach(id => { if (!st.legs.some(l => String(l.id) === id)) delete st.orders[id]; });
+    if (st.pin && isS3() !== before.s3) st.pin = null;
+    const b = book();
+    if (before.on && payoffOn()) {
+      const end = axisEnd(b);
+      if (end !== before.end || isS3() !== before.s3 || (st.horizon && st.horizon !== 'custom' && !horizons(b).some(h => h.key === st.horizon))) { st.horizon = null; refit(b); }
+      else idx.limitT = opt.limitT = end;
+    }
     if (st.m1) renderM1();
     rebuildData();
   }
   function exitLeg(id) {
-    const wasS3 = isS3(), wasOn = payoffOn();
+    const before = snapshot();
     const l = st.legs.find(x => x.id === id);
     if (l) { st.realised += l.side * l.qty * (ltp(l.c) - l.avg); st.legs = st.legs.filter(x => x !== l); toast('ok', `Exited ${l.c.label}`); }
     const o = st.others.find(x => x.id === id);
-    if (o) { st.realised += o.side * o.qty * (o.ltp - o.avg); st.others = st.others.filter(x => x !== o); toast('ok', `Exited ${o.label}`); }
-    st.exits = st.exits.filter(x => x.legIds.some(i => st.legs.find(l2 => l2.id === i)));
+    if (o) { st.realisedOther += o.side * o.qty * (o.ltp - o.avg); st.others = st.others.filter(x => x !== o); toast('ok', `Exited ${o.label}`); }
     cache = null;
-    afterPositionsChange(wasS3, wasOn);
+    afterPositionsChange(before);
     if (st.popover === 'positions') renderPopover();
   }
 
@@ -751,12 +932,11 @@
     const s3 = isS3();
     const T = pt.T, S = pt.S;
     const out = { head: `Nifty ${E.level(S)} · ${E.fmtT(T)}` };
-    const total = P.pnl(b, S, T);
-    out.pnl = total; out.label = s3 ? 'Total P&L' : 'P&L';
+    out.pnl = P.pnl(b, S, T); out.label = s3 ? 'Total P&L' : 'P&L';
     if (!s3 && b.legs.length === 1) {
       const d = P.legDetail(b.legs[0], S, T, b);
-      if (d.uncertain) out.unc = `Too uncertain to price. Time value left: ₹${d.timeValue.toFixed(2)}. Worth at expiry at this level: ₹${d.intrinsic.toFixed(2)}`;
-      else out.range = d.pnlLo === d.pnlHi ? null : `Range ${E.signed(d.pnlLo)} to ${E.signed(d.pnlHi)}`;
+      if (d.uncertain) out.unc = `Too uncertain to price. Time value left: ${E.prem(d.timeValue)}. Worth at expiry at this level: ${E.prem(d.intrinsic)}`;
+      else out.range = Math.abs(d.pnlHi - d.pnlLo) < 1 ? null : `Range ${E.signed(d.pnlLo)} to ${E.signed(d.pnlHi)}`;
     } else {
       const [lo, hi] = P.range(b, S, T);
       out.range = Math.abs(hi - lo) < 1 ? null : `Range ${E.signed(lo)} to ${E.signed(hi)}`;
@@ -764,48 +944,66 @@
     out.flat = `If Nifty stays at ${E.level(b.S0)}: ${E.signed(P.pnl(b, b.S0, T))}`;
     return out;
   }
-  let liveTimer = null;
+  // Current P&L at Now: the same figure the platform shows (from last prices, no projections, BR-13).
+  const pnlNow = b => b.pretrade ? 0 : b.legs.reduce((a, l) => a + l.side * l.qty * (ltp(l.c) - l.avg), 0);
+  let liveTimer = null, lastLive = '';
+  function announce(key, text) {
+    if (key === lastLive) return;
+    lastLive = key;
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(() => { if (payoffOn()) $('#live').textContent = text; }, 700);
+  }
   function updateReadout(p) {
     const wrap = $('#idxWrap');
     let ro = $('#readout');
-    const z = st.hover;
-    if (!payoffOn() || !z) { if (ro) ro.remove(); return; }
-    if (!ro) { ro = document.createElement('div'); ro.id = 'readout'; ro.className = 'readout'; wrap.appendChild(ro); }
     const b = book();
-    const stale = st.pricing === 'delayed';
-    ro.classList.toggle('stale', stale);
-    let html;
-    if (z.past) {
-      const n = P.pnl(b, b.S0, b.nowT);
-      html = `<div class="h">Now · ${esc(E.fmtT(b.nowT))}</div><div class="p num ${n >= 0 ? 'up' : 'down'}"><small>Now:</small>P&amp;L ${E.signed(n)}</div><div class="ft">Model estimate, not a forecast</div>`;
+    const z = st.hover;
+    if (!payoffOn() || !pointable(b) || (st.pin && (!z || z.past))) { if (ro) ro.remove(); return; }
+    if (!ro) { ro = document.createElement('div'); ro.id = 'readout'; ro.className = 'readout'; wrap.appendChild(ro); }
+    ro.classList.toggle('stale', st.pricing === 'delayed');
+    const ch = idx;
+    let html, x, y, docked = false;
+    if (!z || z.past) {
+      // Pointer over past candles, outside the zone, or off the chart: show Now values (BR-13).
+      const n = pnlNow(b);
+      const label = b.pretrade ? 'Not holding' : isS3() ? 'Total P&L' : 'P&L';
+      html = `<div class="h">Now · ${esc(E.fmtT(b.nowT))}</div><div class="p num ${n >= 0 ? 'up' : 'down'}"><small>Now:</small>${b.pretrade ? `Last price ${E.prem(b.legs[0].avg)}` : `${label} ${E.signed(n)}`}</div><div class="ft">Model estimate, not a forecast</div>`;
+      if (z && z.past && p) { x = p.x; y = p.y; } else docked = true;
+      if (z && z.past) announce('now', `Now. ${b.pretrade ? 'Not holding' : `${label} ${E.signed(n)}`}.`);
     } else {
       const m = readoutModel(z);
       html = `<div class="h num">${esc(m.head)}</div><div class="p num ${m.pnl >= 0 ? 'up' : 'down'}"><small>${m.label}</small>${E.signed(m.pnl)}</div>` +
         (m.unc ? `<div class="u">${esc(m.unc)}</div>` : m.range ? `<div class="r num">${esc(m.range)}</div>` : '') +
         `<div class="f num">${esc(m.flat)}</div><div class="ft">Model estimate, not a forecast</div>`;
-      clearTimeout(liveTimer);
-      liveTimer = setTimeout(() => { $('#live').textContent = `${m.head}. ${m.label} ${E.signed(m.pnl)}. ${m.unc || m.range || ''}. ${m.flat}.`; }, 700);
+      announce(`${z.T}:${z.S}`, [m.head, `${m.label} ${E.signed(m.pnl)}`, m.unc || m.range, m.flat].filter(Boolean).join('. ') + '.');
+      x = p ? p.x : ch.tToX(z.T); y = p ? p.y : ch.pToY(z.S);
     }
-    ro.innerHTML = html;
-    const ch = idx;
-    const x = p ? p.x : ch.tToX(z.T), y = p ? p.y : ch.pToY(z.S);
+    setHTML(ro, html);
     const w = ro.offsetWidth, h = ro.offsetHeight;
-    let lx = x + 18, ly = y + 18;
-    if (lx + w > ch.plotW - 4) lx = x - 18 - w;
-    if (ly + h > ch.mainH - 4) ly = y - 18 - h;
+    let lx, ly;
+    if (docked) {
+      // docked beside the Now line, over the past candles where possible
+      const nx = ch.tToX(b.nowT);
+      lx = nx - 10 - w >= 4 ? nx - 10 - w : nx + 10;
+      ly = ch.o.padTop + 36;
+    } else {
+      lx = x + 18; ly = y + 18;
+      if (lx + w > ch.plotW - 4) lx = x - 18 - w;
+      if (ly + h > ch.mainH - 4) ly = y - 18 - h;
+    }
     ro.style.left = Math.max(4, lx) + 'px'; ro.style.top = Math.max(ch.o.padTop, ly) + 'px';
   }
 
   /* ---------- UI render ---------- */
+  const bannerShown = () => { const k = payoffOn() ? bannerKind() : null; return !!k && !(k === 'closed' && st.closedBannerHidden); };
   function renderUI() {
     const b = book();
     const on = payoffOn();
-    const T = nowT(), S = S0();
+    const S = S0();
     const chg = S - E.PREV_CLOSE;
     const chgTxt = `${chg >= 0 ? '+' : '−'}${Math.abs(chg).toFixed(2)} (${(Math.abs(chg) / E.PREV_CLOSE * 100).toFixed(2)}%)`;
     ['#topIdx', '#idxLtp'].forEach(s => { $(s).textContent = S.toFixed(2); });
     ['#topChg', '#idxChg'].forEach(s => { $(s).textContent = chgTxt; $(s).className = (s === '#topChg' ? 'chg ' : 'sub ') + 'num ' + (chg >= 0 ? 'up' : 'down'); });
-    // option header
     const c = shownOpt();
     if (c) {
       const lp = ltp(c), pc = optPrevClose(c), oc = lp - pc;
@@ -816,55 +1014,62 @@
       $('#optChg').className = 'sub num ' + (oc >= 0 ? 'up' : 'down');
     } else { $('#optTitle').textContent = 'No contract loaded'; $('#optType').textContent = ''; $('#optLtp').textContent = ''; $('#optChg').textContent = ''; }
     $('#qVal').textContent = st.lots * E.LOT; $('#qLots').textContent = `${st.lots} Lot${st.lots > 1 ? 's' : ''}`;
-    // P&L pill
     const open = st.legs.reduce((a, l) => a + l.side * l.qty * (ltp(l.c) - l.avg), 0) + st.others.reduce((a, o) => a + o.side * o.qty * (o.ltp - o.avg), 0);
-    const tot = open + st.realised;
+    const tot = open + st.realised + st.realisedOther;
     $('#pnlTop').textContent = (tot > 0 ? '+' : tot < 0 ? '−' : '') + '₹' + E.inr(Math.abs(tot), 2).s;
     $('#pnlTop').className = 'num ' + (tot > 0 ? 'up' : tot < 0 ? 'down' : '');
     $('#tapBtn').setAttribute('aria-pressed', st.oneTap); $('#tapLbl').textContent = st.oneTap ? '1-Tap ON' : '1-Tap OFF';
-    // payoff button
     const btn = $('#payoffBtn');
     btn.setAttribute('aria-pressed', st.sticky || !!st.pin);
-    btn.classList.toggle('peek', st.peek && !st.sticky);
+    btn.setAttribute('aria-keyshortcuts', 'Alt');
+    btn.classList.toggle('peek', st.peek && !st.sticky && !st.pin);
     $('#payoffKey').textContent = keyName();
-    $('#emLegend').style.display = on ? 'none' : '';
-    // chart padding for the payoff strip and banner
-    const bannerH = on && bannerKind() ? 40 : 0;
-    $('#idxWrap').style.setProperty('--bh', bannerH + 'px');
+    $('#payoffDesc').textContent = `Hold ${keyWord()} to peek at your breakeven and P&L, or press to keep Payoff on.`;
+    renderBanner();
+    const bh = bannerShown() && $('#n2') ? $('#n2').offsetHeight + 6 : 0;
+    $('#idxWrap').style.setProperty('--bh', bh + 'px');
     renderStrip(b);
     const strip = $('#pstrip');
-    idx.o.padTop = on ? (strip ? strip.offsetHeight : 40) + 12 + bannerH : 8;
-    opt.o.padTop = on && !isS3() ? 12 + bannerH : 8;
-    renderBanner(); renderTable(); renderMsgs(b); renderD1();
-    $('#oiLabel').style.display = on && isS3() ? 'none' : '';
+    idx.o.padTop = on ? (strip ? strip.offsetHeight : 0) + 12 + bh : 8;
+    opt.o.padTop = on && !isS3() ? 12 + bh : 8;
+    renderTable(); renderMsgs(b); renderD1();
+    const oiOn = !!c && !(on && isS3());
+    $('#oiLabel').style.display = oiOn ? '' : 'none';
+    if (oiOn) { const lastOI = OI.filter(q => q.T <= nowT()).pop(); $('#oiLabel').innerHTML = `OI: <b>${lastOI ? (lastOI.v / 1e5).toFixed(0) : '—'}L</b>`; $('#oiLabel').style.top = (opt.subTop + 8) + 'px'; }
+    // the existing Exp. Move legend sits beside its bands in S1
+    const em = $('#emLegend');
+    em.style.display = on ? 'none' : '';
+    if (!on && idx.yr) em.style.top = Math.max(8, idx.pToY(EM50) - 26) + 'px';
     idx.invalidate(); opt.invalidate();
-    if (st.hover) updateReadout(null);
+    updateReadout(null);
   }
   function summary(b) {
     if (isS3()) {
-      const nExp = new Set(b.legs.map(l => l.c.expKey)).size;
-      return `${b.legs.length} positions · ${nExp} ${nExp === 1 ? 'expiry' : 'expiries'}`;
+      const n = positionCount(), nExp = new Set(b.all.map(l => l.c.expKey)).size;
+      if (expiredBook(b)) return `${n} positions settled today`;
+      return `${n} positions · ${nExp} ${nExp === 1 ? 'expiry' : 'expiries'}`;
     }
+    if (expiredSingle(b)) { const l = b.settled[0]; const v = E.intrinsic(l.c, E.settleS(l.c)); return `Expired · settled at ${E.prem(v)} · P&L ${E.signed(l.side * l.qty * (v - l.avg))}`; }
     const l = b.legs[0];
     if (!l) return '';
-    if (b.pretrade) return `Not holding · priced as a buy of ${l.qty} at ₹${l.avg.toFixed(2)} (last price)`;
-    if (expiredSingle(b)) { const v = E.intrinsic(l.c, b.S0); return `Expired · settled at ₹${v.toFixed(2)} · P&L ${E.signed(l.side * l.qty * (v - l.avg))}`; }
-    return `${l.side > 0 ? 'Buy' : 'Sell'} ${l.qty} ${l.c.label} at ₹${l.avg.toFixed(2)}<span class="muted"> · ${l.product === 'INTRADAY' ? 'Intraday' : 'Carry forward'}</span>`;
+    if (b.pretrade) return `Not holding · priced as a buy of ${l.qty} at ${E.prem(l.avg)} (last price)`;
+    return `${l.side > 0 ? 'Buy' : 'Sell'} ${l.qty} ${l.c.label} at ${E.prem(l.avg)}<span class="muted"> · ${l.product === 'INTRADAY' ? 'Intraday' : 'Carry forward'}</span>`;
   }
   function renderStrip(b) {
     let el = $('#pstrip');
-    if (!payoffOn() || (!b.legs.length)) { if (el) el.remove(); return; }
+    if (!payoffOn() || !b.all.length) { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('div'); el.id = 'pstrip'; el.className = 'pstrip'; $('#idxWrap').appendChild(el); }
     el.style.top = 'var(--bh, 0px)';
-    const hs = expiredSingle(b) ? [] : horizons(b);
+    const live = pointable(b) || st.pricing === 'unavailable';
+    const hs = live ? horizons(b) : [];
     const cur = currentHorizon(b);
     const others = otherCount();
-    const changed = setHTML(el, `<span class="sum">${summary(b)}</span>` +
-      (hs.length ? `<div class="chips" role="group" aria-label="Fit the view to">${hs.map(h => `<button type="button" data-h="${h.key}" aria-pressed="${cur && cur.key === h.key}">${esc(h.label)}</button>`).join('')}</div>` : '') +
-      `<button type="button" class="tog" id="coneTog" aria-pressed="${st.cone}"><span class="sw"></span>Expected move</button>` +
-      (others ? `<span class="ochip" data-tip="others">${others} ${others === 1 ? 'position' : 'positions'} on other charts</span>` : '') +
+    const changed = setHTMLKeepFocus(el, `<span class="sum">${summary(b)}</span>` +
+      (hs.length ? `<div class="chips" role="group" aria-label="Fit the view to">${hs.map(h => `<button type="button" data-h="${h.key}" aria-pressed="${!!cur && cur.key === h.key}">${esc(h.label)}</button>`).join('')}</div>` : '') +
+      (live ? `<button type="button" class="tog" id="coneTog" aria-pressed="${st.cone}"><span class="sw"></span>Expected move</button>` : '') +
+      (others ? `<button type="button" class="ochip" data-tip="others" aria-label="${others} ${others === 1 ? 'position' : 'positions'} on other charts: ${esc(st.others.map(o => o.und).join(', '))}">${others} ${others === 1 ? 'position' : 'positions'} on other charts</button>` : '') +
       `<span class="mlabel">Model estimate, not a forecast <button type="button" data-tip="model" aria-label="About these values"><svg class="i"><use href="#i-info"/></svg></button></span>` +
-      `<span class="mode">${st.sticky || st.pin ? 'Payoff on · Esc to close' : `Holding ${esc(keyName())} · release to hide`}</span>`);
+      `<span class="mode">${st.sticky || st.pin ? 'Payoff on · Esc to close' : `Holding ${esc(keyName())} · release to hide`}</span>`, n => n.dataset.h || n.id || n.dataset.tip);
     if (!changed) return;
     el.querySelectorAll('[data-h]').forEach(bt => bt.addEventListener('click', () => {
       st.horizon = bt.dataset.h;
@@ -872,62 +1077,74 @@
       if (h) fitTo(h.T);
       cache = null; log('payoff_horizon_change', `to=${h ? h.label : ''}`); renderUI();
     }));
-    $('#coneTog').addEventListener('click', () => { st.cone = !st.cone; log('payoff_cone_toggle', `on=${st.cone}`); renderUI(); });
+    const tog = $('#coneTog');
+    if (tog) tog.addEventListener('click', () => { st.cone = !st.cone; log('payoff_cone_toggle', `on=${st.cone}`); renderUI(); });
     bindTips(el);
   }
+  // When the market is closed, that is the message that matters, even if a feed is also delayed.
   function bannerKind() {
-    if (st.pricing === 'delayed') return 'stale';
     if (st.pricing === 'unavailable') return 'err';
     if (closed()) return 'closed';
+    if (st.pricing === 'delayed') return 'stale';
     return null;
   }
   function renderBanner() {
     let el = $('#n2');
-    const k = payoffOn() ? bannerKind() : null;
-    if (!k || st.closedBannerHidden && k === 'closed') { if (el) el.remove(); return; }
+    if (!bannerShown()) { if (el) el.remove(); return; }
+    const k = bannerKind();
     if (!el) { el = document.createElement('div'); el.id = 'n2'; el.setAttribute('role', 'status'); $('#work').appendChild(el); }
     el.className = 'n2' + (k === 'err' ? ' err' : k === 'closed' ? ' closed' : '');
     el.style.top = '84px';
-    const asOf = E.clock(st.clock >= E.CLOSE ? E.CLOSE : st.clock).replace(/ (am|pm)/, '') ;
-    const stamp = (() => { const m = st.clock - 1; const h = Math.floor(m / 60), mi = m % 60; return `${((h + 11) % 12) + 1}:${String(mi).padStart(2, '0')}:15`; })();
+    const m = Math.min(st.clock, E.CLOSE) - 1;
+    const stamp = `${((Math.floor(m / 60) + 11) % 12) + 1}:${String(m % 60).padStart(2, '0')}:15 ${m >= 720 ? 'pm' : 'am'}`;
     const html = k === 'stale' ? `<svg class="i"><use href="#i-clock"/></svg><span>Prices are delayed. Payoff values as of ${stamp}.</span>`
       : k === 'closed' ? `<svg class="i"><use href="#i-clock"/></svg><span>Market closed. Values use the last close; future times start at 9:15 am on ${E.DAYS[E.TODAY + 1].label}.</span><span class="act"><button class="x" id="n2x" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></span>`
       : `<svg class="i"><use href="#i-alert"/></svg><span>Payoff can’t load option prices right now.</span><span class="act"><button id="n2retry">Retry</button></span>`;
-    void asOf;
     if (!setHTML(el, html)) return;
     const x = $('#n2x'); if (x) x.addEventListener('click', () => { st.closedBannerHidden = true; renderUI(); });
-    const r = $('#n2retry'); if (r) r.addEventListener('click', () => { r.textContent = 'Retrying…'; r.disabled = true; setTimeout(() => { st.pricing = 'live'; cache = null; log('payoff_retry'); renderUI(); }, 700); });
+    const r = $('#n2retry'); if (r) r.addEventListener('click', () => { r.textContent = 'Retrying…'; r.disabled = true; setTimeout(() => { st.pricing = 'live'; cache = null; log('payoff_retry'); renderUI(); renderDemo(); }, 700); });
   }
   function renderMsgs(b) {
     const wrap = $('#idxWrap');
     let m = $('#cmsg');
     const on = payoffOn();
-    const empty = on && !b.legs.length;
-    if (empty) {
+    if (on && !b.all.length) {
       if (!m) { m = document.createElement('div'); m.id = 'cmsg'; m.className = 'cmsg'; wrap.appendChild(m); }
-      m.innerHTML = '<div>Pick a contract on the option chart to see its payoff</div>';
+      setHTML(m, '<div>Pick a contract on the option chart to see its payoff</div>');
     } else if (m) m.remove();
     let ld = $('#loading');
-    if (on && performance.now() < st.loadingUntil && b.legs.length) {
+    if (on && performance.now() < st.loadingUntil && pointable(b)) {
       if (!ld) { ld = document.createElement('div'); ld.id = 'loading'; ld.className = 'loading'; wrap.appendChild(ld); }
       ld.style.top = (idx.o.padTop + 6) + 'px';
       ld.textContent = isS3() ? 'Pricing your positions…' : 'Pricing your position…';
     } else if (ld) ld.remove();
     let hn = $('#hint');
-    if (on && !st.hinted && b.legs.length && !expiredSingle(b) && st.pricing !== 'unavailable') {
+    if (on && !st.hinted && pointable(b)) {
       if (!hn) { hn = document.createElement('div'); hn.id = 'hint'; hn.className = 'hint'; wrap.appendChild(hn); }
-      hn.textContent = 'Move your pointer into the shaded area to see P&L at any level and time';
-      const x0 = idx.tToX(b.nowT);
-      hn.style.left = Math.max(12, Math.min(idx.plotW - 270, x0 + (idx.plotW - x0) * 0.25)) + 'px';
-      hn.style.top = (idx.mainH * 0.72) + 'px';
+      hn.textContent = 'Move your pointer into the shaded area, or focus the chart and use the arrow keys, to see P&L at any level and time';
     } else if (hn) hn.remove();
-    // option panel when nothing is loaded
     let om = $('#optEmpty');
     if (!shownOpt()) {
-      if (!om) { om = document.createElement('div'); om.id = 'optEmpty'; om.className = 'cmsg'; om.style.pointerEvents = 'auto'; $('#optWrap').appendChild(om); }
-      om.innerHTML = '<div>No contract loaded.<br><button class="btn sec" id="openChain" style="margin-top:10px">Open option chain</button></div>';
-      $('#openChain').addEventListener('click', () => openPopover('chain'));
+      if (!om) {
+        om = document.createElement('div'); om.id = 'optEmpty'; om.className = 'cmsg'; om.style.pointerEvents = 'auto'; $('#optWrap').appendChild(om);
+        om.innerHTML = '<div>No contract loaded.<br><button class="btn sec" id="openChain" style="margin-top:10px">Open option chain</button></div>';
+        $('#openChain').addEventListener('click', () => openPopover('chain'));
+      }
     } else if (om) om.remove();
+  }
+  // Keep the first-run hint away from labels drawn on the chart.
+  function placeHint(ch) {
+    const hn = $('#hint');
+    if (!hn) return;
+    const b = book();
+    const nx = Math.max(0, ch.tToX(b.nowT)), w = 270, h = hn.offsetHeight || 44;
+    const zoneW = Math.min(ch.plotW, ch.tToX(axisEnd(b) || b.nowT)) - nx;
+    const bottom = ch.mainH * (1 - ch.o.volFrac);
+    const cands = [[nx + zoneW * 0.25, bottom - h - 12], [nx + zoneW * 0.25, ch.o.padTop + 70], [nx + 12, bottom - h - 60], [nx + zoneW * 0.5 - w / 2, (ch.o.padTop + bottom) / 2]];
+    const taken = (ch._taken || []).concat($('#readout') ? [{ x: $('#readout').offsetLeft, y: $('#readout').offsetTop, w: $('#readout').offsetWidth, h: $('#readout').offsetHeight }] : []);
+    let pick = cands.find(([x, y]) => !overlaps({ x, y, w, h }, taken, 6)) || cands[0];
+    hn.style.left = Math.max(12, Math.min(ch.plotW - w - 8, pick[0])) + 'px';
+    hn.style.top = Math.max(ch.o.padTop, pick[1]) + 'px';
   }
 
   /* ---------- S3 table ---------- */
@@ -938,105 +1155,146 @@
     const b = book();
     if (!el) { el = document.createElement('div'); el.id = 'ptable'; el.className = 'ptable'; wrap.appendChild(el); }
     el.classList.toggle('stale', st.pricing === 'delayed');
-    el.style.top = (bannerKind() ? 40 : 0) + 'px';
+    el.style.top = (bannerShown() && $('#n2') ? $('#n2').offsetHeight + 6 : 0) + 'px';
     const unavailable = st.pricing === 'unavailable';
-    const pt = st.pin || (st.hover && st.hover.T ? st.hover : null);
+    const loading = performance.now() < st.loadingUntil;
+    const pt = pointable(b) ? (st.pin || (st.hover && st.hover.T ? st.hover : null)) : null;
     const T = pt ? pt.T : b.nowT, S = pt ? pt.S : b.S0;
     const title = pt ? `Payoff at Nifty ${E.level(S)} · ${E.fmtT(T)}${st.pin ? ' · Pinned' : ''}` : 'Payoff now';
     const narrow = wrap.clientWidth < 600, vnarrow = wrap.clientWidth < 520;
     const groups = {};
-    b.legs.forEach(l => { (groups[l.c.expKey] = groups[l.c.expKey] || { e: l.c.exp, legs: [] }).legs.push(l); });
+    b.all.forEach(l => { (groups[l.c.expKey] = groups[l.c.expKey] || { e: l.c.exp, legs: [] }).legs.push(l); });
     const order = Object.values(groups).sort((x, y) => x.e.T - y.e.T);
     order.forEach(g => g.legs.sort((x, y) => (x.c.strike || 0) - (y.c.strike || 0)));
     const stCls = s => ({ 'Live': 'live', 'Expires today': 'today', 'Expired': 'exp', 'Settled': 'set', 'Squared off': 'sq' }[s]);
+    const cls = v => unavailable || loading ? '' : (v >= 0 ? 'up' : 'down');
+    const sk = '<span class="skel"></span>';
     let rows = '';
+    let settledSum = 0;
     order.forEach(g => {
       rows += `<tr class="g"><td colspan="7">${g.e.info.short} · ${g.e.kind}${g.e.movedFrom ? ` (moved from ${g.e.movedFrom.short})` : ''} · ${g.legs.length} ${g.legs.length === 1 ? 'leg' : 'legs'}</td></tr>`;
       g.legs.forEach(l => {
+        const isSettled = expired(l.c);
         const d = P.legDetail(l, S, T, b);
+        // "Payoff now" values each leg at its last price, the figure the platform shows
+        const value = isSettled ? d.value : pt ? d.value : ltp(l.c);
+        const pl = l.side * l.qty * (value - l.avg);
+        if (isSettled) settledSum += pl;
         const fut = l.c.type === 'FUT';
         const sideTxt = fut ? (l.side > 0 ? 'Buy fut' : 'Sell fut') : (l.side > 0 ? 'Buy' : 'Sell');
-        const rng = unavailable ? '' : d.uncertain ? '<span class="unc">Too uncertain to price</span>' : (fut || d.pnlLo === d.pnlHi) ? '' : `<span class="rg">range ${E.signed(d.pnlLo)} to ${E.signed(d.pnlHi)}</span>`;
+        const rng = unavailable || loading || !pt || isSettled ? '' : d.uncertain ? '<span class="unc">Too uncertain to price</span>' : (fut || Math.abs(d.pnlHi - d.pnlLo) < 1) ? '' : `<span class="rg">range ${E.signed(d.pnlLo)} to ${E.signed(d.pnlHi)}</span>`;
         rows += `<tr class="leg" data-leg="${l.id}"><td>${vnarrow ? `<span class="${l.side > 0 ? 'side-b' : 'side-s'}">${l.side > 0 ? 'B' : 'S'}</span> ` : ''}${esc(l.c.label)}${l.product === 'INTRADAY' ? ' <span class="st" style="margin-left:4px">Intraday</span>' : ''}</td>` +
           (vnarrow ? '' : `<td class="${l.side > 0 ? 'side-b' : 'side-s'}">${sideTxt}</td>`) +
-          `<td class="n">${l.qty}</td>` + (narrow ? '' : `<td class="n">${l.avg.toFixed(2)}</td>`) +
-          `<td class="n">${unavailable ? '—' : '₹' + d.value.toFixed(2)}</td>` +
-          `<td class="n"><span class="${d.pnl >= 0 ? 'up' : 'down'}">${unavailable ? '—' : E.signed(d.pnl)}</span>${rng}</td>` +
-          `<td><span class="st ${stCls(d.status)}">${d.status}</span></td></tr>`;
+          `<td class="n">${l.qty}</td>` + (narrow ? '' : `<td class="n">${E.prem(l.avg)}</td>`) +
+          `<td class="n">${loading ? sk : unavailable && !isSettled ? '—' : E.prem(value)}</td>` +
+          `<td class="n"><span class="${cls(pl)}">${loading ? sk : unavailable && !isSettled ? '—' : E.signed(pl)}</span>${rng}</td>` +
+          `<td><span class="st ${stCls(isSettled ? 'Settled' : d.status)}">${isSettled ? 'Settled' : d.status}</span></td></tr>`;
       });
     });
-    const total = P.pnl(b, S, T), [lo, hi] = P.range(b, S, T);
-    const flat = P.pnl(b, b.S0, T);
-    const mx = P.maxAtExpiry(b);
-    const changed = setHTML(el, `<div class="tt"><h3 id="ptTitle">${esc(title)}</h3><span>Hover the index chart to move the point</span></div>` +
-      `<div class="scroll"><table aria-labelledby="ptTitle"><thead><tr><th scope="col">Contract</th>${vnarrow ? '' : '<th scope="col">Side</th>'}<th scope="col" class="n">Qty</th>${narrow ? '' : '<th scope="col" class="n">Avg</th>'}<th scope="col" class="n">Value at point</th><th scope="col" class="n">P&amp;L at point</th><th scope="col">Status</th></tr></thead><tbody>${rows}</tbody></table></div>` +
+    const total = pt ? P.pnl(b, S, T) : pnlNow(b);
+    const [lo, hi] = pt ? P.range(b, S, T) : [total, total];
+    const flat = pt ? P.pnl(b, b.S0, T) : null;
+    const mx = unavailable ? null : P.maxAtExpiry(b);
+    const realised = st.realised + settledSum;
+    const hide = unavailable || loading;
+    const scroller = el.querySelector('.scroll');
+    const scrollTop = scroller ? scroller.scrollTop : 0;
+    const changed = setHTML(el, `<div class="tt"><h3 id="ptTitle">${esc(title)}</h3><span>${pt ? 'Model estimate at the point' : 'Hover the index chart to move the point'}</span></div>` +
+      `<div class="scroll"><table aria-labelledby="ptTitle"><thead><tr><th scope="col">Contract</th>${vnarrow ? '' : '<th scope="col">Side</th>'}<th scope="col" class="n">Qty</th>${narrow ? '' : '<th scope="col" class="n">Avg</th>'}<th scope="col" class="n">${pt ? 'Value at point' : 'Value now'}</th><th scope="col" class="n">${pt ? 'P&amp;L at point' : 'P&amp;L now'}</th><th scope="col">Status</th></tr></thead><tbody>${rows}</tbody></table></div>` +
       `<div class="foot">` +
-      (st.realised ? `<div><span class="lbl">Realised today</span><span class="${st.realised >= 0 ? 'up' : 'down'}">${E.signed(st.realised)}</span></div>` : '') +
-      `<div><span class="lbl" style="align-self:center">Total open P&amp;L</span><span class="tot ${total >= 0 ? 'up' : 'down'}">${unavailable ? '—' : E.signed(total)}<small>${unavailable ? '' : `Range ${E.signed(lo)} to ${E.signed(hi)}`}</small></span></div>` +
-      `<div><span class="lbl">If Nifty stays at ${E.level(b.S0)}</span><span class="${flat >= 0 ? 'up' : 'down'}">${unavailable ? '—' : E.signed(flat)}</span></div>` +
-      (mx ? `<div><span class="lbl">At expiry</span><span>Max profit <b class="up">${E.signed(mx.maxProfit)}</b> · Max loss <b class="down">${E.signed(mx.maxLoss)}</b></span></div>` : '') +
+      (realised ? `<div><span class="lbl">Realised today${settledSum ? ' (incl. settled)' : ''}</span><span class="${realised >= 0 ? 'up' : 'down'}">${E.signed(realised)}</span></div>` : '') +
+      `<div><span class="lbl" style="align-self:center">Total open P&amp;L</span><span class="tot ${cls(total)}">${hide ? (loading ? sk : '—') : E.signed(total)}${!hide && pt && Math.abs(hi - lo) >= 1 ? `<small>Range ${E.signed(lo)} to ${E.signed(hi)}</small>` : ''}</span></div>` +
+      (pt ? `<div><span class="lbl">If Nifty stays at ${E.level(b.S0)}</span><span class="${cls(flat)}">${hide ? '—' : E.signed(flat)}</span></div>` : '') +
+      (mx && !loading ? `<div><span class="lbl">At expiry</span><span>Max profit <b class="up">${E.signed(mx.maxProfit)}</b> · Max loss <b class="down">${E.signed(mx.maxLoss)}</b></span></div>` : '') +
       `<div class="model"><svg class="i" style="width:13px;height:13px"><use href="#i-info"/></svg>Model estimate, not a forecast</div></div>`);
     if (!changed) return;
+    const sc2 = el.querySelector('.scroll'); if (sc2) sc2.scrollTop = scrollTop;
     el.querySelectorAll('tr.leg').forEach(tr => {
-      tr.addEventListener('mouseenter', () => { st.rowHover = b.legs.find(l => String(l.id) === tr.dataset.leg); idx.invalidate(); log('payoff_row_hover'); });
+      tr.addEventListener('mouseenter', () => { st.rowHover = b.all.find(l => String(l.id) === tr.dataset.leg); idx.invalidate(); log('payoff_row_hover'); });
       tr.addEventListener('mouseleave', () => { st.rowHover = null; idx.invalidate(); });
     });
   }
 
   /* ---------- D1 pinned point card (Later release) ---------- */
-  function sameDay(T) { return E.dayOfT(T) === E.dayOfT(nowT()) || (closed() && E.dayOfT(T) === E.TODAY + 1); }
-  const timeFor = T => sameDay(T) && !closed() ? E.fmtT(T, false) : E.fmtT(T);
+  const timeFor = T => (!closed() && E.dayOfT(T) === E.TODAY) ? E.fmtT(T, false) : E.fmtT(T);
+  const isOpenAt = (l, T) => !(l.c.type !== 'FUT' && l.c.expT <= T) && !(l.product === 'INTRADAY' && T >= P.SQ_T);
   function pinActions(b) {
     const out = { buttons: [], note: '', helper: '', premium: null };
-    if (b.pretrade) return out;
+    if (b.pretrade || !b.legs.length) return out;
     const T = st.pin.T, S = st.pin.S;
-    if (isS3()) { out.buttons.push({ kind: 'exitAll', label: `Exit all at ${timeFor(T)}`, pri: true }); out.note = 'An exit at a time closes at the market price then, wherever Nifty is.'; return out; }
+    if (isS3()) {
+      const openThen = b.legs.filter(l => isOpenAt(l, T));
+      if (openThen.length) out.buttons.push({ kind: 'exitAll', label: `Exit all at ${timeFor(T)}`, pri: true });
+      else out.helper = b.legs.every(l => l.product === 'INTRADAY') ? 'Auto square-off closes these positions at 3:20 pm' : 'Nothing is open at this time';
+      out.note = 'An exit at a time closes at the market price then, wherever Nifty is.';
+      return out;
+    }
     const l = b.legs[0];
     const d = P.legDetail(l, S, T, b);
     out.premium = d;
     const prem = E.roundTick(d.value), cur = ltp(l.c);
     const diff = prem - cur;
-    const atSq = l.product === 'INTRADAY' && T >= P.SQ_T;
-    if (Math.abs(diff) > E.TICK + 1e-9 && l.c.type !== 'FUT') {
+    // BR-20: neither within one tick of the current price, and never at a price below one tick
+    if (Math.abs(diff) > E.TICK + 1e-9 && l.c.type !== 'FUT' && prem >= E.TICK) {
       const target = l.side > 0 ? diff > 0 : diff < 0;
-      out.buttons.push({ kind: target ? 'target' : 'stop', label: `Set ${target ? 'target' : 'stop'} at ₹${prem.toFixed(2)}`, price: prem, pri: true });
+      out.buttons.push({ kind: target ? 'target' : 'stop', label: `Set ${target ? 'target' : 'stop'} at ${E.prem(prem)}`, price: prem, pri: true });
       const o = st.orders[l.id] || {};
       const ex = target ? o.tp : o.sl;
-      if (ex) out.replace = `Replaces your ${target ? 'target' : 'stop'} at ₹${ex.toFixed(2)}`;
+      if (ex) out.replace = `Replaces your ${target ? 'target' : 'stop'} at ${E.prem(ex)}`;
       out.note = 'Targets and stops trigger on the option’s price, not on Nifty. Time decay moves the Nifty level where they trigger.';
     }
-    if (!atSq) out.buttons.push({ kind: 'exit', label: `Exit at ${timeFor(T)}`, pri: !out.buttons.length });
-    else out.helper = 'Auto square-off closes this position at 3:20 pm';
+    const atSq = l.product === 'INTRADAY' && T >= P.SQ_T;
+    const atExpiry = l.c.type !== 'FUT' && T >= l.c.expT;
+    if (atSq) out.helper = 'Auto square-off closes this position at 3:20 pm';
+    else if (atExpiry) out.helper = 'The contract settles at expiry, so there is nothing to exit at this time';
+    else out.buttons.push({ kind: 'exit', label: `Exit at ${timeFor(T)}`, pri: !out.buttons.length });
     if (!out.note) out.note = 'An exit at a time closes at the market price then, wherever Nifty is.';
     return out;
   }
+  let d1Down = false;
   function renderD1() {
     let el = $('#d1');
     if (!st.pin || !payoffOn()) { if (el) el.remove(); return; }
     const b = book();
-    if (st.pin.T <= b.nowT) { st.pin = null; if (el) el.remove(); return; }
-    if (!el) { el = document.createElement('div'); el.id = 'd1'; el.className = 'd1'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Pinned point'); $('#idxWrap').appendChild(el); }
+    if (!b.legs.length || st.pin.T <= b.nowT || axisEnd(b) == null) {
+      if (el) el.remove();
+      if (st.pin.T <= b.nowT && b.legs.length) toast('ok', 'The pinned time has passed, so the pin was removed.');
+      setPayoff(() => { st.pin = null; }, 'pin');
+      return;
+    }
+    if (!el) {
+      el = document.createElement('div'); el.id = 'd1'; el.className = 'd1'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Pinned point');
+      el.addEventListener('pointerdown', () => { d1Down = true; });
+      window.addEventListener('pointerup', () => { if (d1Down) { d1Down = false; setTimeout(renderD1, 0); } });
+      $('#idxWrap').appendChild(el);
+    }
+    if (d1Down) return; // don't swap the button out from under a click
     const T = st.pin.T, S = st.pin.S;
     const s3 = isS3();
-    const total = P.pnl(b, S, T), [lo, hi] = P.range(b, S, T);
     const acts = pinActions(b);
-    const live = st.pricing === 'live';
-    const disabledWhy = !live ? 'Prices aren’t live' : closed() ? 'Outside market hours' : '';
-    const d = acts.premium;
+    const unavailable = st.pricing === 'unavailable';
+    const disabledWhy = st.pricing !== 'live' ? 'Prices aren’t live' : closed() ? 'Outside market hours' : '';
+    el.classList.toggle('stale', st.pricing !== 'live');
+    const d = acts.premium || (!s3 && b.pretrade ? P.legDetail(b.legs[0], S, T, b) : null);
     const vals = [];
-    if (!s3 && d) vals.push(`<div class="m">Premium ₹${d.value.toFixed(2)}${d.uncertain ? '' : ` (₹${d.lo.toFixed(2)} to ₹${d.hi.toFixed(2)})`}</div>`);
-    else if (!s3 && b.pretrade) { const dd = P.legDetail(b.legs[0], S, T, b); vals.push(`<div class="m">Premium ₹${dd.value.toFixed(2)} (₹${dd.lo.toFixed(2)} to ₹${dd.hi.toFixed(2)})</div>`); }
-    vals.push(`<div class="big num ${total >= 0 ? 'up' : 'down'}">${s3 ? 'Total P&amp;L' : 'P&amp;L'} ${E.signed(total)}</div>`);
-    if (d && d.uncertain) vals.push(`<div class="m" style="color:var(--warn-ink)">Too uncertain to price. Time value left: ₹${d.timeValue.toFixed(2)}. Worth at expiry at this level: ₹${d.intrinsic.toFixed(2)}</div>`);
-    else vals.push(`<div class="m">Range ${E.signed(lo)} to ${E.signed(hi)}</div>`);
-    vals.push(`<div class="m">If Nifty stays at ${E.level(b.S0)}: ${E.signed(P.pnl(b, b.S0, T))}</div>`);
-    const changed = setHTML(el, `<div class="hd"><h4><small>Pinned</small>Nifty ${E.level(S)} at ${esc(E.fmtT(T))}</h4><button class="ib" id="d1x" aria-label="Remove pin"><svg class="i"><use href="#i-x"/></svg></button></div>` +
+    if (unavailable) vals.push('<div class="m">—</div>');
+    else {
+      // a held single position shows the premium at the tick it would trade at, so the card, button and M1 agree
+      const premV = d ? (b.pretrade ? d.value : E.roundTick(d.value)) : null;
+      const total = d && !b.pretrade ? b.legs[0].side * b.legs[0].qty * (premV - b.legs[0].avg) : P.pnl(b, S, T);
+      const [lo, hi] = P.range(b, S, T);
+      if (d) vals.push(`<div class="m">Premium ${E.prem(premV)}${!d.uncertain && E.roundTick(d.hi) - E.roundTick(d.lo) >= E.TICK ? ` (${E.prem(d.lo)} to ${E.prem(d.hi)})` : ''}</div>`);
+      vals.push(`<div class="big num ${total >= 0 ? 'up' : 'down'}">${s3 ? 'Total P&amp;L' : 'P&amp;L'} ${E.signed(total)}</div>`);
+      if (d && d.uncertain) vals.push(`<div class="m" style="color:var(--warn-ink)">Too uncertain to price. Time value left: ${E.prem(d.timeValue)}. Worth at expiry at this level: ${E.prem(d.intrinsic)}</div>`);
+      else if (Math.abs(hi - lo) >= 1) vals.push(`<div class="m">Range ${E.signed(lo)} to ${E.signed(hi)}</div>`);
+      vals.push(`<div class="m">If Nifty stays at ${E.level(b.S0)}: ${E.signed(P.pnl(b, b.S0, T))}</div>`);
+    }
+    const changed = setHTMLKeepFocus(el, `<div class="hd"><h4><small>Pinned</small>Nifty ${E.level(S)} at ${esc(E.fmtT(T))}</h4><button class="ib" id="d1x" aria-label="Remove pin"><svg class="i"><use href="#i-x"/></svg></button></div>` +
       `<div class="vals">${vals.join('')}</div>` +
       (b.pretrade ? `<div class="note">Actions appear for positions you hold</div>` : `<div class="note">${esc(acts.note)}</div>`) +
       (closed() && !b.pretrade ? `<div class="proto-note">PRD open item 9: whether orders can be set outside market hours. Shown disabled here.</div>` : '') +
-      `<div class="acts">${acts.buttons.map((bt, i) => `<button class="btn ${bt.pri ? 'pri' : 'sec'} wide" data-act="${i}" ${disabledWhy ? `disabled data-why="${esc(disabledWhy)}"` : ''}>${esc(bt.label)}</button>${bt.kind !== 'exit' && bt.kind !== 'exitAll' && acts.replace ? `<div class="helper">${esc(acts.replace)}</div>` : ''}`).join('')}${acts.helper ? `<div class="helper">${esc(acts.helper)}</div>` : ''}</div>` +
-      `<div class="ml"><svg class="i"><use href="#i-info"/></svg>Model estimate, not a forecast</div>`);
-    // position the card beside the pin, flipping near the edges
+      `<div class="acts">${acts.buttons.map((bt, i) => `<button class="btn ${bt.pri ? 'pri' : 'sec'} wide" data-act="${i}" ${disabledWhy ? `aria-disabled="true" aria-describedby="d1why" style="opacity:.45;cursor:not-allowed"` : ''}>${esc(bt.label)}</button>${bt.kind !== 'exit' && bt.kind !== 'exitAll' && acts.replace ? `<div class="helper">${esc(acts.replace)}</div>` : ''}`).join('')}${acts.helper ? `<div class="helper">${esc(acts.helper)}</div>` : ''}${disabledWhy && acts.buttons.length ? `<div class="helper" id="d1why">${esc(disabledWhy)}</div>` : ''}</div>` +
+      `<div class="ml"><svg class="i"><use href="#i-info"/></svg>Model estimate, not a forecast</div>`, n => n.dataset.act || n.id);
     const ch = idx, px = ch.tToX(T), py = ch.pToY(S);
     const w = el.offsetWidth, h = el.offsetHeight;
     let x = px + 18, y = py - 30;
@@ -1046,25 +1304,28 @@
     if (!changed) return;
     $('#d1x').addEventListener('click', () => removePin());
     el.querySelectorAll('[data-act]').forEach(bt => {
-      bt.addEventListener('click', () => { const a = acts.buttons[+bt.dataset.act]; log('payoff_pin_action_click', `action=${a.kind}`); openM1(a); });
-      if (bt.dataset.why) { bt.parentElement.addEventListener('mouseenter', ev => { if (ev.target === bt) showTipFor(bt, bt.dataset.why); }); }
+      bt.addEventListener('click', () => {
+        if (bt.getAttribute('aria-disabled') === 'true') { showTipFor(bt, disabledWhy); return; }
+        const i = +bt.dataset.act, a = acts.buttons[i];
+        log('payoff_pin_action_click', `action=${a.kind}`); openM1(a, i);
+      });
+      if (disabledWhy) { bt.addEventListener('mouseenter', () => showTipFor(bt, disabledWhy)); bt.addEventListener('mouseleave', () => hideTip('btn')); bt.addEventListener('focus', () => showTipFor(bt, disabledWhy)); bt.addEventListener('blur', () => hideTip('btn')); }
     });
-    // disabled buttons don't fire mouse events, so show the reason on the wrapper
-    const acts2 = el.querySelector('.acts');
-    acts2.onmousemove = ev => { const bt = [...acts2.querySelectorAll('button[disabled]')].find(x2 => { const r = x2.getBoundingClientRect(); return ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom; }); if (bt) showTipFor(bt, bt.dataset.why); else hideTip('btn'); };
-    acts2.onmouseleave = () => hideTip('btn');
   }
 
   /* ---------- M1 confirm order from pin ---------- */
-  function openM1(a) {
-    st.m1 = { a, pin: Object.assign({}, st.pin), legIds: book().legs.map(l => l.id), submitting: false };
+  function openM1(a, opener) {
+    const b = book();
+    const legIds = a.kind === 'exitAll' ? b.legs.filter(l => isOpenAt(l, st.pin.T)).map(l => l.id) : b.legs.map(l => l.id);
+    st.m1 = { a, opener, pin: Object.assign({}, st.pin), legIds, submitting: false };
     log('payoff_order_confirm_open', `mode=${a.kind}`);
     renderM1();
   }
   function closeM1(silent) {
     const s = $('#m1scrim'); if (s) s.remove();
-    if (st.m1 && !silent) { log('payoff_order_cancel'); const f = $('.d1 button[data-act]'); if (f) f.focus(); }
+    const m = st.m1;
     st.m1 = null;
+    if (m && !silent) { log('payoff_order_cancel'); const f = $(`#d1 [data-act="${m.opener}"]`) || $('#d1 [data-act]'); if (f) f.focus(); }
   }
   function renderM1() {
     let s = $('#m1scrim');
@@ -1075,59 +1336,59 @@
     const legs = st.m1.legIds.map(id => st.legs.find(l => l.id === id)).filter(Boolean);
     const T = pin.T;
     const title = a.kind === 'target' ? 'Set target' : a.kind === 'stop' ? 'Set stop' : 'Schedule exit';
+    const rangeTxt = () => { const r = P.range(b, pin.S, T); return Math.abs(r[1] - r[0]) >= 1 ? ` (range ${E.signed(r[0])} to ${E.signed(r[1])})` : ''; };
     let body = '', msg = '', canConfirm = true, hideConfirm = false;
     if (!legs.length) { msg = 'This position is closed, so there’s nothing to set.'; hideConfirm = true; }
     else if (a.kind === 'exitAll') {
-      const openThen = legs.filter(l => !(l.c.type !== 'FUT' && l.c.expT <= T) && !(l.product === 'INTRADAY' && T >= P.SQ_T));
+      const openThen = legs.filter(l => isOpenAt(l, T));
       body = `<div class="pos">${openThen.length} ${openThen.length === 1 ? 'leg' : 'legs'} open at ${esc(E.fmtT(T))}</div>` +
-        `<div class="order">${openThen.map(l => `<div>${l.side > 0 ? 'Sell' : 'Buy back'} ${l.qty} ${esc(l.c.label)}</div>`).join('')}</div>` +
-        `<div class="pl">P&amp;L depends on prices at ${esc(timeFor(T))}. Payoff estimate at Nifty ${E.level(pin.S)}: ${E.signed(P.pnl(b, pin.S, T))} (range ${P.range(b, pin.S, T).map(v => E.signed(v)).join(' to ')})</div>` +
+        (openThen.length ? `<div class="order">${openThen.map(l => `<div>${l.side > 0 ? 'Sell' : 'Buy back'} ${l.qty} ${esc(l.c.label)}</div>`).join('')}</div>` : '') +
+        `<div class="pl">P&amp;L depends on prices at ${esc(timeFor(T))}. Payoff estimate at Nifty ${E.level(pin.S)}: ${E.signed(P.pnl(b, pin.S, T))}${rangeTxt()}</div>` +
         `<div class="tn">Cancelled for any leg you exit before then. Legs that expire or square off before then are left alone.</div>`;
+      if (!openThen.length) { msg = 'Nothing is open at this time.'; canConfirm = false; }
     } else {
       const l = legs[0];
       const bought = l.side > 0;
-      body = `<div class="pos">${esc(l.c.label)} · ${bought ? 'Bought' : 'Sold'} ${l.qty} at ₹${l.avg.toFixed(2)}</div>`;
+      body = `<div class="pos">${esc(l.c.label)} · ${bought ? 'Bought' : 'Sold'} ${l.qty} at ${E.prem(l.avg)}</div>`;
       if (a.kind === 'target' || a.kind === 'stop') {
         const p = a.price;
         const line = a.kind === 'target'
-          ? (bought ? `Sells ${l.qty} at market when the option’s price reaches ₹${p.toFixed(2)}` : `Buys back ${l.qty} at market when the option’s price falls to ₹${p.toFixed(2)}`)
-          : (bought ? `Sells ${l.qty} at market if the option’s price falls to ₹${p.toFixed(2)}` : `Buys back ${l.qty} at market if the option’s price rises to ₹${p.toFixed(2)}`);
-        const pl = l.side * l.qty * (p - l.avg);
-        body += `<div class="order">${esc(line)}</div><div class="pl">P&amp;L if filled at ₹${p.toFixed(2)}: ${E.signed(pl)} before charges</div>` +
+          ? (bought ? `Sells ${l.qty} at market when the option’s price reaches ${E.prem(p)}` : `Buys back ${l.qty} at market when the option’s price falls to ${E.prem(p)}`)
+          : (bought ? `Sells ${l.qty} at market if the option’s price falls to ${E.prem(p)}` : `Buys back ${l.qty} at market if the option’s price rises to ${E.prem(p)}`);
+        body += `<div class="order">${esc(line)}</div><div class="pl">P&amp;L if filled at ${E.prem(p)}: ${E.signed(l.side * l.qty * (p - l.avg))} before charges</div>` +
           `<div class="tn">Targets and stops trigger on the option’s price, not on Nifty. Time decay moves the Nifty level where they trigger.</div>`;
         const o = st.orders[l.id] || {};
         const ex = a.kind === 'target' ? o.tp : o.sl;
-        if (ex) body += `<div class="helper">Replaces your current ${a.kind} at ₹${ex.toFixed(2)}</div>`;
+        if (ex) body += `<div class="helper">Replaces your current ${a.kind} at ${E.prem(ex)}</div>`;
         const cur = ltp(l.c);
         const crossed = a.kind === 'target' ? (bought ? cur >= p : cur <= p) : (bought ? cur <= p : cur >= p);
-        if (crossed) { msg = `The option is already at or past ₹${p.toFixed(2)}. Move the pin to pick a new price.`; canConfirm = false; }
+        if (p < E.TICK) { msg = 'Pick a price of at least ₹0.05.'; canConfirm = false; }
+        else if (crossed) { msg = `The option is already at or past ${E.prem(p)}. Move the pin to pick a new price.`; canConfirm = false; }
       } else {
-        const r = P.range(b, pin.S, T);
         body += `<div class="order">${bought ? 'Sells' : 'Buys back'} ${l.qty} at market at ${esc(E.fmtT(T))}, if the position is still open</div>` +
-          `<div class="pl">P&amp;L depends on prices at ${esc(timeFor(T))}. Payoff estimate at Nifty ${E.level(pin.S)}: ${E.signed(P.pnl(b, pin.S, T))} (range ${E.signed(r[0])} to ${E.signed(r[1])})</div>` +
+          `<div class="pl">P&amp;L depends on prices at ${esc(timeFor(T))}. Payoff estimate at Nifty ${E.level(pin.S)}: ${E.signed(P.pnl(b, pin.S, T))}${rangeTxt()}</div>` +
           `<div class="tn">Cancelled if you exit before then.</div>`;
       }
-      if (T <= nowT()) { msg = `${E.fmtT(T, false)} has passed. Pick a later time.`; canConfirm = false; }
     }
- const sub = st.m1.submitting;
+    if (legs.length && T <= nowT()) { msg = `${E.fmtT(T, false)} has passed. Pick a later time.`; canConfirm = false; }
+    const sub = st.m1.submitting;
     const first = !s._html;
+    const hadFocus = s.contains(document.activeElement) ? document.activeElement.id : null;
     const changed = setHTML(s, `<div class="m1" role="dialog" aria-modal="true" aria-labelledby="m1t">` +
       `<div class="mh"><h2 id="m1t">${title}</h2><button class="ib" id="m1x" aria-label="Close" ${sub ? 'disabled' : ''}><svg class="i"><use href="#i-x"/></svg></button></div>` +
-      `<div class="mb">${body}${msg ? `<div class="msg">${esc(msg)}</div>` : ''}</div>` +
+      `<div class="mb">${body}${msg ? `<div class="msg" role="alert">${esc(msg)}</div>` : ''}</div>` +
       `<div class="mf"><button class="btn sec" id="m1c" ${sub ? 'disabled' : ''}>Cancel</button>${hideConfirm ? '' : `<button class="btn pri" id="m1ok" ${canConfirm && !sub ? '' : 'disabled'}>${sub ? '<span class="spin"></span>Placing…' : 'Confirm'}</button>`}</div></div>`);
     if (!changed) return;
-    const hadFocus = s.contains(document.activeElement) ? document.activeElement.id : null;
-    const cancel = () => { if (hideConfirm) { closeM1(); removePin(); } else closeM1(); };
+    const cancel = () => { if (hideConfirm) { closeM1(true); log('payoff_order_cancel'); removePin(); } else closeM1(); };
     $('#m1x').addEventListener('click', cancel);
     $('#m1c').addEventListener('click', cancel);
-    s.addEventListener('mousedown', e => { if (e.target === s && !st.m1.submitting) cancel(); });
+    s.onmousedown = e => { if (e.target === s && st.m1 && !st.m1.submitting) cancel(); };
     const ok = $('#m1ok');
     if (ok) ok.addEventListener('click', confirmM1);
     // initial focus on Cancel so Enter can't place an order by accident (assumption 29)
-    if (!sub && (first || !hadFocus)) $('#m1c').focus();
-    else if (hadFocus && $('#' + hadFocus) && !$('#' + hadFocus).disabled) $('#' + hadFocus).focus();
-    else if (!sub) $('#m1c').focus();
-    s.onkeydown = e => { if (e.key === 'Tab') { const f = [...s.querySelectorAll('button:not([disabled])')]; if (!f.length) return; const i = f.indexOf(document.activeElement); e.preventDefault(); f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus(); } };
+    const back = hadFocus && $('#' + hadFocus) && !$('#' + hadFocus).disabled ? $('#' + hadFocus) : null;
+    if (first || !back) { if (!sub) $('#m1c').focus(); } else back.focus();
+    s.onkeydown = e => { if (e.key === 'Tab') { const f = [...s.querySelectorAll('button:not([disabled])')]; if (!f.length) { e.preventDefault(); return; } const i = f.indexOf(document.activeElement); e.preventDefault(); f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus(); } };
   }
   function confirmM1() {
     if (!st.m1) return;
@@ -1144,22 +1405,24 @@
         return;
       }
       const legs = st.m1.legIds.map(id => st.legs.find(l => l.id === id)).filter(Boolean);
+      if (!legs.length) { renderM1(); return; }
       let msg = '';
       if (a.kind === 'target' || a.kind === 'stop') {
         const l = legs[0];
         st.orders[l.id] = Object.assign(st.orders[l.id] || {}, { [a.kind === 'target' ? 'tp' : 'sl']: a.price });
-        msg = `${a.kind === 'target' ? 'Target' : 'Stop'} set at ₹${a.price.toFixed(2)}`;
+        msg = `${a.kind === 'target' ? 'Target' : 'Stop'} set at ${E.prem(a.price)}`;
       } else {
-        const label = `Exit at ${timeFor(pin.T)}`;
+        const ids = legs.filter(l => isOpenAt(l, pin.T)).map(l => l.id);
         st.exits = st.exits.filter(x => x.T !== pin.T);
-        st.exits.push({ T: pin.T, legIds: legs.map(l => l.id), label, tip: `Exits at market at ${timeFor(pin.T)} if still open` });
+        st.exits.push({ T: pin.T, legIds: ids, label: `Exit at ${timeFor(pin.T)}`, tip: `Exits at market at ${timeFor(pin.T)} if still open` });
         msg = `Exit scheduled for ${timeFor(pin.T)}`;
       }
       log('payoff_order_result', 'success');
       closeM1(true);
-      st.pin = null;
       toast('ok', msg);
-      setPayoff(() => {}, 'pin');
+      // stay on S2/S3 so the new pill or exit marker is in view (M1 Success)
+      setPayoff(() => { st.sticky = true; st.pin = null; }, 'pin');
+      $('#idxCanvas').focus();
     }, 750);
   }
 
@@ -1184,38 +1447,43 @@
   function closePopover() { st.popover = null; const p = $('#pop'); if (p) p.remove(); }
   document.addEventListener('mousedown', e => {
     const p = $('#pop');
-    if (p && !p.contains(e.target) && !e.target.closest('#railPositions,#railChain,#navPositions,#pnlPill,#openChain')) closePopover();
+    if (p && !p.contains(e.target) && !e.target.closest('#railPositions,#railChain,#navPositions,#pnlPill,#openChain,#demo')) closePopover();
   });
   let chainExp = '2026-10-27';
   function renderPopover() {
     let p = $('#pop');
     if (!st.popover) { if (p) p.remove(); return; }
-    if (!p) { p = document.createElement('div'); p.id = 'pop'; p.className = 'pop'; document.body.appendChild(p); }
+    if (!p) { p = document.createElement('div'); p.id = 'pop'; p.className = 'pop'; p.setAttribute('role', 'dialog'); document.body.appendChild(p); }
     const rail = $('.rail.r').getBoundingClientRect();
     if (st.popover === 'positions') {
-      p.style.width = '560px';
-      const rows = st.legs.map(l => { const lp = ltp(l.c), pl = l.side * l.qty * (lp - l.avg); return `<tr><td>${esc(l.c.label)}</td><td>${l.product === 'INTRADAY' ? 'Intraday' : 'Carry forward'}</td><td class="n ${l.side > 0 ? 'up' : 'down'}">${l.side > 0 ? '' : '−'}${l.qty}</td><td class="n">${l.avg.toFixed(2)}</td><td class="n">${lp.toFixed(2)}</td><td class="n ${pl >= 0 ? 'up' : 'down'}">${E.signed(pl, 2)}</td><td><button class="xb" data-exit="${l.id}">Exit</button></td></tr>`; })
-        .concat(st.others.map(o => { const pl = o.side * o.qty * (o.ltp - o.avg); return `<tr><td>${esc(o.label)}</td><td>${esc(o.product)}</td><td class="n up">${o.qty}</td><td class="n">${o.avg.toFixed(2)}</td><td class="n">${o.ltp.toFixed(2)}</td><td class="n ${pl >= 0 ? 'up' : 'down'}">${E.signed(pl, 2)}</td><td><button class="xb" data-exit="${o.id}">Exit</button></td></tr>`; }));
+      p.style.width = '700px'; p.setAttribute('aria-label', 'Positions');
+      const rows = st.legs.map(l => { const lp = ltp(l.c), pl = l.side * l.qty * (lp - l.avg); return `<tr><td>${esc(l.c.label)}${expired(l.c) ? ' <span class="st set">Settled</span>' : ''}</td><td>${l.product === 'INTRADAY' ? 'Intraday' : 'Carry fwd'}</td><td class="n ${l.side > 0 ? 'up' : 'down'}">${l.side > 0 ? '' : '−'}${l.qty}</td><td class="n">${E.prem(l.avg)}</td><td class="n">${E.prem(lp)}</td><td class="n ${pl >= 0 ? 'up' : 'down'}">${E.signed(pl, 2)}</td><td>${expired(l.c) || closed() ? '' : `<button class="xb" data-exit="${l.id}">Exit</button>`}</td></tr>`; })
+        .concat(st.others.map(o => { const pl = o.side * o.qty * (o.ltp - o.avg); return `<tr><td>${esc(o.label)}</td><td>Carry fwd</td><td class="n up">${o.qty}</td><td class="n">${E.prem(o.avg)}</td><td class="n">${E.prem(o.ltp)}</td><td class="n ${pl >= 0 ? 'up' : 'down'}">${E.signed(pl, 2)}</td><td>${closed() ? '' : `<button class="xb" data-exit="${o.id}">Exit</button>`}</td></tr>`; }));
+      const realised = st.realised + st.realisedOther;
       if (!setHTML(p, `<div class="poph"><h3>Positions</h3><button class="ib" id="popx" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div><div class="popb">` +
         (rows.length ? `<table><thead><tr><th>Contract</th><th>Product</th><th class="n">Qty</th><th class="n">Avg</th><th class="n">LTP</th><th class="n">P&amp;L</th><th></th></tr></thead><tbody>${rows.join('')}</tbody></table>` : `<div class="empty">No open positions.</div>`) +
-        (st.realised ? `<div style="padding:9px 12px;display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--text-2)">Realised today</span><span class="${st.realised >= 0 ? 'up' : 'down'}">${E.signed(st.realised, 2)}</span></div>` : '') + `</div>`)) { placePop(p, rail); return; }
+        (realised ? `<div style="padding:9px 12px;display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--text-2)">Realised today</span><span class="${realised >= 0 ? 'up' : 'down'}">${E.signed(realised, 2)}</span></div>` : '') + `</div>`)) { placePop(p, rail); return; }
       p.querySelectorAll('[data-exit]').forEach(b2 => b2.addEventListener('click', () => { const id = b2.dataset.exit; exitLeg(isNaN(+id) ? id : +id); }));
     } else {
-      p.style.width = '400px';
-      const exps = ['2026-10-13', '2026-10-19', '2026-10-27', '2026-11-03'];
+      p.style.width = '400px'; p.setAttribute('aria-label', 'Option chain');
+      const exps = ['2026-10-13', '2026-10-19', '2026-10-27', '2026-11-03'].filter(k => !expired(C('CE', 22700, k)));
+      if (!exps.includes(chainExp)) chainExp = exps[0];
       const S = S0(), atm = Math.round(S / 100) * 100;
       const strikes = []; for (let k = atm - 500; k <= atm + 500; k += 100) strikes.push(k);
-      const rows = strikes.map(k => { const ce = C('CE', k, chainExp), pe = C('PE', k, chainExp); const sel = c => st.opt === c ? ' sel' : ''; return `<tr><td class="n"><button class="cp${sel(ce)}" data-c="${ce.id}">${ltp(ce).toFixed(2)}</button></td><td class="k ${k === atm ? 'atm' : ''}">${k}</td><td><button class="cp pe${sel(pe)}" data-c="${pe.id}">${ltp(pe).toFixed(2)}</button></td></tr>`; }).join('');
-      if (!setHTML(p, `<div class="poph"><h3>Option chain · NIFTY</h3><button class="ib" id="popx" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>` +
+      const cur = st.opt;
+      const rows = strikes.map(k => { const ce = C('CE', k, chainExp), pe = C('PE', k, chainExp); const sel = c => cur === c ? ' sel' : ''; return `<tr><td class="n"><button class="cp${sel(ce)}" data-c="${ce.id}" aria-label="${esc(ce.label)} ${ltp(ce).toFixed(2)}">${ltp(ce).toFixed(2)}</button></td><td class="k ${k === atm ? 'atm' : ''}">${k}</td><td><button class="cp pe${sel(pe)}" data-c="${pe.id}" aria-label="${esc(pe.label)} ${ltp(pe).toFixed(2)}">${ltp(pe).toFixed(2)}</button></td></tr>`; }).join('');
+      if (!setHTMLKeepFocus(p, `<div class="poph"><h3>Option chain · NIFTY</h3><button class="ib" id="popx" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>` +
         `<div class="chain"><div class="ex">${exps.map(k => `<button data-x="${k}" aria-pressed="${k === chainExp}">${E.expiryByKey(k).info.short}${E.expiryByKey(k).movedFrom ? '*' : ''}</button>`).join('')}</div>` +
         `<div class="popb"><table><thead><tr><th class="n">Call LTP</th><th style="text-align:center">Strike</th><th>Put LTP</th></tr></thead><tbody>${rows}</tbody></table></div>` +
-        `<div style="padding:8px 12px;color:var(--text-3);font-size:11px">*19 Oct expiry moved from Tue 20 Oct (Dussehra). Click a price to load it on the option chart.</div></div>`)) { placePop(p, rail); return; }
+        `<div style="padding:8px 12px;color:var(--text-3);font-size:11px">*19 Oct expiry moved from Tue 20 Oct (Dussehra). Click a price to load it on the option chart.</div></div>`, n => n.dataset.c || n.dataset.x || n.id)) { placePop(p, rail); return; }
       p.querySelectorAll('[data-x]').forEach(b2 => b2.addEventListener('click', () => { chainExp = b2.dataset.x; renderPopover(); }));
       p.querySelectorAll('[data-c]').forEach(b2 => b2.addEventListener('click', () => {
         const m = b2.dataset.c.match(/^NIFTY-(\d{4}-\d{2}-\d{2})-(\d*)-(CE|PE)$/);
-        st.opt = C(m[3], +m[2], m[1]);
+        const pick = C(m[3], +m[2], m[1]);
+        st.opt = pick;
+        if (heldSingle()) toast('ok', `Loaded ${pick.label}. It shows on the option chart when Payoff is off; Payoff keeps your position on screen.`);
         cache = null; rebuildData();
-        if (payoffOn()) { idx.limitT = opt.limitT = axisEnd(book()); const h = currentHorizon(book()); if (h) fitTo(h.T); }
+        if (payoffOn()) refit(book());
         renderPopover();
       }));
     }
@@ -1224,15 +1492,15 @@
   }
   function placePop(p, rail) {
     p.style.top = Math.max(70, rail.top + 10) + 'px';
-    p.style.left = (rail.left - p.offsetWidth - 8) + 'px';
+    p.style.left = Math.max(8, rail.left - p.offsetWidth - 8) + 'px';
   }
 
   /* ---------- tooltips ---------- */
-  let tipEl = null, tipOwner = null;
+  let tipEl = null, tipOwner = null, tipNode = null;
   function tipText(key) {
     const k = keyName();
     if (key === 'tap') return { text: st.oneTap ? 'Turn off instant trade' : 'Turn on instant trade', caps: st.platform === 'mac' ? ['⌘', '⌥', '1'] : ['Ctrl', 'Alt', '1'] };
-    if (key === 'payoff') return st.sticky ? { text: 'Hide payoff', caps: ['Esc'] } : { text: 'Payoff: breakeven and P&L at any level and time. Hold to peek, or click to keep on', caps: [k] };
+    if (key === 'payoff') return (st.sticky || st.pin) ? { text: 'Hide payoff', caps: ['Esc'] } : { text: 'Payoff: breakeven and P&L at any level and time. Hold to peek, or click to keep it on', caps: [k], wrap: true };
     if (key === 'model') return { text: 'Worked out from live option prices, IV and time left. The range shows values if IV moves. Actual prices can differ, especially near expiry.', wrap: true };
     if (key === 'others') return { text: st.others.map(o => o.und).join(', ') };
     return null;
@@ -1240,26 +1508,29 @@
   function placeTip(r, t, cls) {
     hideTip();
     tipEl = document.createElement('div');
-    tipEl.className = 'tip' + (t.wrap ? ' wrap' : '');
-    if (t.wrap) tipEl.style.width = '300px';
+    tipEl.className = 'tip' + (t.wrap ? ' wrap' : '') + (t.caps ? '' : ' nocaps');
+    tipEl.setAttribute('role', 'tooltip');
+    if (t.wrap) tipEl.style.width = t.caps ? '340px' : '300px';
     tipEl.innerHTML = `<span>${esc(t.text)}</span>${t.caps ? `<span class="caps">${t.caps.map(c => `<kbd>${esc(c)}</kbd>`).join('')}</span>` : ''}`;
     document.body.appendChild(tipEl);
     const w = tipEl.offsetWidth, h = tipEl.offsetHeight;
     let x = r.left + r.width / 2 - w / 2, y = r.bottom + 10;
     x = Math.max(8, Math.min(innerWidth - w - 8, x));
-    if (y + h > innerHeight - 8) { y = r.top - h - 10; tipEl.classList.add('above'); }
+    if (y + h > innerHeight - 8) y = r.top - h - 10;
     tipEl.style.left = x + 'px'; tipEl.style.top = y + 'px';
-    tipEl.style.setProperty('--ax', (r.left + r.width / 2 - x) + 'px');
     tipOwner = cls;
   }
   function showTipFor(target, text) { placeTip(target.getBoundingClientRect(), { text, wrap: text.length > 60 }, 'btn'); }
-  function hideTip(owner) { if (tipEl && (!owner || owner === tipOwner)) { tipEl.remove(); tipEl = null; tipOwner = null; } }
+  function hideTip(owner) { if (tipEl && (!owner || owner === tipOwner)) { tipEl.remove(); tipEl = null; tipOwner = null; tipNode = null; } }
+  // After a click changes a control's state, its open tooltip follows.
+  function refreshTip() { if (tipOwner === 'el' && tipNode && document.body.contains(tipNode)) { const t = tipText(tipNode.dataset.tip); const n = tipNode; if (t) { placeTip(n.getBoundingClientRect(), t, 'el'); tipNode = n; } } }
   function bindTips(root) {
     root.querySelectorAll('[data-tip]').forEach(n => {
       if (n._tipBound) return; n._tipBound = true;
-      n.addEventListener('mouseenter', () => { const t = tipText(n.dataset.tip); if (t) placeTip(n.getBoundingClientRect(), t, 'el'); });
+      const show = () => { const t = tipText(n.dataset.tip); if (t) { placeTip(n.getBoundingClientRect(), t, 'el'); tipNode = n; } };
+      n.addEventListener('mouseenter', show);
       n.addEventListener('mouseleave', () => hideTip('el'));
-      n.addEventListener('focus', () => { const t = tipText(n.dataset.tip); if (t) placeTip(n.getBoundingClientRect(), t, 'el'); });
+      n.addEventListener('focus', show);
       n.addEventListener('blur', () => hideTip('el'));
     });
   }
@@ -1281,7 +1552,7 @@
     document.body.appendChild(c);
     placeCoach();
     $('#coachGot').addEventListener('click', () => dismissCoach());
-    $('#coachTry').addEventListener('click', () => { dismissCoach(true); log('payoff_open_tip'); setPayoff(() => { st.sticky = true; }, 'tip'); });
+    $('#coachTry').addEventListener('click', () => { dismissCoach(true); setPayoff(() => { st.sticky = true; }, 'tip'); });
   }
   function placeCoach() {
     const c = $('#coach'); if (!c) return;
@@ -1294,7 +1565,7 @@
     c.remove(); st.tipSeen = true; LS.set('tipSeen', true);
     if (!silent) log('payoff_tip_dismissed');
   }
-  document.addEventListener('mousedown', e => { const c = $('#coach'); if (c && !c.contains(e.target) && !e.target.closest('#payoffBtn')) dismissCoach(); });
+  document.addEventListener('mousedown', e => { const c = $('#coach'); if (c && !c.contains(e.target) && !e.target.closest('#payoffBtn,#demo')) dismissCoach(); });
 
   /* ---------- analytics log ---------- */
   function log(name, props = '') {
@@ -1315,9 +1586,15 @@
     const seg = (name, val, opts) => `<div class="seg" role="group">${opts.map(([v, l]) => `<button data-set="${name}" data-v="${v}" aria-pressed="${String(val) === String(v)}">${esc(l)}</button>`).join('')}</div>`;
     const groups = {};
     Object.entries(SCEN).forEach(([k, s]) => (groups[s.group] = groups[s.group] || []).push([k, s.name]));
-    const sc = SCEN[st.scenario];
+    const sc = SCEN[st.scenario] || SCEN.single;
     const k = keyName();
-    d.innerHTML = `<div class="dh"><span class="tag">Prototype</span><b>Demo controls</b><button id="dmin" aria-label="${st.demoMin ? 'Expand' : 'Collapse'}" aria-expanded="${!st.demoMin}"><svg class="i" style="transform:rotate(${st.demoMin ? 180 : 0}deg)"><use href="#i-chev"/></svg></button></div>` +
+    const focusKey = d.contains(document.activeElement) ? (document.activeElement.id || `${document.activeElement.dataset.set}:${document.activeElement.dataset.v}`) : null;
+    if (st.demoMin) {
+      d.innerHTML = `<button id="dmin" class="dpill" aria-label="Open demo controls" aria-expanded="false"><svg class="i"><use href="#i-grid"/></svg><span>Demo</span></button>`;
+      $('#dmin').addEventListener('click', () => { st.demoMin = false; LS.set('demoMin', false); renderDemo(); fit(); const b = $('#dmin'); if (b) b.focus(); });
+      return;
+    }
+    d.innerHTML = `<div class="dh"><span class="tag">Prototype</span><b>Demo controls</b><button id="dmin" aria-label="${st.demoMin ? 'Open demo controls' : 'Collapse demo controls'}" aria-expanded="${!st.demoMin}"><svg class="i" style="transform:rotate(${st.demoMin ? 180 : 0}deg)"><use href="#i-chev"/></svg></button></div>` +
       `<div class="db">` +
       `<div class="grp"><span class="gl">Keys</span><div class="keys">` +
       `<div><span>Peek at Payoff</span><span class="caps">hold <kbd>${esc(k)}</kbd></span></div>` +
@@ -1325,9 +1602,10 @@
       `<div><span>Move the point</span><span class="caps"><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd></span></div>` +
       `<div><span>Pin a point</span><span>click, or <span class="caps"><kbd>Enter</kbd></span></span></div>` +
       `<div><span>Close</span><span class="caps"><kbd>Esc</kbd></span></div></div></div>` +
-      `<div class="grp"><span class="gl">Positions</span><select id="dscen">${Object.entries(groups).map(([g, items]) => `<optgroup label="${esc(g)}">${items.map(([kk, n]) => `<option value="${kk}" ${kk === st.scenario ? 'selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>`).join('')}</select>` +
+      `<div class="grp"><span class="gl">Positions</span><select id="dscen" aria-label="Sample positions">${Object.entries(groups).map(([g, items]) => `<optgroup label="${esc(g)}">${items.map(([kk, n]) => `<option value="${kk}" ${kk === st.scenario ? 'selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>`).join('')}</select>` +
       (sc.product ? seg('product', st.product, [['CARRY', 'Carry forward'], ['INTRADAY', 'Intraday']]) : '') + `</div>` +
-      `<div class="grp"><span class="gl">Clock · Tue 13 Oct</span>${seg('clock', st.clock, CLOCKS)}</div>` +
+      `<div class="grp"><span class="gl">Clock · Tue 13 Oct${CLOCKS.some(c => c[0] === st.clock) ? '' : ` · now ${E.clock(Math.min(st.clock, E.CLOSE))}`}</span>${seg('clock', st.clock, CLOCKS)}</div>` +
+      `<div class="grp"><span class="gl">Simulate</span><div class="row"><button id="dadv">Clock +30 min</button><button id="dclose">Close held positions</button></div></div>` +
       `<div class="grp"><span class="gl">Prices</span>${seg('pricing', st.pricing, [['live', 'Live'], ['delayed', 'Delayed'], ['unavailable', 'Unavailable']])}${seg('ticks', st.ticks, [[true, 'Ticking'], [false, 'Frozen']])}</div>` +
       `<div class="grp"><span class="gl">Keyboard</span>${seg('platform', st.platform, [['mac', 'Mac · ⌥ Option'], ['win', 'Windows · Alt']])}</div>` +
       `<div class="grp"><span class="gl">Later release</span>${seg('later', st.later, [[true, 'Pins and orders on'], [false, 'MVP only']])}${seg('orderFail', st.orderFail, [[false, 'Orders succeed'], [true, 'Orders fail']])}</div>` +
@@ -1335,28 +1613,47 @@
       `<div class="grp"><span class="gl">Analytics events</span><div class="log" id="dlog">${st.events.slice(0, 12).map(x => `<div>${esc(x)}</div>`).join('') || '<div>None yet</div>'}</div></div>` +
       `<div class="note">Sample data for Tue 13 Oct 2026, not market data. Values come from a Black-Scholes model on trading time; IV is held at its current level and the range moves it −2.5 to +3 points.</div>` +
       `</div>`;
-    $('#dmin').addEventListener('click', () => { st.demoMin = !st.demoMin; LS.set('demoMin', st.demoMin); renderDemo(); fit(); });
+    if (focusKey) { const n = d.querySelector('#' + CSS.escape(focusKey.split(':')[0])) || [...d.querySelectorAll('[data-set]')].find(x => `${x.dataset.set}:${x.dataset.v}` === focusKey); if (n) n.focus(); }
+    $('#dmin').addEventListener('click', () => { st.demoMin = !st.demoMin; LS.set('demoMin', st.demoMin); renderDemo(); fit(); $('#dmin').focus(); });
     if (st.demoMin) return;
-    $('#dscen').addEventListener('change', e => { st.scenario = e.target.value; LS.set('scenario', st.scenario); st.product = 'CARRY'; reloadScenario(); });
+    $('#dscen').addEventListener('change', e => { st.scenario = e.target.value; LS.set('scenario', st.scenario); st.product = 'CARRY'; reloadScenario(); $('#dscen').focus(); });
     d.querySelectorAll('[data-set]').forEach(b => b.addEventListener('click', () => {
       const name = b.dataset.set; let v = b.dataset.v;
       if (v === 'true') v = true; else if (v === 'false') v = false; else if (!isNaN(+v)) v = +v;
       st[name] = v;
       if (name === 'platform') LS.set('platform', v);
-      if (name === 'clock' || name === 'product') { st.closedBannerHidden = false; reloadScenario(); return; }
-      if (name === 'pricing') cache = null;
-      if (name === 'later' && !v) st.pin = null;
-      renderUI(); renderDemo(); if (st.m1) renderM1();
+      if (name === 'ticks' && !v) { st.noise = 0; walk = 0; }
+      if (name === 'clock' || name === 'product') { st.closedBannerHidden = false; st.noise = 0; walk = 0; reloadScenario(); return; }
+      if (name === 'pricing') { cache = null; if (v !== 'live') { st.noise = 0; walk = 0; } }
+      if (name === 'later' && !v) { closeM1(true); if (st.pin) setPayoff(() => { st.pin = null; }, 'pin'); }
+      cache = null;
+      rebuildData(); renderDemo(); if (st.m1) renderM1();
     }));
+    $('#dadv').addEventListener('click', () => advanceClock(30));
+    $('#dclose').addEventListener('click', () => { const ids = st.legs.map(l => l.id); if (!ids.length) { toast('ok', 'No positions to close.'); return; } ids.forEach(id => exitLeg(id)); if (st.m1) renderM1(); });
     $('#dtip').addEventListener('click', () => { st.tipSeen = false; LS.set('tipSeen', false); st.hinted = false; LS.set('hinted', false); showCoach(); renderUI(); renderDemo(); });
     $('#dreset').addEventListener('click', () => { LS.clear(); location.reload(); });
+  }
+  // Moves the clock without resetting positions, so time-based states (pin passing, time passed) can be seen.
+  function advanceClock(min) {
+    if (closed()) { toast('ok', 'The market is already closed.'); return; }
+    const wasOpen = !closed();
+    st.clock = Math.min(945, st.clock + min);
+    if (st.clock > E.CLOSE && st.clock < 945) st.clock = 945;
+    if (wasOpen && closed()) squareOffIntraday();
+    st.noise = 0; walk = 0; cache = null;
+    const before = snapshot();
+    rebuildData();
+    if (payoffOn()) { const b = book(); idx.limitT = opt.limitT = axisEnd(b); if (axisEnd(b) !== before.end) refit(b); }
+    if (st.m1) renderM1();
+    renderDemo();
   }
   function reloadScenario() {
     const was = payoffOn();
     applyScenario();
     renderDemo();
     cache = null;
-    if (was && payoffOn()) { const b = book(); idx.limitT = opt.limitT = axisEnd(b); const h = currentHorizon(b); if (h) fitTo(h.T); }
+    if (was && payoffOn()) { const b = book(); if (pointable(b)) refit(b); }
     if (!payoffOn()) defaultViews();
     renderUI();
   }
@@ -1364,7 +1661,7 @@
   /* ---------- live ticks ---------- */
   let walk = 0;
   setInterval(() => {
-    if (!st.ticks || st.pricing !== 'live' || closed()) return;
+    if (!ticking()) return;
     walk = Math.max(-3, Math.min(3, walk + (Math.random() - 0.5) * 1.6));
     st.noise = Math.round(walk * 20) / 20;
     rebuildDataSoft();
@@ -1393,7 +1690,12 @@
     const app = $('#app');
     app.style.width = W + 'px'; app.style.height = H + 'px';
     app.style.transform = s < 1 ? `scale(${s})` : '';
-    requestAnimationFrame(() => { idx.resize(); opt.resize(); cache = null; renderUI(); placeCoach(); if (st.popover) renderPopover(); });
+    requestAnimationFrame(() => {
+      idx.resize(); opt.resize(); cache = null; renderUI(); placeCoach(); if (st.popover) renderPopover();
+      // collapsed, the demo control sits in the left rail's empty space so it hides no product UI
+      const sep = $('.rail.l .sep').getBoundingClientRect(), d = $('#demo');
+      if (d) { d.style.setProperty('--pill-top', (sep.top + 6) + 'px'); d.style.setProperty('--pill-left', Math.max(2, sep.left + sep.width / 2 - 28) + 'px'); }
+    });
   }
   window.addEventListener('resize', fit);
   new ResizeObserver(() => { idx.resize(); opt.resize(); cache = null; idx.invalidate(); opt.invalidate(); }).observe($('#idxWrap'));

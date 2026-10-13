@@ -77,7 +77,7 @@ class SahiChart {
     this.hooks.below && this.hooks.below(ctx, this);
     this._volume();
     this._candles();
-    if (this.o.sub) this._sub();
+    if (this.o.sub && (this.candles.length || this.lastPrice != null)) this._sub();
     this.hooks.above && this.hooks.above(ctx, this);
     ctx.restore();
     this._axes();
@@ -108,20 +108,21 @@ class SahiChart {
       const start = Math.ceil(this.view.t0 / 15) * 15;
       for (let T = start; T <= this.view.t1; T += 15) {
         const m = T % 375;
-        if (m === 0) out.push({ T, label: E.DAYS[T / 375].short, day: true });
-        else if (m % step === 0 && m >= 30) out.push({ T, label: E.clock(E.OPEN + m).replace(/ (am|pm)/, '') });
+        if (m === 0) { if (!(this.hooks.skipDay && this.hooks.skipDay(T))) out.push({ T, label: E.DAYS[T / 375].short, day: true }); }
+        else if (m % step === 0 && m >= 30) { const mm = E.OPEN + m; out.push({ T, label: `${Math.floor(mm / 60)}:${String(mm % 60).padStart(2, '0')}` }); }
       }
       // keep day labels, drop time labels that collide with them
       return out.filter((t, i) => t.day || !out.some(u => u.day && Math.abs(u.T - t.T) * pxPerMin < 52));
     }
     const dayStep = step / 375;
     for (let d = Math.ceil(this.view.t0 / 375); d * 375 <= this.view.t1; d++) {
-      if (d % dayStep === 0 && E.DAYS[d]) out.push({ T: d * 375, label: E.DAYS[d].short, day: true });
+      if (d % dayStep === 0 && E.DAYS[d] && !(this.hooks.skipDay && this.hooks.skipDay(d * 375))) out.push({ T: d * 375, label: E.DAYS[d].short, day: true });
     }
     return out;
   }
   _grid() {
     const { ctx } = this;
+    if (!this.candles.length && this.lastPrice == null) return;
     ctx.strokeStyle = this.col.grid; ctx.lineWidth = 1;
     ctx.beginPath();
     for (const p of this._priceTicks()) { const y = Math.round(this.pToY(p)) + 0.5; ctx.moveTo(0, y); ctx.lineTo(this.plotW, y); }
@@ -180,15 +181,18 @@ class SahiChart {
     ctx.stroke();
     ctx.font = '500 11.5px Inter, system-ui, sans-serif'; ctx.textBaseline = 'middle';
     ctx.fillStyle = this.col.text2;
-    for (const p of this._priceTicks()) {
+    const empty = !this.candles.length && this.lastPrice == null;
+    for (const p of empty ? [] : this._priceTicks()) {
       const y = this.pToY(p);
       if (y < 6 || y > this.mainH - 6) continue;
       const st = this._tickStep || 1;
       ctx.fillText(st >= 1 ? Math.round(p).toString() : p.toFixed(st >= 0.1 ? 1 : 2), x0 + 8, y);
     }
-    if (this.o.sub && this._subY) {
+    if (this.o.sub && this._subY && !empty) {
       const sub = this.o.sub;
       for (const v of sub.ticks) { const y = this._subY(v); ctx.fillText(sub.fmt(v), x0 + 8, y); }
+      const lastV = sub.series.filter(q => q.T <= this.nowT).pop();
+      if (lastV) this.tag(x0, this._subY(lastV.v), sub.fmt(lastV.v), sub.color, '#fff');
     }
     ctx.textAlign = 'center';
     for (const t of this._timeTicks()) {
@@ -221,11 +225,14 @@ class SahiChart {
     if (!p || this.drag || p.x > this.plotW || p.y > this.h - this.o.timeH) return;
     if (this.hooks.crosshair && this.hooks.crosshair(this.ctx, this, p) === false) return;
     const { ctx } = this;
+    // An app hook can snap the horizontal line and its label (Payoff snaps to 5 index points).
+    const snap = this.hooks.crossY ? this.hooks.crossY(this, p) : null;
+    const cy = snap ? snap.y : p.y;
     ctx.strokeStyle = this.col.cross; ctx.setLineDash([4, 4]); ctx.beginPath();
     ctx.moveTo(Math.round(p.x) + 0.5, 0); ctx.lineTo(Math.round(p.x) + 0.5, this.h - this.o.timeH);
-    if (p.y < this.mainH) { ctx.moveTo(0, Math.round(p.y) + 0.5); ctx.lineTo(this.plotW, Math.round(p.y) + 0.5); }
+    if (p.y < this.mainH) { ctx.moveTo(0, Math.round(cy) + 0.5); ctx.lineTo(this.plotW, Math.round(cy) + 0.5); }
     ctx.stroke(); ctx.setLineDash([]);
-    if (p.y < this.mainH) this.tag(this.plotW, p.y, this.o.dec === 0 ? Engine.level(this.yToP(p.y)) : this.yToP(p.y).toFixed(2), '#363c47', '#fff');
+    if (p.y < this.mainH) this.tag(this.plotW, cy, snap ? snap.label : this.yToP(p.y).toFixed(2), '#363c47', '#fff');
     const T = this.xToT(p.x);
     const label = this.hooks.timeLabel ? this.hooks.timeLabel(T) : Engine.fmtT(Math.round(T));
     ctx.font = '600 11px Inter, system-ui, sans-serif';
@@ -239,12 +246,15 @@ class SahiChart {
     const r = this.cv.getBoundingClientRect();
     return { x: (e.clientX - r.left) * (this.w / r.width), y: (e.clientY - r.top) * (this.h / r.height) };
   }
+  // Keep the view between the first candle and the axis end; the chart can't pan past the axis end.
   clampView(t0, t1) {
     let span = Math.max(this.o.minSpan, Math.min(this.o.maxSpan, t1 - t0));
     const first = this.candles.length ? this.candles[0].s * this.o.tf : t0;
-    const maxRight = (this.limitT != null ? this.limitT : this.nowT) + span * 0.06;
-    if (t0 + span > maxRight) t0 = maxRight - span;
+    const right = this.limitT != null ? this.limitT : this.nowT;
+    span = Math.min(span, (right - first) / 0.89);
+    const maxRight = right + span * 0.06;
     if (t0 < first - span * 0.05) t0 = first - span * 0.05;
+    if (t0 + span > maxRight) t0 = maxRight - span;
     return [t0, t0 + span];
   }
   _bind() {
@@ -276,7 +286,7 @@ class SahiChart {
       if (!this.drag) return;
       const d = this.drag; this.drag = null; this.cv.style.cursor = '';
       if (!d.moved && this.hooks.click) this.hooks.click(this, this.local(e), e);
-      if (d.moved) this.hooks.viewchange && this.hooks.viewchange(this, false);
+      if (d.moved) this.hooks.viewchange && this.hooks.viewchange(this, false, true);
       this.invalidate();
     });
     cv.addEventListener('wheel', e => {
@@ -287,7 +297,7 @@ class SahiChart {
       const t0 = T - (T - this.view.t0) * k, t1 = T + (this.view.t1 - T) * k;
       const [a, b] = this.clampView(t0, t1);
       this.view = { t0: a, t1: b };
-      this.hooks.viewchange && this.hooks.viewchange(this, false);
+      this.hooks.viewchange && this.hooks.viewchange(this, false, true);
       this.invalidate();
     }, { passive: false });
   }

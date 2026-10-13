@@ -20,6 +20,8 @@ const Payoff = (() => {
   function legValue(leg, S, T, book, shift = 0) {
     const t = legTime(leg, T, book);
     const c = leg.c;
+    // Already settled (expired before now): fixed at the settlement level, whatever level is hovered.
+    if (c.type !== 'FUT' && c.expT <= book.nowT) return E.intrinsic(c, E.settleS(c));
     if (c.type !== 'FUT' && t >= c.expT) return E.intrinsic(c, S);
     return E.price(c, S, t, shift);
   }
@@ -36,8 +38,9 @@ const Payoff = (() => {
   }
   function legStatus(leg, T, book) {
     const c = leg.c;
+    if (c.type !== 'FUT' && c.expT <= book.nowT) return 'Settled';
     if (leg.product === 'INTRADAY' && hasCarry(book) && T > SQ_T) return 'Squared off';
-    if (c.type !== 'FUT' && T >= c.expT) return (c.exp.di === E.TODAY && book.closed) ? 'Settled' : 'Expired';
+    if (c.type !== 'FUT' && T >= c.expT) return 'Expired';
     if (c.exp.di === E.TODAY) return 'Expires today';
     return 'Live';
   }
@@ -48,12 +51,14 @@ const Payoff = (() => {
     const v = legValue(leg, S, T, book);
     const status = legStatus(leg, T, book);
     const out = { leg, value: v, pnl: legPnl(leg, v), status, uncertain: false };
-    if (c.type === 'FUT' || t >= c.expT) { out.lo = out.hi = v; out.pnlLo = out.pnlHi = out.pnl; return out; }
+    if (c.type === 'FUT' || t >= c.expT || c.expT <= book.nowT) { out.lo = out.hi = v; out.pnlLo = out.pnlHi = out.pnl; return out; }
     const lo = legValue(leg, S, T, book, IV_LO), hi = legValue(leg, S, T, book, IV_HI);
     out.lo = Math.min(lo, hi); out.hi = Math.max(lo, hi);
     const pa = legPnl(leg, lo), pb = legPnl(leg, hi);
     out.pnlLo = Math.min(pa, pb); out.pnlHi = Math.max(pa, pb);
-    if (E.dayOfT(t) === c.exp.di && (out.hi - out.lo) > v) {
+    // BR-10, compared at tick precision so worthless options aren't flagged
+    const w = E.roundTick(out.hi) - E.roundTick(out.lo);
+    if (E.dayOfT(t) === c.exp.di && w > E.TICK && w > E.roundTick(v)) {
       out.uncertain = true;
       out.intrinsic = E.intrinsic(c, S);
       out.timeValue = Math.max(0, v - out.intrinsic);
@@ -80,9 +85,10 @@ const Payoff = (() => {
     return out;
   }
   // Max profit and max loss at expiry for a defined-risk book of options on one expiry (FR-24).
+  // Intraday legs never reach expiry, so they have no expiry maximum.
   function maxAtExpiry(book) {
     const legs = book.legs;
-    if (legs.length < 2 || legs.some(l => l.c.type === 'FUT')) return null;
+    if (legs.length < 2 || legs.some(l => l.c.type === 'FUT' || l.product === 'INTRADAY')) return null;
     const expT = legs[0].c.expT;
     if (legs.some(l => l.c.expT !== expT)) return null;
     const S0 = book.S0;
@@ -90,9 +96,10 @@ const Payoff = (() => {
     const lo = S0 * 0.5, hi = S0 * 1.5;
     const slopeLo = f(lo + 1) - f(lo), slopeHi = f(hi + 1) - f(hi);
     if (Math.abs(slopeLo) > 1e-6 || Math.abs(slopeHi) > 1e-6) return null;
-    let mx = -Infinity, mn = Infinity;
-    for (let S = lo; S <= hi; S += 5) { const v = f(S); if (v > mx) mx = v; if (v < mn) mn = v; }
-    return { maxProfit: mx, maxLoss: mn };
+    // The payoff at expiry is piecewise linear, so its extremes sit at the strikes.
+    const pts = [lo, hi, ...legs.map(l => l.c.strike)];
+    const vals = pts.map(f);
+    return { maxProfit: Math.max(...vals), maxLoss: Math.min(...vals) };
   }
   const coneHalf = (S0, iv, nowT, T) => S0 * iv * Math.sqrt(Math.max(0, T - nowT) / E.YEAR);
 
