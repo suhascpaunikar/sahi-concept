@@ -7,6 +7,8 @@ Mirror is a post-market trade review for the Sahi app. After the 3:30 pm close i
 | Path | What it is |
 |---|---|
 | `docs/sahi-mirror-mobile-prd.md` | Full PRD v2.0, rewritten from the web desktop PRD v1.1 for the Sahi iOS and Android app |
+| `docs/sahi-payoff-desktop-prd.md` | Payoff (desktop) PRD v1.0: the Payoff mode on the Scalper split view, for Sahi web and the Sahi Desktop app |
+| `docs/sahi-payoff-desktop-prd.html` | The same Payoff PRD as a styled page with contents, linked IDs and an open-items filter. Open it in a browser |
 | `prototype/index.html` | Clickable phone prototype of the PRD. One self-contained file, no build step |
 
 ## Run the prototype
