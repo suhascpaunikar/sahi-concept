@@ -8,7 +8,7 @@ class SahiChart {
   constructor(canvas, opts) {
     this.cv = canvas;
     this.ctx = canvas.getContext('2d');
-    this.o = Object.assign({ tf: 3, axisW: 64, timeH: 28, volFrac: 0.14, sub: null, dec: 2, minSpan: 30, maxSpan: 375 * 20, padTop: 8 }, opts);
+    this.o = Object.assign({ tf: 3, axisW: 64, timeH: 28, volFrac: 0.14, sub: null, dec: 2, minSpan: 30, maxSpan: 375 * 20, padTop: 8, minY: null }, opts);
     this.candles = [];
     this.view = { t0: 0, t1: 375 };
     this.hooks = {};
@@ -58,8 +58,8 @@ class SahiChart {
     const extra = this.hooks.extraRange && this.hooks.extraRange(this);
     if (extra) { lo = Math.min(lo, extra[0]); hi = Math.max(hi, extra[1]); }
     if (!isFinite(lo)) { lo = (this.lastPrice || 100) * 0.99; hi = (this.lastPrice || 100) * 1.01; }
-    const pad = Math.max((hi - lo) * 0.06, (hi + lo) / 2 * 0.0004);
-    this.yr = { lo: lo - pad, hi: hi + pad };
+    const pad = Math.max((hi - lo) * 0.06, (hi + lo) / 2 * 0.0004, 0.05);
+    this.yr = { lo: this.o.minY != null ? Math.max(this.o.minY, lo - pad) : lo - pad, hi: hi + pad };
   }
   /* ---------- drawing ---------- */
   render() {
@@ -266,6 +266,7 @@ class SahiChart {
         const [a, b] = this.clampView(this.drag.t0 + dT, this.drag.t1 + dT);
         if (Math.abs(p.x - this.drag.x) > 3) this.drag.moved = true;
         this.view = { t0: a, t1: b };
+        this.pointer = p;
         this.hooks.viewchange && this.hooks.viewchange(this, true);
         this.invalidate();
         return;
@@ -297,6 +298,7 @@ class SahiChart {
       const t0 = T - (T - this.view.t0) * k, t1 = T + (this.view.t1 - T) * k;
       const [a, b] = this.clampView(t0, t1);
       this.view = { t0: a, t1: b };
+      this.pointer = p;
       this.hooks.viewchange && this.hooks.viewchange(this, false, true);
       this.invalidate();
     }, { passive: false });

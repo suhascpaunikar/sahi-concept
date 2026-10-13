@@ -104,7 +104,7 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .work { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 2px 10px 10px 2px; min-width: 0; min-height: 0; position: relative; }
 
 /* ---------- panels ---------- */
-.panel { container-type: inline-size; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; position: relative; }
+.panel { container-type: inline-size; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: clip; position: relative; }
 .ph { height: 46px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 14px; border-bottom: 1px solid var(--line); }
 .ph .nm { display: flex; align-items: baseline; gap: 7px; font-weight: 600; font-size: 14px; white-space: nowrap; min-width: 0; flex: 1 1 auto; overflow: hidden; }
 .ph .nm > * { flex: none; }
@@ -142,7 +142,7 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .payoff-btn.peek { border-color: var(--breakeven); box-shadow: 0 0 0 3px rgba(242, 184, 75, .16); }
 .payoff-btn:disabled { opacity: .45; }
 
-.cw { position: relative; flex: 1; min-height: 0; }
+.cw { position: relative; flex: 1; min-height: 0; overflow: clip; }
 .cw canvas { position: absolute; inset: 0; display: block; }
 .cw canvas.grab { cursor: grab; }
 .cw canvas:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; border-radius: 0 0 8px 8px; }
@@ -172,7 +172,7 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .qty .qv small { font-size: 9px; color: var(--text-3); }
 
 /* ---------- payoff header strip (over the index chart) ---------- */
-.pstrip { position: absolute; left: 0; right: 64px; top: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 8px 12px; background: linear-gradient(180deg, rgba(13, 17, 24, .97), rgba(13, 17, 24, .88)); border-bottom: 1px solid var(--line); }
+.pstrip { position: absolute; left: 0; right: 64px; top: 0; padding-top: calc(8px + var(--bh, 0px)) !important; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 8px 12px; background: linear-gradient(180deg, rgba(18, 22, 29, .98), rgba(18, 22, 29, .9)); border-bottom: 1px solid var(--line); }
 .pstrip .sum { font-weight: 600; font-size: 12.5px; white-space: nowrap; }
 .pstrip .sum .muted { color: var(--text-2); font-weight: 500; }
 .chips { display: inline-flex; border: 1px solid var(--line-2); border-radius: 7px; overflow: hidden; }
@@ -206,7 +206,7 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .loading { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); z-index: 6; font-size: 12px; padding: 5px 10px; border-radius: 999px; background: var(--panel-3); color: var(--text-2); border: 1px solid var(--line-2); }
 
 /* S3 payoff table */
-.ptable { position: absolute; inset: 0; z-index: 5; background: var(--panel); display: flex; flex-direction: column; }
+.ptable { position: absolute; inset: 0; z-index: 5; background: var(--panel); display: flex; flex-direction: column; padding-top: var(--bh, 0px); }
 .ptable .tt { flex: none; padding: 12px 14px 10px; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .ptable .tt h3 { margin: 0; font-size: 13.5px; font-weight: 600; }
 .ptable .tt span { font-size: 11px; color: var(--text-3); white-space: nowrap; }
@@ -276,7 +276,7 @@ button.ochip:focus-visible { outline: 2px solid var(--blue); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* D1 pinned card */
-.d1 { position: absolute; z-index: 8; width: 270px; border-radius: 11px; background: #1a202b; border: 1px solid #3a4558; box-shadow: 0 18px 44px -14px rgba(0, 0, 0, .85); padding: 12px 13px 11px; }
+.d1 { position: absolute; z-index: 8; width: 270px; overflow-y: auto; border-radius: 11px; background: #1a202b; border: 1px solid #3a4558; box-shadow: 0 18px 44px -14px rgba(0, 0, 0, .85); padding: 12px 13px 11px; }
 .d1 .hd { display: flex; align-items: flex-start; gap: 8px; }
 .d1 .hd h4 { margin: 0; font-size: 12.5px; font-weight: 600; line-height: 1.35; flex: 1; }
 .d1 .hd h4 small { display: block; color: var(--text-3); font-weight: 500; font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 2px; }
@@ -701,7 +701,8 @@ const Engine = (() => {
     const iv = T < t0 ? ivPrev + 0.004 * Math.sin(T / 37) : ivPrev + (c.iv - ivPrev) * f;
     return bs(c.type, pathAt(T, closing), c.strike, tauOf(c.expT, T), iv);
   }
-  function candles(tf, fromT, toT, valueAt, seed) {
+  // floor: lowest value a series can take (0 for option prices).
+  function candles(tf, fromT, toT, valueAt, seed, floor = -Infinity) {
     const r = rng(seed);
     const out = [];
     const s0 = Math.floor(fromT / tf), s1 = Math.ceil(toT / tf);
@@ -710,8 +711,9 @@ const Engine = (() => {
       if (b <= a) continue;
       let o = valueAt(a, false), c = valueAt(b, true), h = Math.max(o, c), l = Math.min(o, c);
       for (let m = a + 1; m < b; m++) { const v = valueAt(m); if (v > h) h = v; if (v < l) l = v; }
-      const span = Math.max(0.6, (h - l) * 0.18);
-      h += r() * span; l -= r() * span;
+      // wick size scales with the price, so a ₹0.05 option doesn't get ₹0.60 wicks
+      const span = Math.max(Math.min(0.6, Math.abs(o) * 0.01), (h - l) * 0.18);
+      h += r() * span; l = Math.max(floor, l - r() * span);
       const mod = (a % SESSION);
       const u = 0.55 + 0.9 * Math.pow(Math.abs(mod - 187) / 187, 2);
       out.push({ s, o, h, l, c, v: u * (0.4 + r()) });
@@ -861,7 +863,7 @@ class SahiChart {
   constructor(canvas, opts) {
     this.cv = canvas;
     this.ctx = canvas.getContext('2d');
-    this.o = Object.assign({ tf: 3, axisW: 64, timeH: 28, volFrac: 0.14, sub: null, dec: 2, minSpan: 30, maxSpan: 375 * 20, padTop: 8 }, opts);
+    this.o = Object.assign({ tf: 3, axisW: 64, timeH: 28, volFrac: 0.14, sub: null, dec: 2, minSpan: 30, maxSpan: 375 * 20, padTop: 8, minY: null }, opts);
     this.candles = [];
     this.view = { t0: 0, t1: 375 };
     this.hooks = {};
@@ -911,8 +913,8 @@ class SahiChart {
     const extra = this.hooks.extraRange && this.hooks.extraRange(this);
     if (extra) { lo = Math.min(lo, extra[0]); hi = Math.max(hi, extra[1]); }
     if (!isFinite(lo)) { lo = (this.lastPrice || 100) * 0.99; hi = (this.lastPrice || 100) * 1.01; }
-    const pad = Math.max((hi - lo) * 0.06, (hi + lo) / 2 * 0.0004);
-    this.yr = { lo: lo - pad, hi: hi + pad };
+    const pad = Math.max((hi - lo) * 0.06, (hi + lo) / 2 * 0.0004, 0.05);
+    this.yr = { lo: this.o.minY != null ? Math.max(this.o.minY, lo - pad) : lo - pad, hi: hi + pad };
   }
   /* ---------- drawing ---------- */
   render() {
@@ -1119,6 +1121,7 @@ class SahiChart {
         const [a, b] = this.clampView(this.drag.t0 + dT, this.drag.t1 + dT);
         if (Math.abs(p.x - this.drag.x) > 3) this.drag.moved = true;
         this.view = { t0: a, t1: b };
+        this.pointer = p;
         this.hooks.viewchange && this.hooks.viewchange(this, true);
         this.invalidate();
         return;
@@ -1150,6 +1153,7 @@ class SahiChart {
       const t0 = T - (T - this.view.t0) * k, t1 = T + (this.view.t1 - T) * k;
       const [a, b] = this.clampView(t0, t1);
       this.view = { t0: a, t1: b };
+      this.pointer = p;
       this.hooks.viewchange && this.hooks.viewchange(this, false, true);
       this.invalidate();
     }, { passive: false });
@@ -1177,10 +1181,12 @@ class SahiChart {
     const a = document.activeElement;
     const key = a && el.contains(a) ? keyOf(a) : null;
     const changed = setHTML(el, html);
-    if (changed && key) { const n = [...el.querySelectorAll('button, [tabindex]')].find(x => keyOf(x) === key); if (n) n.focus(); }
+    if (changed && key) { const n = [...el.querySelectorAll('button, [tabindex]')].find(x => keyOf(x) === key); focusNS(n); }
     return changed;
   }
   const SHOT_C = C('CE', 22500, '2026-10-27');
+  // Focus without letting the browser scroll a clipped panel to reach the element.
+  const focusNS = el => { if (el) el.focus({ preventScroll: true }); };
   let legId = 1;
   const leg = (c, side, avg, product = 'CARRY', qty = E.LOT) => ({ id: legId++, c, side, qty, avg, product });
 
@@ -1238,7 +1244,14 @@ class SahiChart {
       st.realised += l.side * l.qty * (E.price(l.c, E.pathAt(P.SQ_T), P.SQ_T) - l.avg);
       return false;
     });
+    pruneOrders();
   }
+  // Scheduled exits and targets/stops go with the positions they belong to (BR-21).
+  function pruneOrders() {
+    st.exits = st.exits.map(x => Object.assign({}, x, { legIds: x.legIds.filter(i => st.legs.some(l => l.id === i)) })).filter(x => x.legIds.length);
+    Object.keys(st.orders).forEach(id => { if (!st.legs.some(l => String(l.id) === id)) delete st.orders[id]; });
+  }
+  function clearPin(reason) { if (st.pin) { log('payoff_pin_close', `reason=${reason}`); st.pin = null; } }
   function applyScenario() {
     const sc = SCEN[st.scenario] || SCEN.single;
     st.legs = sc.legs(st.product);
@@ -1273,6 +1286,18 @@ class SahiChart {
   const otherCount = () => st.others.length;
   const sessionEnd = () => closed() ? (E.TODAY + 2) * E.SESSION : (E.TODAY + 1) * E.SESSION;
   const firstT = b => Math.ceil((b.nowT + 1) / 3) * 3;
+  // A point at or before Now shows Now values (BR-13), e.g. after the clock moves on.
+  const livePt = (z, b) => (z && z.T && z.T > b.nowT) ? z : null;
+  // One P&L per point: a held single position is valued at the tick it would trade at.
+  function pointPnl(b, S, T) {
+    if (!isS3() && !b.pretrade && b.legs.length === 1) { const l = b.legs[0]; return l.side * l.qty * (heldPrem(l, S, T, b) - l.avg); }
+    return P.pnl(b, S, T);
+  }
+  function heldPrem(l, S, T, b) {
+    const v = P.legDetail(l, S, T, b).value;
+    if (l.c.type === 'FUT') return v;
+    return T < l.c.expT ? Math.max(E.TICK, E.roundTick(v)) : E.roundTick(v);
+  }
 
   function horizons(b) {
     const end = axisEnd(b);
@@ -1318,7 +1343,7 @@ class SahiChart {
   const idx = new SahiChart($('#idxCanvas'), { tf: 3, dec: 2 });
   const OI = [];
   const opt = new SahiChart($('#optCanvas'), {
-    tf: 5, dec: 2, volFrac: 0.1,
+    tf: 5, dec: 2, volFrac: 0.1, minY: 0,
     sub: { frac: 0.26, series: OI, lo: 21e5, hi: 43e5, ticks: [25e5, 30e5, 35e5, 40e5], fmt: v => (v / 1e5).toFixed(0) + 'L', color: '#2196f3' }
   });
   const savedViews = { idx: null, opt: null };
@@ -1348,7 +1373,7 @@ class SahiChart {
     idx.setData(ic, T, S);
     const c = shownOpt();
     if (c) {
-      const oc = E.candles(5, E.tOf(E.TODAY - 3, E.OPEN), T, (t, cc) => E.optionPathAt(c, t, cc), 7 + (c.strike || 0));
+      const oc = E.candles(5, E.tOf(E.TODAY - 3, E.OPEN), T, (t, cc) => E.optionPathAt(c, t, cc), 7 + (c.strike || 0), c.type === 'FUT' ? -Infinity : 0);
       const lp = ltp(c);
       const ol = oc[oc.length - 1];
       if (ol) { ol.c = lp; ol.h = Math.max(ol.h, lp); ol.l = Math.min(ol.l, lp); }
@@ -1375,7 +1400,7 @@ class SahiChart {
   function enterPayoff(source) {
     const b = book();
     savedViews.idx = savedViews.idx || idx.view; savedViews.opt = savedViews.opt || opt.view;
-    if (pointable(b)) refit(b);
+    { const e = axisEnd(b); if (e != null && e > b.nowT) refit(b); }
     st.fadeStart = performance.now();
     st.loadingUntil = performance.now() + 260;
     setTimeout(() => { idx.invalidate(); renderUI(); }, 280);
@@ -1479,14 +1504,18 @@ class SahiChart {
   }
   const overlaps = (r, list, pad = 3) => list.some(t => r.x < t.x + t.w + pad && r.x + r.w + pad > t.x && r.y < t.y + t.h + pad && r.y + r.h + pad > t.y);
   // Try each candidate position; draw the first one that collides with nothing already placed.
+  const overlapArea = (r, list) => list.reduce((a, t) => a + Math.max(0, Math.min(r.x + r.w, t.x + t.w) - Math.max(r.x, t.x)) * Math.max(0, Math.min(r.y + r.h, t.y + t.h) - Math.max(r.y, t.y)), 0);
   function placePill(ctx, taken, cands, lines, o, plotW) {
-    let chosen = null;
+    let chosen = null, best = null, bestA = Infinity;
     for (const cd of cands) {
       const r = pill(ctx, cd.x, cd.y, lines, Object.assign({}, o, cd, { measure: true, clampW: plotW }));
       if (!overlaps(r, taken)) { chosen = cd; break; }
+      const a = overlapArea(r, taken);
+      if (a < bestA) { bestA = a; best = cd; }
     }
     if (!chosen && o.required === false) return null;
-    chosen = chosen || cands[cands.length - 1];
+    // nothing is clear: take the spot that hides the least
+    chosen = chosen || best || cands[cands.length - 1];
     const r = pill(ctx, chosen.x, chosen.y, lines, Object.assign({}, o, chosen, { clampW: plotW }));
     taken.push(r);
     return r;
@@ -1507,21 +1536,33 @@ class SahiChart {
     band(EM50, '#e5484d', 'rgba(229,72,77,.10)');
     band(EM20, '#f0a020', 'rgba(240,160,32,.10)');
     const y = Math.round(ch.pToY(OI_SUPPORT)) + 0.5;
-    if (y > 0 && y < ch.mainH) {
-      ctx.strokeStyle = 'rgba(40,188,208,.7)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ch.plotW, y); ctx.stroke(); ctx.setLineDash([]);
-      pill(ctx, 100, y, 'OI Support', { valign: 'middle', font: '500 10.5px Inter, system-ui, sans-serif', bg: 'rgba(18,22,29,.95)', fg: '#7fd7e4', border: 'rgba(40,188,208,.5)', padX: 10, lh: 12 });
-    }
+    if (y > 0 && y < ch.mainH) { ctx.strokeStyle = 'rgba(40,188,208,.7)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ch.plotW, y); ctx.stroke(); ctx.setLineDash([]); }
+  }
+  // Labels for the S1 indicators sit above the candles, inside the plot, with a pointed left edge like Sahi's tags.
+  function drawS1Labels(ctx, ch) {
+    const y = Math.round(ch.pToY(OI_SUPPORT)) + 0.5;
+    if (y > 0 && y < ch.mainH) pill(ctx, 100, y, 'OI Support', { valign: 'middle', font: '500 10.5px Inter, system-ui, sans-serif', bg: 'rgba(18,22,29,.95)', fg: '#7fd7e4', border: 'rgba(40,188,208,.5)', padX: 10, lh: 12 });
+    [[EM50, '50.0%', '#e5484d'], [EM20, '20.0%', '#d98a12']].forEach(([lvl, t, c]) => {
+      const yy = ch.pToY(lvl);
+      if (yy < 8 || yy > ch.mainH - 8) return;
+      ctx.font = '600 10.5px Inter, system-ui, sans-serif';
+      const w = ctx.measureText(t).width + 12, x = ch.plotW - w - 4;
+      ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x - 6, yy); ctx.lineTo(x, yy - 9); ctx.lineTo(x + w, yy - 9); ctx.lineTo(x + w, yy + 9); ctx.lineTo(x, yy + 9); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(t, x + 6, yy + 0.5);
+    });
   }
   idx.on('axis', (ctx, ch) => {
-    if (payoffOn()) return;
-    [[EM50, '50.0%', '#e5484d'], [EM20, '20.0%', '#d98a12']].forEach(([lvl, t, c]) => { const y = ch.pToY(lvl); if (y > 8 && y < ch.mainH - 8) ch.tag(ch.plotW, y, t, c, '#fff'); });
+    const em = $('#emLegend');
+    if (payoffOn()) { em.style.display = 'none'; return; }
+    em.style.display = '';
+    em.style.top = Math.max(8, ch.pToY(EM50) - 30) + 'px';
   });
 
   /* ---------- index chart overlays ---------- */
   idx.on('extraRange', ch => {
     const b = book();
     if (!payoffOn()) return [Math.min(EM20 - 10, b.S0), Math.max(OI_SUPPORT + 10, b.S0)];
-    if (!pointable(b)) return null;
+    if (!pointable(b)) return st.pin ? [st.pin.S - 10, st.pin.S + 10] : null;
     const end = axisEnd(b);
     const tR = Math.min(end, ch.view.t1);
     const half = P.coneHalf(b.S0, E.BASE_IV, b.nowT, tR);
@@ -1559,17 +1600,19 @@ class SahiChart {
       ctx.strokeStyle = stale ? '#7d8596' : css('--cone'); ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]);
       [up, dn].forEach(line => { ctx.beginPath(); line.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); });
       ctx.setLineDash([]); ctx.lineWidth = 1;
-      ch._coneUp = up;
-    } else ch._coneUp = null;
+      ch._coneUp = up; ch._coneDn = dn;
+    } else { ch._coneUp = null; ch._coneDn = null; }
     ctx.globalAlpha = 1;
   });
   idx.on('above', (ctx, ch) => {
     const taken = [];
     ch._taken = taken;
-    if (!payoffOn()) { drawExitMarkers(ctx, ch, 'idx', taken); return; }
+    if (!payoffOn()) { drawS1Labels(ctx, ch); drawExitMarkers(ctx, ch, 'idx', taken); return; }
     const b = book();
     const end = axisEnd(b);
     if (end == null || end <= b.nowT) return;
+    // labels keep clear of the docked Now readout
+    if (docking(b)) taken.push(dockRect(ch, b, $('#readout')));
     ctx.globalAlpha = alpha();
     const stale = st.pricing === 'delayed';
     const nx = ch.tToX(b.nowT);
@@ -1584,8 +1627,11 @@ class SahiChart {
       ctx.lineWidth = 1;
     }
     // top row: Now first, then each marker, moving down a row when labels would collide
-    ctx.strokeStyle = '#71809a'; ctx.beginPath(); ctx.moveTo(Math.round(nx) + 0.5, topY - 4); ctx.lineTo(Math.round(nx) + 0.5, ch.mainH); ctx.stroke();
-    placePill(ctx, taken, [{ x: nx + 5, y: topY + 4 }, { x: nx - 5, y: topY + 4, align: 'right' }], closed() ? 'Now · last close' : 'Now', { bg: 'rgba(30,36,48,.95)', border: '#3a4558' }, ch.plotW);
+    const nowTxt = closed() ? 'Now · last close' : 'Now';
+    if (nx >= 0 && nx <= ch.plotW) {
+      ctx.strokeStyle = '#71809a'; ctx.beginPath(); ctx.moveTo(Math.round(nx) + 0.5, topY - 4); ctx.lineTo(Math.round(nx) + 0.5, ch.mainH); ctx.stroke();
+      placePill(ctx, taken, [{ x: nx + 5, y: topY + 4 }, { x: nx - 5, y: topY + 4, align: 'right' }], nowTxt, { bg: 'rgba(30,36,48,.95)', border: '#3a4558' }, ch.plotW);
+    } else placePill(ctx, taken, [nx < 0 ? { x: 4, y: topY + 4 } : { x: ch.plotW - 4, y: topY + 4, align: 'right' }], nx < 0 ? `← ${nowTxt}` : `${nowTxt} →`, { bg: 'rgba(30,36,48,.95)', border: '#3a4558' }, ch.plotW);
     markers(b).forEach(m => {
       const x = Math.round(ch.tToX(m.T)) + 0.5;
       if (x < 0 || x > ch.plotW + 1) return;
@@ -1609,8 +1655,17 @@ class SahiChart {
       const beTip = isS3() ? 'Breakeven: the Nifty level where your book’s total P&L is zero at each time' : 'Breakeven: the Nifty level where this position’s P&L is zero at each time';
       rootsAt.slice().sort((p, q) => q - p).forEach(r => {
         const y = ch.pToY(r);
-        const cands = [{ x: lx - 6, y: y - 4, valign: 'bottom', align: 'right' }, { x: lx - 6, y: y + 4, align: 'right' }, { x: lx - 140, y: y - 4, valign: 'bottom', align: 'right' }, { x: lx - 140, y: y + 4, align: 'right' }];
+        const cands = [{ x: lx - 6, y: y - 4, valign: 'bottom', align: 'right' }, { x: lx - 6, y: y + 4, align: 'right' }, { x: lx - 140, y: y - 4, valign: 'bottom', align: 'right' }, { x: lx - 140, y: y + 4, align: 'right' }, { x: lx - 6, y: y + 30, align: 'right' }, { x: lx - 6, y: y + 56, align: 'right' }, { x: lx - 140, y: y + 30, align: 'right' }, { x: lx - 6, y: y - 30, valign: 'bottom', align: 'right' }];
         const box = placePill(ctx, taken, cands, `Breakeven ${E.level(r)} ${endWord}`, { fg: beCol, bg: 'rgba(16,20,28,.94)', border: stale ? '#4a5263' : 'rgba(242,184,75,.45)', clampH: [topY, plotBottom] }, ch.plotW);
+        hits.idx.push(Object.assign({}, box, { tip: beTip }));
+      });
+      // lines that end before the label time (e.g. a book that is a loss everywhere by then) get a label at their end
+      if (!rootsAt.length) g.lines.forEach(l => {
+        if (l.pts.length < 6) return;
+        const [x, pv] = l.pts[l.pts.length - 1];
+        if (x >= lx - 4) return;
+        const y = ch.pToY(pv), tEnd = Math.round(ch.xToT(x) / ch.o.tf) * ch.o.tf;
+        const box = placePill(ctx, taken, [{ x: x - 4, y: y - 4, valign: 'bottom', align: 'right' }, { x: x - 4, y: y + 4, align: 'right' }, { x: x + 4, y: y - 4, valign: 'bottom' }, { x: x + 4, y: y + 4 }], `Breakeven ${E.level(pv)} at ${E.fmtT(tEnd)}`, { fg: beCol, bg: 'rgba(16,20,28,.94)', border: stale ? '#4a5263' : 'rgba(242,184,75,.45)', clampH: [topY, plotBottom] }, ch.plotW);
         hits.idx.push(Object.assign({}, box, { tip: beTip }));
       });
       // breakevens beyond the visible range, at the same time as the labels
@@ -1624,11 +1679,17 @@ class SahiChart {
       // cone label on a flatter part of the upper edge, with a background so the dashes don't cross it
       if (st.cone && ch._coneUp && ch._coneUp.length > 3) {
         const up = ch._coneUp;
-        const cands = [0.82, 0.68, 0.92, 0.55].map(f => { const [x, y] = up[Math.floor((up.length - 1) * f)]; return { x, y: y - 6, align: 'center', valign: 'bottom' }; }).filter(c => c.y > topY + 20);
-        if (cands.length) placePill(ctx, taken, cands, 'Typical move (1 SD)', { font: '500 10.5px Inter, system-ui, sans-serif', fg: stale ? '#9aa2b2' : '#f2a6b4', bg: 'rgba(18,22,29,.9)', padX: 10, lh: 12, required: false }, ch.plotW);
+        const dn = ch._coneDn || up;
+        const cands = [0.82, 0.68, 0.92, 0.55].map(f => { const [x, y] = up[Math.floor((up.length - 1) * f)]; return { x, y: y - 6, align: 'center', valign: 'bottom' }; }).filter(c => c.y > topY + 20)
+          .concat([0.9, 0.75, 0.6].map(f => { const i = Math.floor((up.length - 1) * f); return { x: up[i][0], y: (up[i][1] + dn[i][1]) / 2 - 30, align: 'center', valign: 'middle' }; }), [0.9, 0.75].map(f => { const i = Math.floor((up.length - 1) * f); return { x: dn[i][0], y: dn[i][1] + 6, align: 'center' }; }));
+        if (cands.length) placePill(ctx, taken, cands, 'Typical move (1 SD)', { font: '500 10.5px Inter, system-ui, sans-serif', fg: stale ? '#9aa2b2' : '#f2a6b4', bg: 'rgba(18,22,29,.9)', padX: 10, lh: 12, clampH: [topY + 4, plotBottom] }, ch.plotW);
       }
       // Profit and Loss labels, in the largest region of a column that is clear of other labels
       if (g.cols.length) {
+        const lineRects = [];
+        const addPts = pts => pts.forEach(([x, y]) => lineRects.push({ x: x - 1, y: y - 1, w: 2, h: 2 }));
+        if (st.cone && ch._coneUp) { addPts(ch._coneUp); addPts(ch._coneDn || []); }
+        g.lines.forEach(l => addPts(l.pts.map(([x, pv]) => [x, ch.pToY(pv)])));
         [[true, 'Profit', stale ? '#8a92a3' : css('--up-2')], [false, 'Loss', stale ? '#8a92a3' : '#f0828f']].forEach(([want, text, color]) => {
           for (const f of [0.62, 0.45, 0.76, 0.3, 0.88]) {
             const col = g.cols[Math.floor(g.cols.length * f)];
@@ -1641,14 +1702,15 @@ class SahiChart {
             ctx.font = '600 12px Inter, system-ui, sans-serif';
             const w = ctx.measureText(text).width + 8;
             const r = { x: col.x - w / 2, y: yc - 9, w, h: 18 };
-            if (overlaps(r, taken)) continue;
+            if (overlaps(r, taken) || overlaps(r, lineRects, 0)) continue;
             taken.push(r);
             ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(text, col.x, yc); ctx.textAlign = 'left';
             break;
           }
         });
-        if (!g.anyRoot) placePill(ctx, taken, [{ x: nx + 8, y: topY + 50 }, { x: nx + 8, y: topY + 90 }, { x: nx + 8, y: plotBottom - 30 }], `${g.sign} at every level shown`, { fg: g.sign === 'Profit' ? css('--up-2') : '#f0828f', bg: 'rgba(16,20,28,.94)', border: '#3a4558' }, ch.plotW);
+        const signAt = labelT > b.nowT ? (P.pnl(b, (g.lo + g.hi) / 2, labelT) > 0 ? 'Profit' : 'Loss') : g.sign;
+        if (!g.anyRoot || !rootsAt.length) placePill(ctx, taken, [{ x: nx + 8, y: topY + 50 }, { x: nx + 8, y: topY + 90 }, { x: nx + 8, y: plotBottom - 30 }, { x: nx + 8, y: plotBottom - 56 }, { x: nx + 8, y: (topY + plotBottom) / 2 }, { x: lx - 6, y: plotBottom - 30, align: 'right' }], `${g.anyRoot ? signAt : g.sign} at every level shown${g.anyRoot ? ` ${endWord}` : ''}`, { fg: (g.anyRoot ? signAt : g.sign) === 'Profit' ? css('--up-2') : '#f0828f', bg: 'rgba(16,20,28,.94)', border: '#3a4558' }, ch.plotW);
       }
       // hovered table row: that leg's strike
       if (st.rowHover && st.rowHover.c.type !== 'FUT') {
@@ -1709,11 +1771,13 @@ class SahiChart {
       if (l && l.c === shown) {
         vals.push(l.avg);
         const tR = Math.min(end, ch.view.t1);
-        for (let k = 1; k <= 6; k++) {
-          const T = b.nowT + (tR - b.nowT) * k / 6;
-          const half = P.coneHalf(b.S0, E.BASE_IV, b.nowT, T) * 0.8;
-          vals.push(P.legValue(l, b.S0, T, b), P.legValue(l, b.S0 + half, T, b), P.legValue(l, b.S0 - half, T, b));
+        // option value is monotonic in the index level, so the index chart's visible range bounds every hoverable point
+        const lo = idx.yr ? idx.yr.lo : b.S0 * 0.97, hi = idx.yr ? idx.yr.hi : b.S0 * 1.03;
+        for (let k = 0; k <= 6; k++) {
+          const T = Math.max(b.nowT + 1, b.nowT + (tR - b.nowT) * k / 6);
+          vals.push(P.legValue(l, b.S0, T, b), P.legValue(l, hi, T, b), P.legValue(l, lo, T, b));
         }
+        if (st.pin) { const d = P.legDetail(l, st.pin.S, st.pin.T, b); vals.push(d.lo, d.hi); }
       }
     }
     if (!vals.length) return null;
@@ -1766,14 +1830,16 @@ class SahiChart {
       if (x < 0 || x > ch.plotW + 1) return;
       ctx.strokeStyle = '#8b95a8'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(x, topY); ctx.lineTo(x, ch.mainH); ctx.stroke(); ctx.setLineDash([]);
     });
-    ctx.strokeStyle = '#71809a'; ctx.beginPath(); ctx.moveTo(Math.round(nx) + 0.5, topY); ctx.lineTo(Math.round(nx) + 0.5, ch.mainH); ctx.stroke();
-    taken.push(pill(ctx, nx + 5, topY + 4, closed() ? 'Now · last close' : 'Now', { bg: 'rgba(30,36,48,.95)', border: '#3a4558' }));
+    taken.push({ x: 0, y: 0, w: 52, h: 42 });
+    if (nx >= 0 && nx <= ch.plotW) {
+      ctx.strokeStyle = '#71809a'; ctx.beginPath(); ctx.moveTo(Math.round(nx) + 0.5, topY); ctx.lineTo(Math.round(nx) + 0.5, ch.mainH); ctx.stroke();
+      placePill(ctx, taken, [{ x: nx + 5, y: topY + 4 }, { x: nx - 5, y: topY + 4, align: 'right' }, { x: nx + 5, y: topY + 30 }], closed() ? 'Now · last close' : 'Now', { bg: 'rgba(30,36,48,.95)', border: '#3a4558' }, ch.plotW);
+    }
     if (st.pricing === 'unavailable') { ctx.globalAlpha = 1; return; }
     // paid / sold at / last price line
     const yP = Math.round(ch.pToY(l.avg)) + 0.5;
     ctx.strokeStyle = '#c9d0dc'; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(0, yP); ctx.lineTo(ch.plotW, yP); ctx.stroke(); ctx.setLineDash([]);
-    const paidTxt = b.pretrade ? `Last price ${E.prem(l.avg)}` : l.side > 0 ? `Paid ${E.prem(l.avg)}` : `Sold at ${E.prem(l.avg)}`;
-    placePill(ctx, taken, [{ x: 8, y: yP + 4 }, { x: 8, y: yP - 4, valign: 'bottom' }], paidTxt, { fg: '#e9ecf1' }, ch.plotW);
+    // (the paid-line label is placed after the marker so it can move out of the way)
     // flat case: premium over time if the index stays where it is
     const pts = [];
     for (let x = nx; x <= Math.min(ch.tToX(end), ch.plotW); x += 3) pts.push([x, P.legValue(l, b.S0, Math.min(end, ch.xToT(x)), b)]);
@@ -1781,13 +1847,15 @@ class SahiChart {
     pts.forEach(([x, v], i) => i ? ctx.lineTo(x, ch.pToY(v)) : ctx.moveTo(x, ch.pToY(v))); ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1;
     // (the flat-case label is placed after the marker, which matters more)
     // marker for the hovered or pinned time; with neither, the current premium at Now
-    const pt = st.pin || (st.hover && st.hover.T ? st.hover : null);
+    const pt = livePt(st.pin || (st.hover && st.hover.T ? st.hover : null), b);
     const clampY = y => Math.max(topY + 6, Math.min(plotBottom - 6, y));
-    if (pt) {
+    if (pt && (ch.tToX(pt.T) < 0 || ch.tToX(pt.T) > ch.plotW)) {
+      // the point is outside this view: no marker, rather than a label pinned to the edge
+    } else if (pt) {
       const d = P.legDetail(l, pt.S, pt.T, b);
       const x = ch.tToX(pt.T), yRaw = ch.pToY(d.value), y = clampY(yRaw);
       ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(x, topY); ctx.lineTo(x, ch.mainH); ctx.stroke(); ctx.setLineDash([]);
-      const hasRange = !d.uncertain && E.roundTick(d.hi) - E.roundTick(d.lo) >= E.TICK;
+      const hasRange = !d.uncertain && d.hi - d.lo >= E.TICK;
       if (hasRange) {
         ctx.strokeStyle = stale ? '#8a92a3' : '#ffd98a'; ctx.lineWidth = 2;
         const yh = clampY(ch.pToY(d.hi)), yl = clampY(ch.pToY(d.lo));
@@ -1798,12 +1866,14 @@ class SahiChart {
       dot(ctx, x, y, stale ? '#c0c6d2' : '#ffd98a', 4.5);
       if (yRaw !== y) { ctx.fillStyle = '#ffd98a'; ctx.font = '700 11px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(yRaw < y ? '▲' : '▼', x, yRaw < y ? y - 10 : y + 12); ctx.textAlign = 'left'; }
       const timeTxt = E.fmtT(pt.T, E.dayOfT(pt.T) !== E.dayOfT(b.nowT) || closed());
-      const shownV = b.pretrade ? d.value : E.roundTick(d.value);
-      const shownPnl = b.pretrade ? d.pnl : l.side * l.qty * (shownV - l.avg);
+      const shownV = b.pretrade ? d.value : heldPrem(l, pt.S, pt.T, b);
+      const shownPnl = pointPnl(b, pt.S, pt.T);
       const lines = [`${E.prem(shownV)} at ${timeTxt}`, d.uncertain ? 'Too uncertain to price' : hasRange ? `${E.prem(d.lo)} to ${E.prem(d.hi)}` : null].filter(Boolean);
       const tagTxt = `${E.signed(shownPnl)} on ${l.qty}`;
       // the price box and its P&L tag move together: right of the point, left of it, then below it
-      const both = [{ dx: 12, align: 'left', up: true }, { dx: -12, align: 'right', up: true }, { dx: 12, align: 'left', up: false }, { dx: -12, align: 'right', up: false }];
+      const up4 = [{ dx: 12, align: 'left', up: true }, { dx: -12, align: 'right', up: true }], dn4 = [{ dx: 12, align: 'left', up: false }, { dx: -12, align: 'right', up: false }];
+      // when the dot is clamped to the top, put the label below it so it never covers the dot
+      const both = yRaw < y ? dn4.concat(up4) : up4.concat(dn4);
       let chosen = null;
       for (const c of both) {
         const box = pill(ctx, x + c.dx, c.up ? y - 10 : y + 10, lines, { align: c.align, valign: c.up ? 'bottom' : 'top', measure: true, clampW: ch.plotW, clampH: [topY, plotBottom - 30] });
@@ -1814,14 +1884,20 @@ class SahiChart {
       const box = pill(ctx, x + chosen.dx, chosen.up ? y - 10 : y + 10, lines, { align: chosen.align, valign: chosen.up ? 'bottom' : 'top', bg: 'rgba(23,29,39,.97)', border: '#3a4558', fg: stale ? '#9aa2b2' : '#fff', clampW: ch.plotW, clampH: [topY, plotBottom - 30] });
       taken.push(box, { x: box.x, y: box.y + box.h + 4, w: box.w, h: 22 });
       pill(ctx, x + chosen.dx, box.y + box.h + 4, tagTxt, { align: chosen.align, clampW: ch.plotW, bg: stale ? '#2a303b' : shownPnl >= 0 ? COL.upBg : COL.downBg, fg: stale ? '#9aa2b2' : '#fff', border: stale ? '#3a4558' : shownPnl >= 0 ? COL.up : COL.down });
-    } else {
+    } else if (nx >= 0 && nx <= ch.plotW) {
       const cur = ltp(l.c), y = clampY(ch.pToY(cur));
-      dot(ctx, nx, y, '#ffd98a', 4.5);
+      dot(ctx, nx, y, stale ? '#c0c6d2' : '#ffd98a', 4.5);
       const pnlNow = b.pretrade ? 0 : l.side * l.qty * (cur - l.avg);
-      const box = pill(ctx, nx + 12, y - 10, `${E.prem(cur)} now`, { valign: 'bottom', bg: 'rgba(23,29,39,.97)', border: '#3a4558', fg: '#fff', clampH: [topY + 26, plotBottom - 30], clampW: ch.plotW });
-      if (!b.pretrade) pill(ctx, nx + 12, box.y + box.h + 4, `${E.signed(pnlNow)} on ${l.qty}`, { bg: pnlNow >= 0 ? COL.upBg : COL.downBg, fg: '#fff', border: pnlNow >= 0 ? COL.up : COL.down, clampW: ch.plotW });
+      const tagTxt = `${E.signed(pnlNow)} on ${l.qty}`;
+      const cands = [{ dx: 12, align: 'left', up: true }, { dx: 12, align: 'left', up: false }, { dx: -12, align: 'right', up: true }, { dx: -12, align: 'right', up: false }];
+      let ch0 = cands.find(c => { const bx = pill(ctx, nx + c.dx, c.up ? y - 10 : y + 10, `${E.prem(cur)} now`, { align: c.align, valign: c.up ? 'bottom' : 'top', measure: true, clampW: ch.plotW, clampH: [topY + 26, plotBottom - 30] }); const tg = { x: bx.x, y: bx.y + bx.h + 4, w: bx.w + 30, h: 22 }; return !overlaps(bx, taken) && (b.pretrade || !overlaps(tg, taken)); }) || cands[0];
+      const box = pill(ctx, nx + ch0.dx, ch0.up ? y - 10 : y + 10, `${E.prem(cur)} now`, { align: ch0.align, valign: ch0.up ? 'bottom' : 'top', bg: 'rgba(23,29,39,.97)', border: '#3a4558', fg: stale ? '#9aa2b2' : '#fff', clampH: [topY + 26, plotBottom - 30], clampW: ch.plotW });
+      taken.push(box);
+      if (!b.pretrade) taken.push(pill(ctx, nx + ch0.dx, box.y + box.h + 4, tagTxt, { align: ch0.align, bg: stale ? '#2a303b' : pnlNow >= 0 ? COL.upBg : COL.downBg, fg: stale ? '#9aa2b2' : '#fff', border: stale ? '#3a4558' : pnlNow >= 0 ? COL.up : COL.down, clampW: ch.plotW }));
     }
     if (pts.length > 2) { const [lx, lv] = pts[pts.length - 1]; placePill(ctx, taken, [{ x: lx - 4, y: ch.pToY(lv) - 6, align: 'right', valign: 'bottom' }, { x: lx - 4, y: ch.pToY(lv) + 6, align: 'right' }], `If Nifty stays at ${E.level(b.S0)}`, { fg: stale ? '#9aa2b2' : '#cbbcff', clampH: [topY, plotBottom], required: false }, ch.plotW); }
+    const paidTxt = b.pretrade ? `Last price ${E.prem(l.avg)}` : l.side > 0 ? `Paid ${E.prem(l.avg)}` : `Sold at ${E.prem(l.avg)}`;
+    placePill(ctx, taken, [{ x: 8, y: yP + 4 }, { x: 8, y: yP - 4, valign: 'bottom' }, { x: 60, y: yP + 4 }, { x: 60, y: yP - 4, valign: 'bottom' }, { x: ch.plotW * 0.5, y: yP + 4 }], paidTxt, { fg: '#e9ecf1' }, ch.plotW);
     drawExitMarkers(ctx, ch, 'opt', taken);
     ctx.globalAlpha = 1;
   });
@@ -1888,12 +1964,16 @@ class SahiChart {
     if (byUser && st.horizon !== 'custom') { st.horizon = 'custom'; renderStrip(book()); }
     opt.setView(ch.view.t0, ch.view.t1);
     if (!dragging) cache = null;
+    // the point under a still pointer changes when the view moves
+    if (ch.pointer && !pinDrag) { st.hover = zoneAt(ch, ch.pointer); updateReadout(ch.pointer); opt.invalidate(); renderTable(); }
     renderD1();
   });
   opt.on('viewchange', (ch, dragging, byUser) => {
     if (!payoffOn() || isS3()) return;
     if (byUser && st.horizon !== 'custom') { st.horizon = 'custom'; renderStrip(book()); }
-    idx.setView(ch.view.t0, ch.view.t1);
+    const [a, c] = idx.clampView(ch.view.t0, ch.view.t1);
+    idx.setView(a, c); ch.view = { t0: a, t1: c };
+    renderD1();
   });
   opt.on('hover', (ch, p) => {
     const hit = hits.opt.find(h => p.x >= h.x && p.x <= h.x + h.w && p.y >= h.y && p.y <= h.y + h.h);
@@ -1924,7 +2004,7 @@ class SahiChart {
     log(first ? 'payoff_pin_place' : 'payoff_pin_move');
     renderUI();
     idx.invalidate(); opt.invalidate();
-    if (first) setTimeout(() => { const f = $('#d1 [data-act]') || $('#d1x'); if (f) f.focus(); }, 30);
+    if (first) setTimeout(() => focusNS($('#d1 [data-act]') || $('#d1x')), 30);
   }
   function removePin(returnFocus = true) {
     if (!st.pin) return;
@@ -1932,7 +2012,7 @@ class SahiChart {
     log('payoff_pin_close');
     setPayoff(() => { st.pin = null; }, 'pin');
     if (payoffOn()) { st.keyPt = st.hover = { T: was.T, S: was.S }; updateReadout(null); idx.invalidate(); opt.invalidate(); renderTable(); }
-    if (returnFocus) $(payoffOn() ? '#idxCanvas' : '#payoffBtn').focus();
+    if (returnFocus) focusNS($(payoffOn() ? '#idxCanvas' : '#payoffBtn'));
   }
 
   function moveKeyPoint(dx, dy) {
@@ -1946,13 +2026,17 @@ class SahiChart {
     let T = Math.round((from.T + dx * 3) / 3) * 3;
     if (!base && dx === 0) T = firstT(b);
     T = Math.max(firstT(b), Math.min(end, T));
-    const pt = { T, S: clampS(from.S + dy) };
-    if (st.pin) { st.pin = pt; log('payoff_pin_move'); renderD1(); }
-    else { st.keyPt = pt; st.hover = pt; }
+    // pan first, then change the level only for Up/Down, within the visible range
+    keepPointInView({ T, S: from.S });
+    idx.computeY();
+    const pt = { T, S: dy ? clampS(from.S + dy) : from.S };
+    if (st.pin) {
+      st.pin = pt; st.keyPt = st.hover = null; log('payoff_pin_move');
+      announce(`pin:${T}:${pt.S}`, `Pinned. Nifty ${E.level(pt.S)} · ${E.fmtT(T)}. P&L ${E.signed(pointPnl(b, pt.S, T))}.`);
+    } else { st.keyPt = pt; st.hover = pt; }
     markHinted(pt);
-    keepPointInView(pt);
     updateReadout(null);
-    idx.invalidate(); opt.invalidate(); renderTable();
+    idx.invalidate(); opt.invalidate(); renderTable(); renderD1();
   }
   function keepPointInView(pt) {
     const v = idx.view, span = v.t1 - v.t0;
@@ -1960,7 +2044,7 @@ class SahiChart {
   }
 
   /* ---------- hold-to-peek and other keys ---------- */
-  let altDown = false;
+  let altDown = false, peekTimer = null;
   const typing = t => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
   const ARROWS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 5], ArrowDown: [0, -5] };
   window.addEventListener('keydown', e => {
@@ -1968,10 +2052,12 @@ class SahiChart {
       e.preventDefault(); // stops Windows from moving focus to the browser menu
       if (e.repeat || typing(e.target) || e.metaKey || e.ctrlKey || e.shiftKey || st.m1) return;
       altDown = true;
-      dismissCoach(true);
-      if (!st.peek) setPayoff(() => { st.peek = true; }, 'key');
+      clearTimeout(peekTimer);
+      peekTimer = setTimeout(() => { peekTimer = null; if (!altDown || st.m1) return; dismissCoach(true); if (!st.peek) setPayoff(() => { st.peek = true; }, 'key'); }, 140);
       return;
     }
+    // any other key while Alt is down makes it a shortcut, not a peek
+    if (altDown && peekTimer && !ARROWS[e.key] && e.key !== 'Enter') { clearTimeout(peekTimer); peekTimer = null; }
     // A modal confirm takes all keyboard input; only Esc (and its own Tab trap) apply.
     if (st.m1) { if (e.key === 'Escape') onEsc(e); return; }
     if (e.altKey && (e.metaKey || e.ctrlKey) && e.code === 'Digit1') { e.preventDefault(); cancelPeek(); toggleTap(); return; }
@@ -1991,22 +2077,22 @@ class SahiChart {
   // Enter pins the focused point, or moves focus into the card when a pin is already placed.
   function enterAtPoint() {
     if (!st.later) return;
-    if (st.pin) { const f = $('#d1 [data-act]') || $('#d1x'); if (f) f.focus(); return; }
+    if (st.pin) { focusNS($('#d1 [data-act]') || $('#d1x')); return; }
     const b = book();
     if (!pointable(b)) return;
     placePin(st.keyPt || (st.hover && st.hover.T ? st.hover : { T: firstT(b), S: snapS(b.S0) }));
   }
   window.addEventListener('keyup', e => {
-    if (e.key === 'Alt') { e.preventDefault(); altDown = false; if (st.peek) setPayoff(() => { st.peek = false; }, 'key'); }
+    if (e.key === 'Alt') { e.preventDefault(); altDown = false; clearTimeout(peekTimer); peekTimer = null; if (st.peek) setPayoff(() => { st.peek = false; }, 'key'); }
   });
-  window.addEventListener('blur', () => { altDown = false; if (st.peek) setPayoff(() => { st.peek = false; }, 'key'); });
+  window.addEventListener('blur', () => { altDown = false; clearTimeout(peekTimer); peekTimer = null; if (st.peek) setPayoff(() => { st.peek = false; }, 'key'); });
   function cancelPeek() { if (st.peek) setPayoff(() => { st.peek = false; }, 'key'); }
   function onEsc(e) {
     if (st.m1) { if (st.m1.submitting) return; e.preventDefault(); closeM1(); return; }
     if (st.popover) { closePopover(); return; }
     if (st.pin) { e.preventDefault(); removePin(); return; }
     if (coachOpen()) { dismissCoach(); return; }
-    if (st.sticky) { setPayoff(() => { st.sticky = false; }, 'esc'); $('#payoffBtn').focus(); }
+    if (st.sticky) { setPayoff(() => { st.sticky = false; }, 'esc'); focusNS($('#payoffBtn')); }
   }
 
   /* ---------- toolbar, buttons ---------- */
@@ -2014,7 +2100,7 @@ class SahiChart {
   $('#payoffBtn').addEventListener('click', () => {
     dismissCoach(true);
     const on = st.sticky || !!st.pin;
-    setPayoff(() => { if (on) { st.sticky = false; st.pin = null; } else st.sticky = true; }, 'button');
+    setPayoff(() => { if (on) { st.sticky = false; clearPin('button'); } else st.sticky = true; }, 'button');
   });
   function toggleTap() { st.oneTap = !st.oneTap; renderUI(); refreshTip(); toast('ok', st.oneTap ? '1-Tap is on. Orders go out instantly.' : '1-Tap is off.'); }
   $('#tapBtn').addEventListener('click', toggleTap);
@@ -2059,10 +2145,8 @@ class SahiChart {
   }
   const snapshot = () => ({ s3: isS3(), end: axisEnd(book()), on: payoffOn() });
   function afterPositionsChange(before) {
-    // scheduled exits and targets/stops go with the positions they belong to (BR-21)
-    st.exits = st.exits.map(x => Object.assign({}, x, { legIds: x.legIds.filter(i => st.legs.some(l => l.id === i)) })).filter(x => x.legIds.length);
-    Object.keys(st.orders).forEach(id => { if (!st.legs.some(l => String(l.id) === id)) delete st.orders[id]; });
-    if (st.pin && isS3() !== before.s3) st.pin = null;
+    pruneOrders();
+    if (st.pin && isS3() !== before.s3) clearPin('positions');
     const b = book();
     if (before.on && payoffOn()) {
       const end = axisEnd(b);
@@ -2120,15 +2204,22 @@ class SahiChart {
     ro.classList.toggle('stale', st.pricing === 'delayed');
     const ch = idx;
     let html, x, y, docked = false;
-    if (!z || z.past) {
+    const q = p || idx.pointer;
+    if (performance.now() < st.loadingUntil) {
+      setHTML(ro, `<div class="h">${isS3() ? 'Pricing your positions…' : 'Pricing your position…'}</div>`);
+      const d0 = dockRect(ch, b, ro); ro.style.left = d0.x + 'px'; ro.style.top = d0.y + 'px';
+      return;
+    }
+    if (!z || z.past || !livePt(z, b)) {
       // Pointer over past candles, outside the zone, or off the chart: show Now values (BR-13).
       const n = pnlNow(b);
       const label = b.pretrade ? 'Not holding' : isS3() ? 'Total P&L' : 'P&L';
       html = `<div class="h">Now · ${esc(E.fmtT(b.nowT))}</div><div class="p num ${n >= 0 ? 'up' : 'down'}"><small>Now:</small>${b.pretrade ? `Last price ${E.prem(b.legs[0].avg)}` : `${label} ${E.signed(n)}`}</div><div class="ft">Model estimate, not a forecast</div>`;
-      if (z && z.past && p) { x = p.x; y = p.y; } else docked = true;
+      if (z && z.past && q) { x = q.x; y = q.y; } else docked = true;
       if (z && z.past) announce('now', `Now. ${b.pretrade ? 'Not holding' : `${label} ${E.signed(n)}`}.`);
     } else {
       const m = readoutModel(z);
+      m.pnl = pointPnl(b, z.S, z.T);
       html = `<div class="h num">${esc(m.head)}</div><div class="p num ${m.pnl >= 0 ? 'up' : 'down'}"><small>${m.label}</small>${E.signed(m.pnl)}</div>` +
         (m.unc ? `<div class="u">${esc(m.unc)}</div>` : m.range ? `<div class="r num">${esc(m.range)}</div>` : '') +
         `<div class="f num">${esc(m.flat)}</div><div class="ft">Model estimate, not a forecast</div>`;
@@ -2139,10 +2230,8 @@ class SahiChart {
     const w = ro.offsetWidth, h = ro.offsetHeight;
     let lx, ly;
     if (docked) {
-      // docked beside the Now line, over the past candles where possible
-      const nx = ch.tToX(b.nowT);
-      lx = nx - 10 - w >= 4 ? nx - 10 - w : nx + 10;
-      ly = ch.o.padTop + 36;
+      const d0 = dockRect(ch, b, ro);
+      lx = d0.x; ly = d0.y;
     } else {
       lx = x + 18; ly = y + 18;
       if (lx + w > ch.plotW - 4) lx = x - 18 - w;
@@ -2151,7 +2240,24 @@ class SahiChart {
     ro.style.left = Math.max(4, lx) + 'px'; ro.style.top = Math.max(ch.o.padTop, ly) + 'px';
   }
 
+  // Where the resting Now readout docks: beside the Now line, over past candles where possible, inside the plot.
+  function dockRect(ch, b, ro) {
+    const w = ro ? ro.offsetWidth || 236 : 236, h = ro ? ro.offsetHeight || 86 : 86;
+    const nx = ch.tToX(b.nowT);
+    let x = nx - 10 - w >= 4 ? nx - 10 - w : nx + 10;
+    x = Math.max(4, Math.min(ch.plotW - w - 4, x));
+    return { x, y: ch.o.padTop + 36, w, h };
+  }
+  const docking = b => payoffOn() && pointable(b) && !st.pin && !livePt(st.hover, b);
+
   /* ---------- UI render ---------- */
+  // Height of the band the banner covers at the top of the chart areas, in unscaled px.
+  function bannerBand() {
+    const n2 = $('#n2');
+    if (!bannerShown() || !n2) return 0;
+    const app = $('#app'), k = app.getBoundingClientRect().width / app.offsetWidth || 1;
+    return Math.ceil((n2.getBoundingClientRect().bottom - $('#idxWrap').getBoundingClientRect().top) / k) + 4;
+  }
   const bannerShown = () => { const k = payoffOn() ? bannerKind() : null; return !!k && !(k === 'closed' && st.closedBannerHidden); };
   function renderUI() {
     const b = book();
@@ -2183,20 +2289,18 @@ class SahiChart {
     $('#payoffKey').textContent = keyName();
     $('#payoffDesc').textContent = `Hold ${keyWord()} to peek at your breakeven and P&L, or press to keep Payoff on.`;
     renderBanner();
-    const bh = bannerShown() && $('#n2') ? $('#n2').offsetHeight + 6 : 0;
+    const bh = bannerBand();
     $('#idxWrap').style.setProperty('--bh', bh + 'px');
+    $('#optWrap').style.setProperty('--bh', bh + 'px');
     renderStrip(b);
     const strip = $('#pstrip');
-    idx.o.padTop = on ? (strip ? strip.offsetHeight : 0) + 12 + bh : 8;
+    idx.o.padTop = on ? (strip ? strip.offsetHeight : bh) + 12 : 8;
     opt.o.padTop = on && !isS3() ? 12 + bh : 8;
     renderTable(); renderMsgs(b); renderD1();
     const oiOn = !!c && !(on && isS3());
     $('#oiLabel').style.display = oiOn ? '' : 'none';
     if (oiOn) { const lastOI = OI.filter(q => q.T <= nowT()).pop(); $('#oiLabel').innerHTML = `OI: <b>${lastOI ? (lastOI.v / 1e5).toFixed(0) : '—'}L</b>`; $('#oiLabel').style.top = (opt.subTop + 8) + 'px'; }
     // the existing Exp. Move legend sits beside its bands in S1
-    const em = $('#emLegend');
-    em.style.display = on ? 'none' : '';
-    if (!on && idx.yr) em.style.top = Math.max(8, idx.pToY(EM50) - 26) + 'px';
     idx.invalidate(); opt.invalidate();
     updateReadout(null);
   }
@@ -2216,7 +2320,7 @@ class SahiChart {
     let el = $('#pstrip');
     if (!payoffOn() || !b.all.length) { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('div'); el.id = 'pstrip'; el.className = 'pstrip'; $('#idxWrap').appendChild(el); }
-    el.style.top = 'var(--bh, 0px)';
+    el.style.top = '0px';
     const live = pointable(b) || st.pricing === 'unavailable';
     const hs = live ? horizons(b) : [];
     const cur = currentHorizon(b);
@@ -2259,7 +2363,7 @@ class SahiChart {
       : `<svg class="i"><use href="#i-alert"/></svg><span>Payoff can’t load option prices right now.</span><span class="act"><button id="n2retry">Retry</button></span>`;
     if (!setHTML(el, html)) return;
     const x = $('#n2x'); if (x) x.addEventListener('click', () => { st.closedBannerHidden = true; renderUI(); });
-    const r = $('#n2retry'); if (r) r.addEventListener('click', () => { r.textContent = 'Retrying…'; r.disabled = true; setTimeout(() => { st.pricing = 'live'; cache = null; log('payoff_retry'); renderUI(); renderDemo(); }, 700); });
+    const r = $('#n2retry'); if (r) r.addEventListener('click', () => { r.textContent = 'Retrying…'; r.disabled = true; setTimeout(() => { st.pricing = 'live'; cache = null; log('payoff_retry'); if (payoffOn() && idx.limitT == null) refit(book()); renderUI(); renderDemo(); }, 700); });
   }
   function renderMsgs(b) {
     const wrap = $('#idxWrap');
@@ -2267,7 +2371,7 @@ class SahiChart {
     const on = payoffOn();
     if (on && !b.all.length) {
       if (!m) { m = document.createElement('div'); m.id = 'cmsg'; m.className = 'cmsg'; wrap.appendChild(m); }
-      setHTML(m, '<div>Pick a contract on the option chart to see its payoff</div>');
+      setHTML(m, `<div>${st.opt && expired(st.opt) ? `${esc(st.opt.label)} expired today. Pick a live contract on the option chart to see its payoff.` : 'Pick a contract on the option chart to see its payoff'}</div>`);
     } else if (m) m.remove();
     let ld = $('#loading');
     if (on && performance.now() < st.loadingUntil && pointable(b)) {
@@ -2312,10 +2416,10 @@ class SahiChart {
     const b = book();
     if (!el) { el = document.createElement('div'); el.id = 'ptable'; el.className = 'ptable'; wrap.appendChild(el); }
     el.classList.toggle('stale', st.pricing === 'delayed');
-    el.style.top = (bannerShown() && $('#n2') ? $('#n2').offsetHeight + 6 : 0) + 'px';
+    el.style.top = '0px';
     const unavailable = st.pricing === 'unavailable';
     const loading = performance.now() < st.loadingUntil;
-    const pt = pointable(b) ? (st.pin || (st.hover && st.hover.T ? st.hover : null)) : null;
+    const pt = pointable(b) ? livePt(st.pin || (st.hover && st.hover.T ? st.hover : null), b) : null;
     const T = pt ? pt.T : b.nowT, S = pt ? pt.S : b.S0;
     const title = pt ? `Payoff at Nifty ${E.level(S)} · ${E.fmtT(T)}${st.pin ? ' · Pinned' : ''}` : 'Payoff now';
     const narrow = wrap.clientWidth < 600, vnarrow = wrap.clientWidth < 520;
@@ -2381,15 +2485,14 @@ class SahiChart {
     const T = st.pin.T, S = st.pin.S;
     if (isS3()) {
       const openThen = b.legs.filter(l => isOpenAt(l, T));
-      if (openThen.length) out.buttons.push({ kind: 'exitAll', label: `Exit all at ${timeFor(T)}`, pri: true });
+      if (openThen.length) { out.buttons.push({ kind: 'exitAll', label: `Exit all at ${timeFor(T)}`, pri: true }); out.note = 'An exit at a time closes at the market price then, wherever Nifty is.'; }
       else out.helper = b.legs.every(l => l.product === 'INTRADAY') ? 'Auto square-off closes these positions at 3:20 pm' : 'Nothing is open at this time';
-      out.note = 'An exit at a time closes at the market price then, wherever Nifty is.';
       return out;
     }
     const l = b.legs[0];
     const d = P.legDetail(l, S, T, b);
     out.premium = d;
-    const prem = E.roundTick(d.value), cur = ltp(l.c);
+    const prem = heldPrem(l, S, T, b), cur = ltp(l.c);
     const diff = prem - cur;
     // BR-20: neither within one tick of the current price, and never at a price below one tick
     if (Math.abs(diff) > E.TICK + 1e-9 && l.c.type !== 'FUT' && prem >= E.TICK) {
@@ -2405,7 +2508,7 @@ class SahiChart {
     if (atSq) out.helper = 'Auto square-off closes this position at 3:20 pm';
     else if (atExpiry) out.helper = 'The contract settles at expiry, so there is nothing to exit at this time';
     else out.buttons.push({ kind: 'exit', label: `Exit at ${timeFor(T)}`, pri: !out.buttons.length });
-    if (!out.note) out.note = 'An exit at a time closes at the market price then, wherever Nifty is.';
+    if (!out.note && out.buttons.length) out.note = 'An exit at a time closes at the market price then, wherever Nifty is.';
     return out;
   }
   let d1Down = false;
@@ -2415,8 +2518,11 @@ class SahiChart {
     const b = book();
     if (!b.legs.length || st.pin.T <= b.nowT || axisEnd(b) == null) {
       if (el) el.remove();
-      if (st.pin.T <= b.nowT && b.legs.length) toast('ok', 'The pinned time has passed, so the pin was removed.');
-      setPayoff(() => { st.pin = null; }, 'pin');
+      const passed = st.pin.T <= b.nowT && b.legs.length;
+      if (passed) toast('ok', 'The pinned time has passed, so the pin was removed.');
+      if (st.m1) closeM1(true);
+      setPayoff(() => { clearPin(passed ? 'time_passed' : 'nothing_to_price'); }, 'pin');
+      focusNS($(payoffOn() ? '#idxCanvas' : '#payoffBtn'));
       return;
     }
     if (!el) {
@@ -2437,10 +2543,10 @@ class SahiChart {
     if (unavailable) vals.push('<div class="m">—</div>');
     else {
       // a held single position shows the premium at the tick it would trade at, so the card, button and M1 agree
-      const premV = d ? (b.pretrade ? d.value : E.roundTick(d.value)) : null;
-      const total = d && !b.pretrade ? b.legs[0].side * b.legs[0].qty * (premV - b.legs[0].avg) : P.pnl(b, S, T);
+      const premV = d ? (b.pretrade ? d.value : heldPrem(b.legs[0], S, T, b)) : null;
+      const total = pointPnl(b, S, T);
       const [lo, hi] = P.range(b, S, T);
-      if (d) vals.push(`<div class="m">Premium ${E.prem(premV)}${!d.uncertain && E.roundTick(d.hi) - E.roundTick(d.lo) >= E.TICK ? ` (${E.prem(d.lo)} to ${E.prem(d.hi)})` : ''}</div>`);
+      if (d) vals.push(`<div class="m">Premium ${E.prem(premV)}${!d.uncertain && d.hi - d.lo >= E.TICK ? ` (${E.prem(d.lo)} to ${E.prem(d.hi)})` : ''}</div>`);
       vals.push(`<div class="big num ${total >= 0 ? 'up' : 'down'}">${s3 ? 'Total P&amp;L' : 'P&amp;L'} ${E.signed(total)}</div>`);
       if (d && d.uncertain) vals.push(`<div class="m" style="color:var(--warn-ink)">Too uncertain to price. Time value left: ${E.prem(d.timeValue)}. Worth at expiry at this level: ${E.prem(d.intrinsic)}</div>`);
       else if (Math.abs(hi - lo) >= 1) vals.push(`<div class="m">Range ${E.signed(lo)} to ${E.signed(hi)}</div>`);
@@ -2448,16 +2554,24 @@ class SahiChart {
     }
     const changed = setHTMLKeepFocus(el, `<div class="hd"><h4><small>Pinned</small>Nifty ${E.level(S)} at ${esc(E.fmtT(T))}</h4><button class="ib" id="d1x" aria-label="Remove pin"><svg class="i"><use href="#i-x"/></svg></button></div>` +
       `<div class="vals">${vals.join('')}</div>` +
-      (b.pretrade ? `<div class="note">Actions appear for positions you hold</div>` : `<div class="note">${esc(acts.note)}</div>`) +
+      (b.pretrade ? `<div class="note">Actions appear for positions you hold</div>` : acts.note ? `<div class="note">${esc(acts.note)}</div>` : '') +
       (closed() && !b.pretrade ? `<div class="proto-note">PRD open item 9: whether orders can be set outside market hours. Shown disabled here.</div>` : '') +
-      `<div class="acts">${acts.buttons.map((bt, i) => `<button class="btn ${bt.pri ? 'pri' : 'sec'} wide" data-act="${i}" ${disabledWhy ? `aria-disabled="true" aria-describedby="d1why" style="opacity:.45;cursor:not-allowed"` : ''}>${esc(bt.label)}</button>${bt.kind !== 'exit' && bt.kind !== 'exitAll' && acts.replace ? `<div class="helper">${esc(acts.replace)}</div>` : ''}`).join('')}${acts.helper ? `<div class="helper">${esc(acts.helper)}</div>` : ''}${disabledWhy && acts.buttons.length ? `<div class="helper" id="d1why">${esc(disabledWhy)}</div>` : ''}</div>` +
+      `<div class="acts">${acts.buttons.map((bt, i) => `<button class="btn ${bt.pri ? 'pri' : 'sec'} wide" data-act="${i}" ${disabledWhy ? `aria-disabled="true" aria-describedby="d1why" style="opacity:.45;cursor:not-allowed"` : ''}>${esc(unavailable ? bt.label.replace(/ at ₹[\d,.]+$/, '') : bt.label)}</button>${bt.kind !== 'exit' && bt.kind !== 'exitAll' && acts.replace ? `<div class="helper">${esc(acts.replace)}</div>` : ''}`).join('')}${acts.helper ? `<div class="helper">${esc(acts.helper)}</div>` : ''}${disabledWhy && acts.buttons.length ? `<div class="helper" id="d1why">${esc(disabledWhy)}</div>` : ''}</div>` +
       `<div class="ml"><svg class="i"><use href="#i-info"/></svg>Model estimate, not a forecast</div>`, n => n.dataset.act || n.id);
+    // beside the pin (right, then left); if neither side fits, above or below it; hidden while the pin is out of view
     const ch = idx, px = ch.tToX(T), py = ch.pToY(S);
+    const out = px < 0 || px > ch.plotW || py < ch.o.padTop - 4 || py > ch.mainH;
+    el.hidden = out;
+    const room = ch.mainH - ch.o.padTop - 12;
+    el.style.maxHeight = Math.max(160, room) + 'px';
     const w = el.offsetWidth, h = el.offsetHeight;
-    let x = px + 18, y = py - 30;
-    if (x + w > ch.plotW - 6) x = px - 18 - w;
-    if (y + h > ch.mainH - 6) y = ch.mainH - 6 - h;
-    el.style.left = Math.max(6, x) + 'px'; el.style.top = Math.max(ch.o.padTop, y) + 'px';
+    let x, y;
+    if (px + 18 + w <= ch.plotW - 6) { x = px + 18; y = py - 30; }
+    else if (px - 18 - w >= 6) { x = px - 18 - w; y = py - 30; }
+    else { x = px - w / 2; y = py + 22 + h <= ch.mainH - 6 ? py + 22 : py - 22 - h; }
+    x = Math.max(6, Math.min(ch.plotW - w - 6, x));
+    y = Math.min(ch.mainH - 6 - h, Math.max(ch.o.padTop, y));
+    el.style.left = x + 'px'; el.style.top = Math.max(ch.o.padTop, y) + 'px';
     if (!changed) return;
     $('#d1x').addEventListener('click', () => removePin());
     el.querySelectorAll('[data-act]').forEach(bt => {
@@ -2482,7 +2596,7 @@ class SahiChart {
     const s = $('#m1scrim'); if (s) s.remove();
     const m = st.m1;
     st.m1 = null;
-    if (m && !silent) { log('payoff_order_cancel'); const f = $(`#d1 [data-act="${m.opener}"]`) || $('#d1 [data-act]'); if (f) f.focus(); }
+    if (m && !silent) { log('payoff_order_cancel'); focusNS($(`#d1 [data-act="${m.opener}"]`) || $('#d1 [data-act]') || $(payoffOn() ? '#idxCanvas' : '#payoffBtn')); }
   }
   function renderM1() {
     let s = $('#m1scrim');
@@ -2500,7 +2614,7 @@ class SahiChart {
       const openThen = legs.filter(l => isOpenAt(l, T));
       body = `<div class="pos">${openThen.length} ${openThen.length === 1 ? 'leg' : 'legs'} open at ${esc(E.fmtT(T))}</div>` +
         (openThen.length ? `<div class="order">${openThen.map(l => `<div>${l.side > 0 ? 'Sell' : 'Buy back'} ${l.qty} ${esc(l.c.label)}</div>`).join('')}</div>` : '') +
-        `<div class="pl">P&amp;L depends on prices at ${esc(timeFor(T))}. Payoff estimate at Nifty ${E.level(pin.S)}: ${E.signed(P.pnl(b, pin.S, T))}${rangeTxt()}</div>` +
+        `<div class="pl">P&amp;L depends on prices at ${esc(timeFor(T))}. Payoff estimate at Nifty ${E.level(pin.S)}: ${E.signed(pointPnl(b, pin.S, T))}${rangeTxt()}</div>` +
         `<div class="tn">Cancelled for any leg you exit before then. Legs that expire or square off before then are left alone.</div>`;
       if (!openThen.length) { msg = 'Nothing is open at this time.'; canConfirm = false; }
     } else {
@@ -2523,28 +2637,29 @@ class SahiChart {
         else if (crossed) { msg = `The option is already at or past ${E.prem(p)}. Move the pin to pick a new price.`; canConfirm = false; }
       } else {
         body += `<div class="order">${bought ? 'Sells' : 'Buys back'} ${l.qty} at market at ${esc(E.fmtT(T))}, if the position is still open</div>` +
-          `<div class="pl">P&amp;L depends on prices at ${esc(timeFor(T))}. Payoff estimate at Nifty ${E.level(pin.S)}: ${E.signed(P.pnl(b, pin.S, T))}${rangeTxt()}</div>` +
+          `<div class="pl">P&amp;L depends on prices at ${esc(timeFor(T))}. Payoff estimate at Nifty ${E.level(pin.S)}: ${E.signed(pointPnl(b, pin.S, T))}${rangeTxt()}</div>` +
           `<div class="tn">Cancelled if you exit before then.</div>`;
       }
     }
-    if (legs.length && T <= nowT()) { msg = `${E.fmtT(T, false)} has passed. Pick a later time.`; canConfirm = false; }
+    if (legs.length && (a.kind === 'exit' || a.kind === 'exitAll') && T <= nowT()) { msg = `${E.fmtT(T, false)} has passed. Pick a later time.`; canConfirm = false; }
     const sub = st.m1.submitting;
     const first = !s._html;
     const hadFocus = s.contains(document.activeElement) ? document.activeElement.id : null;
     const changed = setHTML(s, `<div class="m1" role="dialog" aria-modal="true" aria-labelledby="m1t">` +
       `<div class="mh"><h2 id="m1t">${title}</h2><button class="ib" id="m1x" aria-label="Close" ${sub ? 'disabled' : ''}><svg class="i"><use href="#i-x"/></svg></button></div>` +
       `<div class="mb">${body}${msg ? `<div class="msg" role="alert">${esc(msg)}</div>` : ''}</div>` +
-      `<div class="mf"><button class="btn sec" id="m1c" ${sub ? 'disabled' : ''}>Cancel</button>${hideConfirm ? '' : `<button class="btn pri" id="m1ok" ${canConfirm && !sub ? '' : 'disabled'}>${sub ? '<span class="spin"></span>Placing…' : 'Confirm'}</button>`}</div></div>`);
+      `<div class="mf"><button class="btn sec" id="m1c" ${sub ? 'disabled' : ''}>Cancel</button>${hideConfirm ? '' : `<button class="btn pri" id="m1ok" ${!canConfirm ? 'disabled' : sub ? 'aria-disabled="true" aria-busy="true"' : ''}>${sub ? '<span class="spin"></span>Placing…' : 'Confirm'}</button>`}</div></div>`);
     if (!changed) return;
     const cancel = () => { if (hideConfirm) { closeM1(true); log('payoff_order_cancel'); removePin(); } else closeM1(); };
     $('#m1x').addEventListener('click', cancel);
     $('#m1c').addEventListener('click', cancel);
     s.onmousedown = e => { if (e.target === s && st.m1 && !st.m1.submitting) cancel(); };
     const ok = $('#m1ok');
-    if (ok) ok.addEventListener('click', confirmM1);
+    if (ok) ok.addEventListener('click', () => { if (!st.m1 || st.m1.submitting) return; confirmM1(); });
     // initial focus on Cancel so Enter can't place an order by accident (assumption 29)
     const back = hadFocus && $('#' + hadFocus) && !$('#' + hadFocus).disabled ? $('#' + hadFocus) : null;
-    if (first || !back) { if (!sub) $('#m1c').focus(); } else back.focus();
+    if (sub) focusNS($('#m1ok'));
+    else if (first || !back) focusNS($('#m1c')); else focusNS(back);
     s.onkeydown = e => { if (e.key === 'Tab') { const f = [...s.querySelectorAll('button:not([disabled])')]; if (!f.length) { e.preventDefault(); return; } const i = f.indexOf(document.activeElement); e.preventDefault(); f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus(); } };
   }
   function confirmM1() {
@@ -2579,7 +2694,7 @@ class SahiChart {
       toast('ok', msg);
       // stay on S2/S3 so the new pill or exit marker is in view (M1 Success)
       setPayoff(() => { st.sticky = true; st.pin = null; }, 'pin');
-      $('#idxCanvas').focus();
+      focusNS($('#idxCanvas'));
     }, 750);
   }
 
@@ -2781,8 +2896,8 @@ class SahiChart {
       if (name === 'platform') LS.set('platform', v);
       if (name === 'ticks' && !v) { st.noise = 0; walk = 0; }
       if (name === 'clock' || name === 'product') { st.closedBannerHidden = false; st.noise = 0; walk = 0; reloadScenario(); return; }
-      if (name === 'pricing') { cache = null; if (v !== 'live') { st.noise = 0; walk = 0; } }
-      if (name === 'later' && !v) { closeM1(true); if (st.pin) setPayoff(() => { st.pin = null; }, 'pin'); }
+      if (name === 'pricing') { cache = null; if (v !== 'live') { st.noise = 0; walk = 0; } if (payoffOn() && idx.limitT == null) refit(book()); }
+      if (name === 'later' && !v) { closeM1(true); if (st.pin) setPayoff(() => { clearPin('mvp'); }, 'pin'); }
       cache = null;
       rebuildData(); renderDemo(); if (st.m1) renderM1();
     }));
@@ -2794,14 +2909,29 @@ class SahiChart {
   // Moves the clock without resetting positions, so time-based states (pin passing, time passed) can be seen.
   function advanceClock(min) {
     if (closed()) { toast('ok', 'The market is already closed.'); return; }
+    const before = snapshot();
     const wasOpen = !closed();
     st.clock = Math.min(945, st.clock + min);
     if (st.clock > E.CLOSE && st.clock < 945) st.clock = 945;
+    // scheduled exits that came due close their legs at market at that time (BR-21)
+    st.exits.filter(x => x.T <= nowT()).forEach(x => {
+      x.legIds.forEach(id => {
+        const l = st.legs.find(q => q.id === id);
+        if (!l) return;
+        st.realised += l.side * l.qty * (E.price(l.c, E.pathAt(x.T), x.T) - l.avg);
+        st.legs = st.legs.filter(q => q !== l);
+        toast('ok', `Exited ${l.c.label} at ${E.fmtT(x.T, false)} (scheduled exit)`);
+      });
+    });
+    st.exits = st.exits.filter(x => x.T > nowT());
     if (wasOpen && closed()) squareOffIntraday();
+    pruneOrders();
     st.noise = 0; walk = 0; cache = null;
-    const before = snapshot();
+    const b = book();
+    if (!livePt(st.hover, b)) { st.hover = null; st.keyPt = null; }
+    if (st.pin && isS3() !== before.s3) clearPin('positions');
     rebuildData();
-    if (payoffOn()) { const b = book(); idx.limitT = opt.limitT = axisEnd(b); if (axisEnd(b) !== before.end) refit(b); }
+    if (payoffOn()) { const b2 = book(); const e = axisEnd(b2); idx.limitT = opt.limitT = e; if (e !== before.end || nowT() > idx.view.t1 - 1 || st.horizon !== 'custom') refit(b2); }
     if (st.m1) renderM1();
     renderDemo();
   }

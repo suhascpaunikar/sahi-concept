@@ -183,7 +183,8 @@ const Engine = (() => {
     const iv = T < t0 ? ivPrev + 0.004 * Math.sin(T / 37) : ivPrev + (c.iv - ivPrev) * f;
     return bs(c.type, pathAt(T, closing), c.strike, tauOf(c.expT, T), iv);
   }
-  function candles(tf, fromT, toT, valueAt, seed) {
+  // floor: lowest value a series can take (0 for option prices).
+  function candles(tf, fromT, toT, valueAt, seed, floor = -Infinity) {
     const r = rng(seed);
     const out = [];
     const s0 = Math.floor(fromT / tf), s1 = Math.ceil(toT / tf);
@@ -192,8 +193,9 @@ const Engine = (() => {
       if (b <= a) continue;
       let o = valueAt(a, false), c = valueAt(b, true), h = Math.max(o, c), l = Math.min(o, c);
       for (let m = a + 1; m < b; m++) { const v = valueAt(m); if (v > h) h = v; if (v < l) l = v; }
-      const span = Math.max(0.6, (h - l) * 0.18);
-      h += r() * span; l -= r() * span;
+      // wick size scales with the price, so a ₹0.05 option doesn't get ₹0.60 wicks
+      const span = Math.max(Math.min(0.6, Math.abs(o) * 0.01), (h - l) * 0.18);
+      h += r() * span; l = Math.max(floor, l - r() * span);
       const mod = (a % SESSION);
       const u = 0.55 + 0.9 * Math.pow(Math.abs(mod - 187) / 187, 2);
       out.push({ s, o, h, l, c, v: u * (0.4 + r()) });

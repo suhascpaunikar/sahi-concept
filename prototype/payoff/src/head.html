@@ -104,7 +104,7 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .work { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 2px 10px 10px 2px; min-width: 0; min-height: 0; position: relative; }
 
 /* ---------- panels ---------- */
-.panel { container-type: inline-size; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; position: relative; }
+.panel { container-type: inline-size; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: clip; position: relative; }
 .ph { height: 46px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 14px; border-bottom: 1px solid var(--line); }
 .ph .nm { display: flex; align-items: baseline; gap: 7px; font-weight: 600; font-size: 14px; white-space: nowrap; min-width: 0; flex: 1 1 auto; overflow: hidden; }
 .ph .nm > * { flex: none; }
@@ -142,7 +142,7 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .payoff-btn.peek { border-color: var(--breakeven); box-shadow: 0 0 0 3px rgba(242, 184, 75, .16); }
 .payoff-btn:disabled { opacity: .45; }
 
-.cw { position: relative; flex: 1; min-height: 0; }
+.cw { position: relative; flex: 1; min-height: 0; overflow: clip; }
 .cw canvas { position: absolute; inset: 0; display: block; }
 .cw canvas.grab { cursor: grab; }
 .cw canvas:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; border-radius: 0 0 8px 8px; }
@@ -172,7 +172,7 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .qty .qv small { font-size: 9px; color: var(--text-3); }
 
 /* ---------- payoff header strip (over the index chart) ---------- */
-.pstrip { position: absolute; left: 0; right: 64px; top: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 8px 12px; background: linear-gradient(180deg, rgba(13, 17, 24, .97), rgba(13, 17, 24, .88)); border-bottom: 1px solid var(--line); }
+.pstrip { position: absolute; left: 0; right: 64px; top: 0; padding-top: calc(8px + var(--bh, 0px)) !important; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 8px 12px; background: linear-gradient(180deg, rgba(18, 22, 29, .98), rgba(18, 22, 29, .9)); border-bottom: 1px solid var(--line); }
 .pstrip .sum { font-weight: 600; font-size: 12.5px; white-space: nowrap; }
 .pstrip .sum .muted { color: var(--text-2); font-weight: 500; }
 .chips { display: inline-flex; border: 1px solid var(--line-2); border-radius: 7px; overflow: hidden; }
@@ -206,7 +206,7 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .loading { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); z-index: 6; font-size: 12px; padding: 5px 10px; border-radius: 999px; background: var(--panel-3); color: var(--text-2); border: 1px solid var(--line-2); }
 
 /* S3 payoff table */
-.ptable { position: absolute; inset: 0; z-index: 5; background: var(--panel); display: flex; flex-direction: column; }
+.ptable { position: absolute; inset: 0; z-index: 5; background: var(--panel); display: flex; flex-direction: column; padding-top: var(--bh, 0px); }
 .ptable .tt { flex: none; padding: 12px 14px 10px; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .ptable .tt h3 { margin: 0; font-size: 13.5px; font-weight: 600; }
 .ptable .tt span { font-size: 11px; color: var(--text-3); white-space: nowrap; }
@@ -276,7 +276,7 @@ button.ochip:focus-visible { outline: 2px solid var(--blue); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* D1 pinned card */
-.d1 { position: absolute; z-index: 8; width: 270px; border-radius: 11px; background: #1a202b; border: 1px solid #3a4558; box-shadow: 0 18px 44px -14px rgba(0, 0, 0, .85); padding: 12px 13px 11px; }
+.d1 { position: absolute; z-index: 8; width: 270px; overflow-y: auto; border-radius: 11px; background: #1a202b; border: 1px solid #3a4558; box-shadow: 0 18px 44px -14px rgba(0, 0, 0, .85); padding: 12px 13px 11px; }
 .d1 .hd { display: flex; align-items: flex-start; gap: 8px; }
 .d1 .hd h4 { margin: 0; font-size: 12.5px; font-weight: 600; line-height: 1.35; flex: 1; }
 .d1 .hd h4 small { display: block; color: var(--text-3); font-weight: 500; font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 2px; }
