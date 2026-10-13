@@ -1,16 +1,18 @@
 # Sahi Payoff (Desktop) PRD
 *Full PRD: the Payoff mode on Sahi's Scalper split view, for Sahi web on desktop browsers and the Sahi Desktop app. Use this to design the screens in Figma and to agree scope with Sahi's product, engineering and compliance leads.*
 
-**Product type:** Web app (desktop), Desktop app · **Depth:** Full PRD · **Version:** v1.0 · **Date:** 13 Oct 2026 · **Status:** Draft
+**Product type:** Web app (desktop), Desktop app · **Depth:** Full PRD · **Version:** v1.1 · **Date:** 13 Oct 2026 · **Status:** Draft
 
 **Owner:** Suhas · **Reviewers / sign-off:** Open item: Sahi product, design, engineering and compliance leads
 > Scope note: Payoff was called Premium What-If in the research. This PRD covers desktop only; mobile gets its own PRD. Order actions from a pinned point are specced here for the Later release. Example values come from the research model (Nifty 25,000, IV 12%, range at IV 10% to 15%) and are illustrative, not market data.
+>
+> Changes in v1.1: the P key toggle is replaced by hold-to-peek. Holding ⌥ Option (Mac) or Alt (Windows) shows Payoff and letting go hides it; the Payoff button on the toolbar still keeps it on until it is clicked again or Esc is pressed (BR-23). Copy for the button, its tooltip, N1 and the Payoff header follows.
 
 ## 1. Overview
 - **Problem / why:** 87.7% of individual F&O traders lost money in FY26, about 97% mainly buy options, and 59% of index option turnover is in contracts expiring that same day (SEBI). Traders read levels on the Nifty chart, but their P&L lives in premium, and delta, time decay and IV move premium in ways they can't see. On expiry day a 50-point Nifty rise by the close can still leave an at-the-money call below what was paid.
 - **Users / roles:** One role, a trader with F&O enabled using the Scalper on desktop. Three personas: expiry-day option buyer, option seller, positional option buyer (1.2).
 - **Main jobs:** see where each position breaks even now and at every future time; see P&L for any index level at any time up to expiry; for multi-leg books, see each leg and the total; in the Later release, turn a chosen point into a target, a stop or an exit time.
-- **Entry points:** the Payoff button on the index chart toolbar in the Scalper split view, and the P key anywhere in the Scalper.
+- **Entry points:** the Payoff button on the index chart toolbar in the Scalper split view, which keeps Payoff on, and holding ⌥ Option (Mac) or Alt (Windows) anywhere in the Scalper, which shows Payoff only while the key is held (hold-to-peek).
 - **In scope:** index options and index futures on the index loaded in the left chart (Nifty, Bank Nifty, Sensex and any other index the Scalper supports); one or several positions; weekly and monthly expiries; intraday and carry-forward positions; a pre-trade view when nothing is held. · **Out of scope / owned elsewhere:** mobile (separate PRD); sign-in, account and F&O activation (existing Sahi flows); stock options; the option seller terminal's strategy payoff (owned by that terminal); manual IV sliders; order rules for targets, stops and time exits (owned by Orders).
 - **Platforms and frames:** Sahi web and the Sahi Desktop app share one layout. Frames: 1440 × 900 primary, 1280 × 800 minimum, 1920 × 1080 large.
 
@@ -52,7 +54,7 @@
 ### 2.1 Functional
 | ID | Requirement | Priority | Surfaces |
 |---|---|---|---|
-| FR-01 | The trader can turn Payoff on and off from the index chart toolbar and with the P key in the Scalper | Must | S1, S2, S3 |
+| FR-01 | The trader can turn Payoff on and off from the index chart toolbar, and can peek at it by holding ⌥ Option (Mac) or Alt (Windows) anywhere in the Scalper; letting go of the key hides it (BR-23) | Must | S1, S2, S3 |
 | FR-02 | The system extends the index chart's future zone to 3:30 pm on the latest expiry among open positions on that index | Must | S2, S3 |
 | FR-03 | The system ends the future zone at today's 3:20 pm auto square-off when every open position is intraday | Must | S2, S3 |
 | FR-04 | The system draws breakeven lines where total open P&L is zero at each moment, and shades the profit side | Must | S2, S3 |
@@ -69,8 +71,8 @@
 | FR-15 | With no open position, the system prices the contract on the option chart as a buy of the default order quantity at its last price | Should | S2 |
 | FR-16 | On expiry day, when the range is wider than the premium, the system shows time value left instead of the range | Must | S2, S3 |
 | FR-17 | The system flags stale or unavailable prices and shows the time of the last update | Must | S2, S3, N2 |
-| FR-18 | The trader can move the hovered point with arrow keys, so Payoff works without a mouse (NFR-04) | Must | S2, S3 |
-| FR-19 | The system introduces the P key once with a tip | Should | S1, N1 |
+| FR-18 | The trader can move the hovered point with arrow keys, with the index chart focused or while holding the peek key, so Payoff works without a mouse (NFR-04) | Must | S2, S3 |
+| FR-19 | The system introduces hold-to-peek once with a tip | Should | S1, N1 |
 | FR-20 | Later release: the trader can click in the future zone to pin a point | Must | S2, S3, D1 |
 | FR-21 | Later release: from a pin on a held single position, the trader can set a target or a stop at the premium projected there, after confirming | Must | D1, M1, N3 |
 | FR-22 | Later release: from a pin, the trader can schedule an exit at the pinned time, after confirming | Must | D1, M1, N3 |
@@ -95,13 +97,13 @@ Payoff is a mode of the Scalper split view, not a new page. It uses Sahi's exist
 | Nav item | Goes to | Visible to | Notes |
 |---|---|---|---|
 | Payoff (index chart toolbar button) | S2 or S3 | Traders with F&O enabled | Pressed state while Payoff is on; disabled for instruments without options |
-| P key | S2 or S3 | Same | Toggles Payoff; ignored while typing in an input |
-| Esc key | S1 | Same | Turns Payoff off; in the Later release, removes a pin first |
+| Hold ⌥ Option (Mac) or Alt (Windows) | S2 or S3 while held | Same | Hold-to-peek: Payoff shows while the key is held and hides when it is let go (BR-23); ignored while typing in an input or when the key is part of another shortcut |
+| Esc key | S1 | Same | Turns off Payoff that the button kept on; in the Later release, removes a pin first |
 
 ## 4. User Flows
 ### Flow 1: Check one position before deciding to hold or exit
 **Actor:** Trader (expiry-day option buyer) · **Starts:** S1 at 10:15 on Mon 19 Oct, holding Buy 65 NIFTY 19 OCT 25000 CE at ₹69.10, carry-forward · **Ends:** S1
-- Trader presses P on S1 Scalper split view.
+- Trader rests the pointer on the index chart in S1 Scalper split view and holds ⌥ Option (Mac) or Alt (Windows).
 - System opens S2 Payoff mode: one position, switches the option chart to NIFTY 19 OCT 25000 CE if another contract was showing, and extends both charts' future zones to 3:30 pm today.
 - System draws the breakeven line labelled "Breakeven 25,069 at expiry", the profit shading, the "Weekly expiry · Mon 19 Oct" marker and the expected-move cone, with the "Today" horizon chip selected.
 - Trader hovers the index chart at 25,050 and 11:15.
@@ -112,8 +114,8 @@ Payoff is a mode of the Scalper split view, not a new page. It uses Sahi's exist
 - If the position is intraday (the Scalper default), system ends the future zone at 3:20 pm with the "Auto square-off · 3:20 pm" marker instead of the expiry marker, and the readout at 25,050 and 3:20 pm shows "P&L -₹1,197".
 - If the range grows wider than the premium in the afternoon, system shows "Time value left" instead of the range.
 - If prices go stale, system greys the values and shows N2 Pricing status banner, Stale variant.
-- Trader presses P or Esc.
-- System closes Payoff and returns to S1, restoring the option contract shown before.
+- Trader lets go of the key.
+- System closes Payoff and returns to S1, restoring the option contract shown before. Had the trader clicked Payoff instead of holding the key, Payoff would stay on until they click it again or press Esc.
 
 ### Flow 2: Check a weekly plus monthly book
 **Actor:** Trader (option seller) · **Starts:** S1 at 10:15 on Wed 14 Oct, holding Sell 65 NIFTY 19 OCT 24800 PE at ₹68.26, Sell 65 NIFTY 19 OCT 25200 CE at ₹69.29 and Buy 65 NIFTY 27 OCT 25000 CE at ₹224.15, plus one Bank Nifty position · **Ends:** S1
@@ -130,7 +132,7 @@ Payoff is a mode of the Scalper split view, not a new page. It uses Sahi's exist
 
 ### Flow 3: See a payoff before buying
 **Actor:** Trader · **Starts:** S1 at 10:15 on Mon 19 Oct, holding no Nifty position, with NIFTY 19 OCT 25000 CE at ₹69.10 on the option chart · **Ends:** S1
-- Trader presses P on S1.
+- Trader clicks Payoff on the index chart toolbar on S1, so Payoff stays on while they browse the option chain.
 - System opens S2 in its Pre-trade state, with the summary "Not holding · priced as a buy of 65 at ₹69.10 (last price)", taking the quantity from Order Defaults.
 - Trader hovers the index chart as in Flow 1.
 - System shows the same readout and option chart marker, with no order actions.
@@ -141,7 +143,7 @@ Payoff is a mode of the Scalper split view, not a new page. It uses Sahi's exist
 ### Flow 4: Pin a point and set an exit (Later release)
 **Actor:** Trader · **Starts:** S2, holding Buy 65 NIFTY 19 OCT 25000 CE at ₹69.10 · **Ends:** S2 with a new order, or S2 unchanged
 - Trader clicks the index chart at 25,050 and 11:15.
-- System places a pin and opens D1 Pinned point card.
+- System places a pin and opens D1 Pinned point card. If Payoff was showing only because the trader was holding the peek key, the pin keeps Payoff on after the key is let go, until the pin is removed (BR-23).
 - Trader clicks "Set target at ₹90.40".
 - System opens M1 Confirm order from pin, titled "Set target", showing "NIFTY 19 OCT 25000 CE · Bought 65 at ₹69.10", "Sells 65 at market when the option's price reaches ₹90.40" and "P&L if filled at ₹90.40: +₹1,385 before charges".
 - Trader clicks Confirm.
@@ -153,8 +155,8 @@ Payoff is a mode of the Scalper split view, not a new page. It uses Sahi's exist
 ## 5. Surface List
 | ID | Name | Type | Platform | Purpose | Release |
 |---|---|---|---|---|---|
-| S1 | Scalper split view | Screen (existing, changed) | Web desktop, Desktop app | Entry point; adds the Payoff button and the P key | MVP |
-| N1 | Payoff introduction tip | Coach mark | Web desktop, Desktop app | Introduces the P key once | MVP |
+| S1 | Scalper split view | Screen (existing, changed) | Web desktop, Desktop app | Entry point; adds the Payoff button and hold-to-peek | MVP |
+| N1 | Payoff introduction tip | Coach mark | Web desktop, Desktop app | Introduces hold-to-peek once | MVP |
 | S2 | Payoff mode: one position | Mode within S1 | Web desktop, Desktop app | Breakeven and P&L for one position, or for a contract before buying | MVP |
 | S3 | Payoff mode: several positions | Mode within S1 | Web desktop, Desktop app | Breakevens and a per-leg table for books of two or more positions | MVP |
 | N2 | Pricing status banner | Banner | Web desktop, Desktop app | Flags stale, closed-market or unavailable prices | MVP |
@@ -169,10 +171,10 @@ Payoff is a mode of the Scalper split view, not a new page. It uses Sahi's exist
 | S1 | First Scalper visit after release | S1, N1 | Tip shows once |
 | N1 | Try it | S2 or S3 | S2 for zero or one position on the index; S3 for two or more |
 | N1 | Got it, Esc or a click outside | S1 | Tip dismissed for good |
-| S1 | Payoff button or P | S2 | Zero or one open position on the charted index |
-| S1 | Payoff button or P | S3 | Two or more open positions on the charted index |
-| S2 | Payoff button, P or Esc | S1 | Payoff off; previous option contract restored |
-| S3 | Payoff button, P or Esc | S1 | Payoff off; option chart shown again |
+| S1 | Payoff button (stays on), or hold ⌥ Option (Mac) or Alt (Windows) (while held) | S2 | Zero or one open position on the charted index |
+| S1 | Payoff button (stays on), or hold ⌥ Option (Mac) or Alt (Windows) (while held) | S3 | Two or more open positions on the charted index |
+| S2 | Let go of the key (peek), or Payoff button or Esc (kept on) | S1 | Payoff off; previous option contract restored |
+| S3 | Let go of the key (peek), or Payoff button or Esc (kept on) | S1 | Payoff off; option chart shown again |
 | System | A second position opens while S2 is on | S3 | Count becomes two or more |
 | System | Positions close while S3 is on, leaving one or none | S2 | Count becomes one or zero |
 | System | Prices stale, market closed or prices unavailable | S2, N2 or S3, N2 | Matching banner variant |
@@ -193,10 +195,10 @@ flowchart LR
   S1 -->|first visit| N1[N1 Payoff introduction tip]
   N1 -->|Try it| S2
   N1 -->|Try it| S3
-  S1 -->|P, 0 or 1 position| S2["S2 Payoff mode: one position"]
-  S1 -->|P, 2 or more| S3["S3 Payoff mode: several positions"]
-  S2 -->|P or Esc| S1
-  S3 -->|P or Esc| S1
+  S1 -->|button or hold key, 0 or 1 position| S2["S2 Payoff mode: one position"]
+  S1 -->|button or hold key, 2 or more| S3["S3 Payoff mode: several positions"]
+  S2 -->|let go, button or Esc| S1
+  S3 -->|let go, button or Esc| S1
   S2 <-->|positions change| S3
   S2 -.->|pricing not live| N2[N2 Pricing status banner]
   S3 -.->|pricing not live| N2
@@ -212,12 +214,13 @@ flowchart LR
 ## 7. Shared Components
 | Component | Used on | Contents | Behaviour and variants |
 |---|---|---|---|
-| Payoff button | S1, S2, S3 | Label "Payoff", key hint "P" | Toggle; pressed while Payoff is on; tooltip "Payoff (P): breakeven and P&L at any level and time"; disabled with tooltip "Payoff needs an index with options" |
+| Payoff button | S1, S2, S3 | Label "Payoff", key hint "⌥" (Mac) or "Alt" (Windows) | Toggle: one click keeps Payoff on, the next turns it off; pressed while kept on (by the button or by a pin); highlighted outline while peeking; tooltip "Payoff: breakeven and P&L at any level and time. Hold to peek, or click to keep it on" with the key cap, and "Hide payoff" with an Esc key cap while on; disabled with tooltip "Payoff needs an index with options" |
 | Future zone | S2, S3 | The chart area from the "Now" line to the axis end, on the index chart and (S2) the option chart | Light tint to separate it from past candles; the chart can't pan past the axis end; times in IST |
 | Breakeven line and profit shading | S2, S3 | One line per place where total open P&L is zero; label at the right end, e.g. "Breakeven 25,069 at expiry"; profit side tinted and labelled "Profit", the other side "Loss" | Zero, one or more lines; the label names the axis end, "at expiry" or "at 3:20 pm" for intraday-only books; edge arrow with the level when a line is out of view, e.g. "Breakeven 25,800 ↑"; legend text "Profit at every level shown" or "Loss at every level shown" when no line is in view |
 | Expiry marker | S2, S3 | Vertical dashed line with label, e.g. "Weekly expiry · Mon 19 Oct", "Monthly expiry · Tue 27 Oct", "Auto square-off · 3:20 pm" | Sub-label "moved from Tue 20 Oct" when a holiday shifted it; in month-end week one marker "Weekly and monthly expiry · Tue 27 Oct"; hover tooltip names how many legs expire there |
 | Horizon chips | S2, S3 | "Today", then one chip per expiry held, e.g. "19 Oct", "27 Oct" | Clicking fits the view from now to that time; default is the nearest expiry; intraday-only books show "Today" alone |
 | Payoff readout | S2, S3 | "Nifty 25,050 · 11:15, Mon 19 Oct"; "P&L +₹1,385"; "Range +₹751 to +₹2,355"; "If Nifty stays at 25,000: -₹450"; footer "Model estimate, not a forecast" | Follows the pointer with an offset and flips side near chart edges; shows "Now" values when the pointer leaves the future zone; "Too uncertain to price" variant on expiry afternoon |
+| Mode pill | S2, S3 | "Holding ⌥ · release to hide" (Alt on Windows) while peeking; "Payoff on · Esc to close" while kept on | In the Payoff header, after the model label; tells the trader how Payoff will close |
 | Expected-move cone | S2, S3 | Band from Sahi's Expected Move indicator, labelled "Typical move (1 SD)" | Widens from now to the axis end; legend toggle "Expected move", on by default |
 | Other-charts chip | S2, S3 | "1 position on other charts" or "2 positions on other charts" | Shown only when such positions exist; tooltip lists their underlyings, e.g. "BANKNIFTY" |
 | Model label | S2, S3, D1 | "Model estimate, not a forecast" with an info icon | Info tooltip: "Worked out from live option prices, IV and time left. The range shows values if IV moves. Actual prices can differ, especially near expiry." Open item: final wording from compliance |
@@ -238,41 +241,43 @@ flowchart LR
 #### Actions & interactions
 | Action | Type / placement | Result | Shown / enabled when |
 |---|---|---|---|
-| Payoff | Toolbar control · Index chart toolbar | Turns Payoff on: opens S2 for zero or one open position on the charted index, S3 for two or more | The charted instrument has listed options |
-| P | Keyboard shortcut · Anywhere in the Scalper | Same as Payoff | Focus is not in a text input |
-| Hover Payoff | Hover · Index chart toolbar | Tooltip "Payoff (P): breakeven and P&L at any level and time" | Always |
+| Payoff | Toolbar control · Index chart toolbar | Keeps Payoff on: opens S2 for zero or one open position on the charted index, S3 for two or more; stays on until clicked again or Esc | The charted instrument has listed options |
+| Hold ⌥ Option (Mac) or Alt (Windows) | Keyboard shortcut (hold) · Anywhere in the Scalper | Hold-to-peek: opens S2 or S3 by position count while the key is held; letting go returns to S1 (BR-23) | Focus is not in a text input; no confirm modal open |
+| Hover Payoff | Hover · Index chart toolbar | Tooltip "Payoff: breakeven and P&L at any level and time. Hold to peek, or click to keep it on" with the ⌥ or Alt key cap | Always |
 | Try it | Primary · N1 tip | Opens S2 or S3 by position count | First visit after release |
 | Got it | Tertiary · N1 tip | Closes N1; stays on S1 | First visit after release |
 
 #### Components & content
 | Component / field | Type | Content | Purpose |
 |---|---|---|---|
-| Payoff button | Toolbar control (toggle) | Label "Payoff", key hint "P" | Entry point to Payoff |
-| Payoff tooltip | Tooltip | "Payoff (P): breakeven and P&L at any level and time" | Teaches the shortcut |
-| N1 Payoff introduction tip | Coach mark, anchored to the Payoff button | "New: press P to see your breakeven and P&L at any Nifty level and time." Buttons: Try it, Got it | Introduces the feature once |
+| Payoff button | Toolbar control (toggle) | Label "Payoff", key hint "⌥" (Mac) or "Alt" (Windows) | Entry point to Payoff |
+| Payoff tooltip | Tooltip with key caps, in the style of the 1-Tap tooltip | Off: "Payoff: breakeven and P&L at any level and time. Hold to peek, or click to keep it on" [⌥]. On: "Hide payoff" [Esc] | Teaches hold-to-peek |
+| N1 Payoff introduction tip | Coach mark, anchored to the Payoff button | "New: hold ⌥ to see your breakeven and P&L at any Nifty level and time. Let go to hide it." (Alt on Windows). Buttons: Try it, Got it | Introduces the feature once |
 
 #### States
 | Scope | State | When | What the user sees |
 |---|---|---|---|
 | Button | Default | Instrument has options | Payoff button enabled |
 | Button | Unavailable | Charted instrument has no listed options | Button disabled; tooltip "Payoff needs an index with options" |
-| Button | On | Payoff mode active (S2 or S3) | Pressed state |
+| Button | On | Payoff kept on by the button or by a pin | Pressed state |
+| Button | Peeking | The peek key is held | Highlighted outline, not pressed |
 | Screen | First visit after release | Feature flag on and tip not seen before | N1 anchored to the Payoff button |
-| Key | Typing | Focus in a text input, such as order quantity or search | P types the letter; Payoff doesn't toggle |
+| Key | Typing | Focus in a text input, such as order quantity or search | Holding ⌥ or Alt does nothing; Payoff doesn't show |
+| Key | Shortcut chord | ⌥ or Alt pressed together with another key, such as ⌘ ⌥ 1 for 1-Tap or Alt+Tab | Payoff doesn't show; the other shortcut runs (BR-23) |
 | Screen | Loading, load error, no access | Existing Scalper behaviour | N/A: unchanged by this release |
 
 #### Workflow
 - Trader works in the Scalper as today.
 - On the first visit after release, N1 points at the Payoff button once.
-- Trader clicks Payoff or presses P.
+- Trader clicks Payoff to keep it on, or holds ⌥ or Alt to peek.
 - System opens S2 or S3 depending on how many positions are open on the charted index.
 
 #### Notes
-- **Analytics:** payoff_open with source = button, key or tip; payoff_tip_dismissed.
+- **Analytics:** payoff_open with source = button, key (hold-to-peek) or tip; payoff_close with duration; payoff_tip_dismissed.
 - **Ownership / dependencies:** feature flag for rollout; the tip's seen state is stored per user.
 
 ### S2 Payoff mode: one position
-**Type:** Mode within S1 · **Platform:** Sahi web on desktop browsers, Sahi Desktop app · **Opened from:** S1 Payoff button or P key, with zero or one open position on the charted index · **Roles:** Trader with F&O enabled
+**Type:** Mode within S1 · **Platform:** Sahi web on desktop browsers, Sahi Desktop app · **Opened from:** S1 Payoff button, or holding ⌥ or Alt, with zero or one open position on the charted index · **Roles:** Trader with F&O enabled
 **Purpose:** Show where one position breaks even over time, and what it is worth at any index level and time up to its expiry.
 **Layout (top to bottom, left to right):**
 1. Top bar (existing). The Payoff button shows its pressed state.
@@ -290,12 +295,13 @@ flowchart LR
 | Horizon chip | Toolbar control · Payoff header | Fits the view from now to the chip's time; stays on S2 | Always; selected chip highlighted |
 | Expected move | Toggle · Payoff header | Shows or hides the cone; stays on S2 | Expected Move data available |
 | Scroll or zoom | Scroll · Index chart | Standard zoom and pan; cannot pan past the axis end; stays on S2 | Always |
-| Arrow keys | Keyboard shortcut · Index chart | Tab focuses the index chart with the point one candle after "Now" at the current level; left and right move it one candle; up and down move it 5 points; Shift with up or down moves 25 points; readout and option chart marker follow; stays on S2 | Index chart focused |
+| Arrow keys | Keyboard shortcut · Index chart | Tab focuses the index chart with the point one candle after "Now" at the current level; left and right move it one candle; up and down move it 5 points; Shift with up or down moves 25 points; readout and option chart marker follow; stays on S2 | Index chart focused, or the peek key held |
 | Hover expiry marker | Hover · Index chart | Tooltip, e.g. "Weekly expiry · Mon 19 Oct · moved from Tue 20 Oct for a holiday" | Marker shown |
 | Hover breakeven label | Hover · Index chart | Tooltip "Breakeven: the Nifty level where this position's P&L is zero at each time" | Line shown |
 | Hover model label info | Hover · Payoff header | Model label tooltip (see Components) | Always |
 | Click future zone, or Enter at the focused point | Click or Keyboard shortcut · Index chart | MVP: nothing. Later release: places a pin and opens D1 | Later release only |
-| P, Esc or Payoff | Keyboard shortcut or Toolbar control | Turns Payoff off; returns to S1 and restores the option contract shown before | Always |
+| Let go of ⌥ or Alt | Keyboard shortcut (release) | Turns Payoff off; returns to S1 and restores the option contract shown before | Payoff opened by holding the key, and no pin placed |
+| Esc or Payoff | Keyboard shortcut or Toolbar control | Turns Payoff off; returns to S1 and restores the option contract shown before | Payoff kept on by the button or by a pin |
 
 #### Components & content
 | Component / field | Type | Content | Purpose |
@@ -344,12 +350,12 @@ flowchart LR
 | Access | No access, not found | N/A: Payoff opens only from S1, which already handles these | N/A |
 
 #### Workflow
-- Trader turns Payoff on from S1.
+- Trader holds ⌥ or Alt to peek, or clicks Payoff to keep it on.
 - System prices the position, or the contract on the option chart if nothing is held, and draws the overlays.
 - Trader hovers future times and levels on the index chart and reads the readout and the option chart marker.
 - Trader fits the view to today or to the expiry with the horizon chips.
 - If prices aren't live, system flags it with N2 and greys the values.
-- Trader turns Payoff off with P, Esc or the button and returns to S1.
+- Trader lets go of the key, or, if Payoff was kept on, presses Esc or the button, and returns to S1.
 
 #### Notes
 - **Responsive / platform:** at 1280 px the horizon chips wrap under the position summary; the readout keeps a fixed width and flips to the left of the pointer near the right edge.
@@ -358,7 +364,7 @@ flowchart LR
 - **Accessibility:** the readout is announced politely when the pointer or arrow keys pause; values use plus and minus signs and the words "Profit" and "Loss", never colour alone.
 
 ### S3 Payoff mode: several positions
-**Type:** Mode within S1 · **Platform:** Sahi web on desktop browsers, Sahi Desktop app · **Opened from:** S1 Payoff button or P key, with two or more open positions on the charted index · **Roles:** Trader with F&O enabled
+**Type:** Mode within S1 · **Platform:** Sahi web on desktop browsers, Sahi Desktop app · **Opened from:** S1 Payoff button, or holding ⌥ or Alt, with two or more open positions on the charted index · **Roles:** Trader with F&O enabled
 **Purpose:** Show where a multi-leg book breaks even over time, and what each leg and the total are worth at any index level and time up to the latest expiry held.
 **Layout (top to bottom, left to right):**
 1. Top bar (existing). The Payoff button shows its pressed state.
@@ -378,9 +384,10 @@ flowchart LR
 | Hover table row | Hover · Payoff table | Draws that leg's strike as a dotted line on the index chart; stays on S3 | Always. Priority: Should |
 | Scroll table | Scroll · Payoff table | Rows scroll; title, Realised today, total and flat case stay pinned | More than 8 legs |
 | Hover expiry marker | Hover · Index chart | Tooltip, e.g. "Weekly expiry · Mon 19 Oct · 2 legs expire" | Marker shown |
-| Arrow keys | Keyboard shortcut · Index chart | Tab focuses the index chart with the point one candle after "Now" at the current level; left and right move it one candle; up and down move it 5 points; Shift with up or down moves 25 points; readout and table follow; stays on S3 | Index chart focused |
+| Arrow keys | Keyboard shortcut · Index chart | Tab focuses the index chart with the point one candle after "Now" at the current level; left and right move it one candle; up and down move it 5 points; Shift with up or down moves 25 points; readout and table follow; stays on S3 | Index chart focused, or the peek key held |
 | Click future zone, or Enter at the focused point | Click or Keyboard shortcut · Index chart | MVP: nothing. Later release: places a pin and opens D1 with "Exit all at" only | Later release only |
-| P, Esc or Payoff | Keyboard shortcut or Toolbar control | Turns Payoff off; returns to S1 with the option chart shown again | Always |
+| Let go of ⌥ or Alt | Keyboard shortcut (release) | Turns Payoff off; returns to S1 with the option chart shown again | Payoff opened by holding the key, and no pin placed |
+| Esc or Payoff | Keyboard shortcut or Toolbar control | Turns Payoff off; returns to S1 with the option chart shown again | Payoff kept on by the button or by a pin |
 
 #### Components & content
 | Component / field | Type | Content | Purpose |
@@ -578,7 +585,7 @@ flowchart LR
 ## 9. Supporting Surfaces
 | ID | Surface | Parent | Trigger | Contains | Exit |
 |---|---|---|---|---|---|
-| N1 | Payoff introduction tip (Coach mark) | S1 | First Scalper visit after release, with the feature flag on and the tip not seen before | Anchored to the Payoff button. Copy "New: press P to see your breakeven and P&L at any Nifty level and time." (the index name follows the charted index). Buttons: Try it (Primary), Got it (Tertiary) | Try it: S2 or S3 by position count. Got it, Esc or a click outside: S1, and the tip doesn't show again (Assumption for Esc and click outside) |
+| N1 | Payoff introduction tip (Coach mark) | S1 | First Scalper visit after release, with the feature flag on and the tip not seen before | Anchored to the Payoff button. Copy "New: hold ⌥ to see your breakeven and P&L at any Nifty level and time. Let go to hide it." (Alt on Windows; the index name follows the charted index). Buttons: Try it (Primary), Got it (Tertiary) | Try it: S2 or S3 by position count. Got it, Esc or a click outside: S1, and the tip doesn't show again (Assumption for Esc and click outside) |
 | N2 | Pricing status banner (Banner) | System, on S2 and S3 | Prices not live | Stale: "Prices are delayed. Payoff values as of 11:02:15." Market closed: "Market closed. Values use the last close; future times start at 9:15 am on Thu 15 Oct." Unavailable: "Payoff can't load option prices right now." with Retry (Secondary) | Stale and Market closed clear on their own when prices are live. Retry stays on S2 or S3 and clears the banner if prices load. Only Market closed has a close icon (Assumption) |
 | N3 | Order result toast (Toast) | M1 (Later release) | An order from a pin succeeds or fails | Success: "Target set at ₹90.40", "Stop set at ₹40.30", "Exit scheduled for 11:15" (a later day adds the date: "Exit scheduled for 11:15, Fri 16 Oct"). Error: "Couldn't set target: {reason}", "Couldn't set stop: {reason}", "Couldn't schedule exit: {reason}", with {reason} as the order service returns it | Success closes after 4 seconds (Assumption); error stays until closed; close icon on both; no navigation |
 
@@ -607,6 +614,7 @@ flowchart LR
 | BR-20 | Later release: a target or stop from a pin is offered only on a held single position (S2). The projected premium against the current price decides which one, not profit or loss: for a bought option, above the current price is a target and below is a stop; for a sold option, the reverse. Neither is offered within one tick of the current price. It uses Sahi's existing SL/TP orders, which cover the full position quantity and go out as market orders when triggered, and it replaces an existing target or stop after confirmation | D1, M1 |
 | BR-21 | Later release: exit at a time is a new order type owned by Orders. It closes the open quantity at market at the pinned time, with Market Price Protection, and is cancelled if the position is closed earlier. From S3, "Exit all at" closes every leg still open at that time; legs that expire or square off before then are left alone. It is not offered for an intraday position at the auto square-off time. Open item: leg order and margin handling for multi-leg exits | D1, M1 |
 | BR-22 | Later release: targets and stops trigger on the option's price, not on the index level, and D1 and M1 say so. Open item: whether Sahi can trigger on the index level instead, which would match the pinned point exactly | D1, M1 |
+| BR-23 | Hold-to-peek: holding ⌥ Option (Mac) or Alt (Windows) shows Payoff (S2 or S3 by position count) and letting go hides it. The peek starts after the key has been held alone for about 140 ms (Assumption), so a shortcut that starts with the same key (⌘ ⌥ 1 for 1-Tap, Alt+Tab) runs as before and doesn't open Payoff. While the key is held, the arrow keys move the point and Enter pins it; any other key ends the peek. The peek ends when the window loses focus, and doesn't start while focus is in a text input or a confirm modal (M1) is open. Clicking the Payoff button keeps Payoff on until it is clicked again or Esc is pressed. In the Later release, a pin placed while peeking keeps Payoff on after the key is let go, until the pin is removed. Open item: on Windows, a lone Alt press can move focus to the browser menu bar; confirm the web app can suppress it on every supported browser, and pick a fallback key if not | S1, S2, S3, N1, D1 |
 
 ## 11. Roles and Permissions
 Not applicable: single role. Every trader who can use the Scalper with F&O enabled can use Payoff; sign-in, F&O activation and Scalper access stay with existing Sahi flows.
@@ -622,7 +630,7 @@ Not applicable: single role. Every trader who can use the Scalper with F&O enabl
 - Needs Orders to build exit at a time (BR-21) and to confirm BR-20 and BR-22.
 
 **Waiting for confirmation before build**
-- Pricing model (BR-08), range method (BR-09), freshness threshold (BR-18), auto square-off time (BR-04), decay over nights and weekends (BR-15), single futures layout (BR-02), compliance wording (Model label, order notes), Windows availability of the Sahi Desktop app (NFR-08).
+- Pricing model (BR-08), range method (BR-09), freshness threshold (BR-18), auto square-off time (BR-04), decay over nights and weekends (BR-15), single futures layout (BR-02), compliance wording (Model label, order notes), Windows availability of the Sahi Desktop app (NFR-08), the hold-to-peek key on Windows browsers (BR-23).
 
 **Launch criteria**
 1. Accuracy: on a back-test of past expiry days, the range covers at least the target share of outcomes (NFR-02).
@@ -686,12 +694,16 @@ Not applicable: single role. Every trader who can use the Scalper with F&O enabl
 | 38 | BR-17 | Assumption: values recompute at most once a second while the pointer is still |
 | 39 | 12 Rollout | Assumption: the feature flag can turn Payoff off without a release |
 | 40 | 12 Measurement | Assumption: a guardrail breach pauses the rollout |
+| 41 | BR-23 | Open item: whether a lone Alt press can be suppressed on every supported Windows browser, and a fallback peek key if not |
+| 42 | BR-23 | Assumption: the peek starts after the key is held alone for about 140 ms |
 
 ## 14. References
 | Reference | Relates to |
 |---|---|
 | [Payoff: Research](https://claude.ai/code/artifact/db924cf6-6005-4d30-8c76-5a615ebfd113), 12 Oct 2026, with its Scenarios tab (13 Oct): model, worked example, existing tools, validation plan, every position combination and the 13 Oct decisions | 1, 1.1, S2, S3, BR-03 to BR-12 |
 | Suhas's flow sketch, shared in chat on 13 Oct 2026: hot key, breakeven line on the index chart, hover readout, one position's P&L on the option chart, a table for several positions | S1, S2, S3 |
+| Suhas's direction, 13 Oct 2026: hold Option (Mac) or Alt (Windows) to peek, let go to hide; the toolbar button keeps Payoff on | BR-23, S1, N1 |
+| [Payoff clickable prototype](https://claude.ai/artifact/59eswEh3yuRh4PwFtFLLnT) (source in `prototype/payoff/` of this repo): hold-to-peek, S1 to S3, N1, N2, D1, M1 and N3 on sample data | S1, S2, S3, D1, M1, BR-23 |
 | [F&O problem bank](https://claude.ai/artifact/KJd28U4GEHTEycdmDBcjpc): P002 No way to see the premium at an index level before setting a stop; P013 No time-based exit; P080 Premium doesn't move with the index, and nobody explains why; P121 Frozen or delayed data looks live; P134 Time decay is invisible until it's lost | P002: S2, D1. P013: D1, M1. P080: S2, S3. P121: N2. P134: flat-case line on S2 and S3 |
 | [SEBI study: Profitability of Individual Traders, FY25 to FY26](https://www.sebi.gov.in/sebi_data/attachdocs/aug-2026/1787233506209.pdf) and [SEBI press release 50/2026, reproduced by TaxGuru](https://taxguru.in/?p=1072039) | 1, 1.1 |
 | [Agarwal, Ghosh, Prabhala and Zhao (2025), retail trading on expiry days](https://www.cfr-cologne.de/download/workingpaper/cfr-25-09.pdf) | 1.2 |
