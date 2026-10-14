@@ -22,6 +22,8 @@ class SahiChart {
     this.limitT = null;
     // how far right the view may go even without a future zone (empty space to look into)
     this.panT = null;
+    // A mirrored crosshair from the other chart: { T, p (price or null), label }. It shows only while this chart has no pointer of its own.
+    this.ghost = null;
     this._bind();
   }
   on(name, fn) { this.hooks[name] = fn; return this; }
@@ -37,6 +39,12 @@ class SahiChart {
   }
   setData(candles, nowT, lastPrice) { this.candles = candles; this.nowT = nowT; this.lastPrice = lastPrice; this.invalidate(); }
   setView(t0, t1) { this.view = { t0, t1 }; this.invalidate(); }
+  setGhost(g) {
+    const a = this.ghost;
+    if (!a && !g) return;
+    if (a && g && a.T === g.T && a.p === g.p && a.label === g.label) return;
+    this.ghost = g; this.invalidate();
+  }
   invalidate() {
     if (this._raf) return;
     this._raf = requestAnimationFrame(() => { this._raf = null; this.render(); });
@@ -78,6 +86,7 @@ class SahiChart {
     ctx.beginPath(); ctx.rect(0, 0, this.plotW, this.h - this.o.timeH); ctx.clip();
     this._grid();
     this.hooks.below && this.hooks.below(ctx, this);
+    this._ghostBand();
     this._volume();
     this._candles();
     if (this.o.sub && (this.candles.length || this.lastPrice != null)) this._sub();
@@ -86,6 +95,7 @@ class SahiChart {
     this._axes();
     this.hooks.axis && this.hooks.axis(ctx, this);
     this._crosshair();
+    this._ghost();
     this.hooks.top && this.hooks.top(ctx, this);
   }
   niceStep(range, n) {
@@ -229,6 +239,46 @@ class SahiChart {
     const x0 = align === 'axis' ? x + 1 : x;
     ctx.fillStyle = bg; ctx.fillRect(x0, Math.round(y - 9), w, 18);
     ctx.fillStyle = fg; ctx.textBaseline = 'middle'; ctx.fillText(text, x0 + 6, y + 0.5);
+  }
+  // The candle that contains the mirrored time gets a soft highlight, whatever this chart's timeframe.
+  _ghostBand() {
+    const g = this.ghost;
+    if (!g || this.pointer) return;
+    const c = this.visible().find(k => g.T >= k.t0 && g.T < k.t1);
+    if (!c) return;
+    const x0 = this.tToX(c.t0), x1 = this.tToX(c.t1);
+    this.ctx.fillStyle = 'rgba(120, 150, 230, .10)';
+    this.ctx.fillRect(x0, 0, Math.max(2, x1 - x0), this.mainH);
+  }
+  // The mirrored crosshair: the same minute as the other chart's pointer, and the level that matches it here.
+  _ghost() {
+    const g = this.ghost;
+    if (!g || this.pointer || this.drag) return;
+    const { ctx } = this;
+    const x = Math.round(this.tToX(g.T)) + 0.5;
+    if (x < 0 || x > this.plotW) return;
+    const y = g.p != null ? this.pToY(g.p) : null;
+    const inY = y != null && y >= this.o.padTop && y <= this.mainH;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, this.plotW, this.h - this.o.timeH); ctx.clip();
+    ctx.strokeStyle = 'rgba(130, 160, 240, .75)'; ctx.setLineDash([4, 4]); ctx.beginPath();
+    ctx.moveTo(x, 0); ctx.lineTo(x, this.h - this.o.timeH);
+    if (inY) { ctx.moveTo(0, Math.round(y) + 0.5); ctx.lineTo(this.plotW, Math.round(y) + 0.5); }
+    ctx.stroke(); ctx.setLineDash([]);
+    if (inY) { ctx.fillStyle = '#82a0f0'; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+    if (g.p != null) {
+      // a level above or below the view is tagged at that edge with an arrow
+      const ty = Math.max(this.o.padTop + 9, Math.min(this.mainH - 9, y));
+      const label = (g.label || g.p.toFixed(this.o.dec)) + (inY ? '' : y < this.o.padTop ? ' ↑' : ' ↓');
+      this.tag(this.plotW, ty, label, '#2f4f9e', '#fff');
+    }
+    const label = Engine.fmtT(Math.round(g.T));
+    ctx.font = '600 11px Inter, system-ui, sans-serif';
+    const tw = ctx.measureText(label).width + 14;
+    const tx = Math.max(0, Math.min(this.plotW - tw, x - tw / 2));
+    ctx.fillStyle = '#2f4f9e'; ctx.fillRect(tx, this.h - this.o.timeH + 4, tw, 20);
+    ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(label, tx + 7, this.h - this.o.timeH / 2 + 2);
   }
   _crosshair() {
     const p = this.pointer;

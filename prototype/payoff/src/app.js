@@ -237,6 +237,7 @@
       oc.forEach(k => { if (k.oi != null) OI.push({ T: Math.min(k.t1, T), v: k.oi }); });
     } else { opt.setData([], T, null); OI.length = 0; }
     renderUI();
+    refreshMirror();
   }
   // The window a range preset shows: the last 1 or 5 sessions, or all the data (1M), up to Now.
   function rangeView(key) {
@@ -650,7 +651,9 @@
       hits[which].push(Object.assign({}, r, { tip: x0.tip }));
     });
   }
-  idx.on('timeLabel', T => E.fmtT(Math.max(0, Math.round(T / idx.o.tf) * idx.o.tf)));
+  // Crosshair time labels show the exact minute on both charts, so a mirrored crosshair reads the same time
+  // whatever each chart's timeframe; in the future zone, the snapped Payoff point (BR-16).
+  idx.on('timeLabel', T => { const b = book(); return E.fmtT(payoffOn() && pointable(b) && T > b.nowT ? snapT(T, b) : Math.max(0, Math.round(T))); });
   // no crosshair over the disabled area
   idx.on('crosshair', (ctx, ch, p) => {
     if (!payoffOn()) return;
@@ -808,7 +811,7 @@
     drawExitMarkers(ctx, ch, 'opt', taken);
     ctx.globalAlpha = 1;
   });
-  opt.on('timeLabel', T => E.fmtT(Math.max(0, Math.round(T / opt.o.tf) * opt.o.tf)));
+  opt.on('timeLabel', T => E.fmtT(Math.max(0, Math.round(T))));
 
   /* ---------- pointer and keyboard on the index chart ---------- */
   const snapT = (T, b) => { const end = axisEnd(b); return Math.max(firstT(b), Math.min(end, Math.round(T / step()) * step())); };
@@ -847,10 +850,11 @@
       ch.cv.style.cursor = Math.hypot(p.x - px, p.y - py) < 10 ? 'grab' : (z && z.T && st.later ? 'pointer' : '');
     } else ch.cv.style.cursor = z && z.T && st.later ? 'crosshair' : '';
     updateReadout(p);
+    mirrorFromIdx(p);
     opt.invalidate();
     renderTable();
   });
-  idx.on('leave', () => { st.hover = null; hideTip('canvas'); updateReadout(null); opt.invalidate(); renderTable(); });
+  idx.on('leave', () => { st.hover = null; hideTip('canvas'); updateReadout(null); opt.setGhost(null); opt.invalidate(); renderTable(); });
   idx.on('down', (ch, p) => {
     if (st.pin) {
       const px = ch.tToX(st.pin.T), py = ch.pToY(st.pin.S);
@@ -869,6 +873,7 @@
   // Each chart scrolls and zooms on its own (the two can be on different timeframes).
   idx.on('viewchange', (ch, dragging, byUser) => {
     if (byUser && st.range.idx) { st.range.idx = null; renderTf(); }
+    if (ch.pointer) mirrorFromIdx(ch.pointer);
     if (!payoffOn()) return;
     if (byUser && st.horizon) { st.horizon = null; renderStrip(book()); }
     if (!dragging) cache = null;
@@ -876,13 +881,90 @@
     if (ch.pointer && !pinDrag) { st.hover = zoneAt(ch, ch.pointer); updateReadout(ch.pointer); opt.invalidate(); renderTable(); }
     renderD1();
   });
-  opt.on('viewchange', (ch, dragging, byUser) => { if (byUser && st.range.opt) { st.range.opt = null; renderTf(); } });
+  opt.on('viewchange', (ch, dragging, byUser) => { if (byUser && st.range.opt) { st.range.opt = null; renderTf(); } if (ch.pointer) mirrorFromOpt(ch.pointer); });
   opt.on('hover', (ch, p) => {
     const hit = hits.opt.find(h => p.x >= h.x && p.x <= h.x + h.w && p.y >= h.y && p.y <= h.y + h.h);
     if (hit) showCanvasTip(ch, hit); else hideTip('canvas');
+    mirrorFromOpt(p);
   });
-  opt.on('leave', () => hideTip('canvas'));
+  opt.on('leave', () => { hideTip('canvas'); idx.setGhost(null); });
+
+  /* ---------- mirrored crosshair (BR-28) ---------- */
+  // Hovering one chart mirrors the crosshair onto the other: the same minute, whatever either chart's timeframe,
+  // and the matching level. Up to Now, the option level is the option's real price at that minute, moved by what
+  // the model says it gains or loses between Nifty's actual level then and the hovered one. After Now, with Payoff
+  // on, it is the Payoff value; with Payoff off, the future gets the time line only. The other chart scrolls to
+  // keep the mirrored time in view, at its own zoom.
+  const mirrorOn = () => !!shownOpt() && !(payoffOn() && isS3());
+  const roundLvl = (c, v) => c.type === 'FUT' ? v : Math.max(0, E.roundTick(v));
+  // The option's actual price and Nifty's actual level at T (at Now: the live values).
+  function actualsAt(c, T, b) {
+    if (T >= b.nowT - 0.01) return { o: ltp(c), s: b.S0 };
+    return { o: E.optionPriceAt(c, T), s: E.pathAt(T) };
+  }
+  const blocked = (T, b) => { if (!payoffOn()) return false; const from = disabledFrom(b); return from != null && T > from + 1; };
+  function optLevel(c, T, S) {
+    const b = book();
+    if (T <= b.nowT) { const a = actualsAt(c, T, b); return roundLvl(c, a.o + E.price(c, S, T) - E.price(c, a.s, T)); }
+    if (!payoffOn() || blocked(T, b)) return null;
+    return roundLvl(c, E.price(c, S, T));
+  }
+  // The Nifty level that gives option price P at time T (option value is monotonic in the index level).
+  function idxLevel(c, T, P) {
+    const b = book();
+    let target;
+    if (T <= b.nowT) { const a = actualsAt(c, T, b); target = P - a.o + E.price(c, a.s, T); }
+    else if (!payoffOn() || blocked(T, b)) return null;
+    else target = P;
+    if (c.type === 'FUT') return target;
+    const f = S => E.price(c, S, T) - target;
+    let lo = b.S0 * 0.7, hi = b.S0 * 1.3, flo = f(lo), fhi = f(hi);
+    if (flo * fhi > 0) return Math.abs(flo) < Math.abs(fhi) ? lo : hi;
+    for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2, fm = f(mid); if (fm * flo > 0) { lo = mid; flo = fm; } else hi = mid; }
+    return (lo + hi) / 2;
+  }
+  // Keep the mirrored time in the other chart's view: shift it the least needed, at its own zoom.
+  function follow(ch, which, T) {
+    const v = ch.view, span = v.t1 - v.t0, m = span * 0.08;
+    if (T >= v.t0 + m && T <= v.t1 - m) return;
+    const t0 = T < v.t0 + m ? T - m : T + m - span;
+    const [a, c] = ch.clampView(t0, t0 + span);
+    if (Math.abs(a - v.t0) < 1e-6) return;
+    ch.setView(a, c);
+    if (st.range[which]) { st.range[which] = null; renderTf(); }
+    if (which === 'idx' && st.horizon) { st.horizon = null; renderStrip(book()); }
+  }
+  function mirrorPoint(T, S) {
+    const c = shownOpt();
+    if (!mirrorOn() || blocked(T, book())) { opt.setGhost(null); return; }
+    const lvl = S == null ? null : optLevel(c, T, S);
+    follow(opt, 'opt', T);
+    opt.setGhost({ T, p: lvl, label: lvl == null ? null : lvl.toFixed(2) });
+  }
+  function mirrorFromIdx(p) {
+    if (!p || p.x > idx.plotW || p.y > idx.h - idx.o.timeH) { opt.setGhost(null); return; }
+    // in the future zone, the same snapped point the readout uses (BR-16)
+    const z = payoffOn() ? zoneAt(idx, p) : null;
+    if (z && z.T) mirrorPoint(z.T, z.S);
+    else mirrorPoint(idx.xToT(p.x), p.y <= idx.mainH ? idx.yToP(p.y) : null);
+  }
+  function mirrorFromOpt(p) {
+    if (!p || !mirrorOn() || p.x > opt.plotW || p.y > opt.h - opt.o.timeH) { idx.setGhost(null); return; }
+    const T = opt.xToT(p.x);
+    if (blocked(T, book())) { idx.setGhost(null); return; }
+    const S = p.y <= opt.mainH ? idxLevel(shownOpt(), T, opt.yToP(p.y)) : null;
+    follow(idx, 'idx', T);
+    idx.setGhost({ T, p: S, label: S == null ? null : S.toFixed(2) });
+  }
+  // After data, a tick, Payoff or the clock change, recompute the mirror for wherever the pointer is.
+  function refreshMirror() {
+    if (idx.pointer) mirrorFromIdx(idx.pointer);
+    else if (st.keyPt && payoffOn()) mirrorPoint(st.keyPt.T, st.keyPt.S);
+    else opt.setGhost(null);
+    if (opt.pointer) mirrorFromOpt(opt.pointer); else idx.setGhost(null);
+  }
   // Keyboard: focusing the chart puts the point one candle after Now at the current level (PRD S2/S3).
+  $('#idxCanvas').addEventListener('blur', () => { if (!idx.pointer) opt.setGhost(null); });
   $('#idxCanvas').addEventListener('focus', () => {
     if (!payoffOn() || st.pin || st.keyPt || !$('#idxCanvas').matches(':focus-visible')) return;
     const b = book();
@@ -938,6 +1020,7 @@
     } else { st.keyPt = pt; st.hover = pt; }
     markHinted(pt);
     updateReadout(null);
+    mirrorPoint(pt.T, pt.S);
     idx.invalidate(); opt.invalidate(); renderTable(); renderD1();
   }
   function keepPointInView(pt) {
@@ -1945,6 +2028,7 @@
     const c = shownOpt();
     if (c) { const lp = ltp(c); const ol = opt.candles[opt.candles.length - 1]; if (ol) { ol.c = lp; ol.h = Math.max(ol.h, lp); ol.l = Math.min(ol.l, lp); } opt.lastPrice = lp; }
     renderUI();
+    refreshMirror();
     if (st.popover) renderPopover();
     if (st.m1 && !st.m1.submitting) renderM1();
   }
