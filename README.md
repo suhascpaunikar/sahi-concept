@@ -7,7 +7,7 @@ Two feature concepts for Sahi, each with a PRD and a clickable prototype: **Mirr
 | Path | What it is |
 |---|---|
 | `docs/sahi-mirror-mobile-prd.md` | Full PRD v2.0, rewritten from the web desktop PRD v1.1 for the Sahi iOS and Android app |
-| `docs/sahi-payoff-desktop-prd.md` | Payoff (desktop) PRD v1.6: the Payoff mode on the Scalper split view, for Sahi web and the Sahi Desktop app |
+| `docs/sahi-payoff-desktop-prd.md` | Payoff (desktop) PRD v1.7: the Payoff mode on the Scalper split view, for Sahi web and the Sahi Desktop app |
 | `docs/sahi-payoff-desktop-prd.html` | The same Payoff PRD as a styled page with contents, linked IDs and an open-items filter. Open it in a browser |
 | `prototype/index.html` | Clickable phone prototype of the Mirror PRD. One self-contained file, no build step |
 | `prototype/payoff/index.html` | Clickable desktop prototype of the Payoff PRD on the Scalper split view. One self-contained file, no build step |

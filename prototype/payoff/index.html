@@ -197,6 +197,7 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .readout .p { display: flex; align-items: baseline; gap: 9px; font-size: 24px; font-weight: 700; line-height: 1.15; margin-top: 9px; letter-spacing: -.01em; }
 .readout .p small { font-size: 13px; font-weight: 600; color: var(--text-2); letter-spacing: 0; }
 .readout .r { font-size: 12.5px; color: var(--text-2); margin-top: 7px; }
+.readout .r b { font-weight: 600; }
 .readout .u { font-size: 11.5px; color: var(--warn-ink); margin-top: 7px; line-height: 1.35; }
 .readout .ft { margin-top: 11px; padding-top: 9px; border-top: 1px solid var(--line-2); font-size: 11px; color: var(--text-3); }
 .readout.stale .p, .readout.stale .r { color: var(--text-3) !important; }
@@ -2060,7 +2061,30 @@ class SahiChart {
     ctx.fillStyle = css('--future-tint'); ctx.fillRect(nx, 0, ex - nx, ch.mainH);
     ctx.globalAlpha = 1;
   });
+  // The option chart's point card: the same box as the index chart's readout, placed beside the marker dot.
+  let optCardUsed = false;
+  function optCard(ch, taken, html, x, y, stale) {
+    const wrap = $('#optWrap');
+    let el = $('#optReadout');
+    if (!el) { el = document.createElement('div'); el.id = 'optReadout'; el.className = 'readout'; el.setAttribute('aria-hidden', 'true'); wrap.appendChild(el); }
+    optCardUsed = true;
+    el.classList.toggle('stale', stale);
+    setHTML(el, html);
+    el.style.opacity = alpha();
+    const w = el.offsetWidth, h = el.offsetHeight, top = ch.o.padTop, bot = ch.mainH * (1 - ch.o.volFrac) - 4;
+    const fit = (lx, ly) => ({ x: Math.max(4, Math.min(ch.plotW - w - 4, lx)), y: Math.max(top, Math.min(bot - h, ly)), w, h });
+    const dotBox = { x: x - 7, y: y - 7, w: 14, h: 14 };
+    const cands = [fit(x + 14, y - h - 10), fit(x - 14 - w, y - h - 10), fit(x + 14, y + 10), fit(x - 14 - w, y + 10)];
+    const r = cands.find(c => !overlaps(c, taken) && !overlaps(c, [dotBox])) || cands.find(c => !overlaps(c, [dotBox])) || cands[0];
+    el.style.left = r.x + 'px'; el.style.top = r.y + 'px';
+    taken.push(r);
+    return r;
+  }
   opt.on('above', (ctx, ch) => {
+    optCardUsed = false;
+    try { drawOptAbove(ctx, ch); } finally { if (!optCardUsed) { const el = $('#optReadout'); if (el) el.remove(); } }
+  });
+  function drawOptAbove(ctx, ch) {
     const taken = [];
     drawSimMark(ctx, ch, taken);
     const b = book();
@@ -2131,42 +2155,26 @@ class SahiChart {
       }
       dot(ctx, x, y, stale ? '#c0c6d2' : '#ffd98a', 4.5);
       if (yRaw !== y) { ctx.fillStyle = '#ffd98a'; ctx.font = '700 11px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(yRaw < y ? '▲' : '▼', x, yRaw < y ? y - 10 : y + 12); ctx.textAlign = 'left'; }
-      const timeTxt = E.fmtT(pt.T, E.dayOfT(pt.T) !== E.dayOfT(b.nowT) || closed());
       const shownV = b.pretrade ? d.value : heldPrem(l, pt.S, pt.T, b);
       const shownPnl = pointPnl(b, pt.S, pt.T);
-      const lines = [`${E.prem(shownV)} at ${timeTxt}`, d.uncertain ? 'Too uncertain to price' : hasRange ? `${E.prem(d.lo)} to ${E.prem(d.hi)}` : null].filter(Boolean);
-      const tagTxt = `${E.signed(shownPnl)} on ${l.qty}`;
-      // the price box and its P&L tag move together: right of the point, left of it, then below it
-      const up4 = [{ dx: 12, align: 'left', up: true }, { dx: -12, align: 'right', up: true }], dn4 = [{ dx: 12, align: 'left', up: false }, { dx: -12, align: 'right', up: false }];
-      // when the dot is clamped to the top, put the label below it so it never covers the dot
-      const both = yRaw < y ? dn4.concat(up4) : up4.concat(dn4);
-      let chosen = null;
-      for (const c of both) {
-        const box = pill(ctx, x + c.dx, c.up ? y - 10 : y + 10, lines, { align: c.align, valign: c.up ? 'bottom' : 'top', measure: true, clampW: ch.plotW, clampH: [topY, plotBottom - 30] });
-        const tag = pill(ctx, x + c.dx, box.y + box.h + 4, tagTxt, { align: c.align, measure: true, clampW: ch.plotW });
-        if (!overlaps(box, taken) && !overlaps(tag, taken)) { chosen = c; break; }
-      }
-      chosen = chosen || both[x + 12 + 200 > ch.plotW ? 1 : 0];
-      const box = pill(ctx, x + chosen.dx, chosen.up ? y - 10 : y + 10, lines, { align: chosen.align, valign: chosen.up ? 'bottom' : 'top', bg: 'rgba(23,29,39,.97)', border: '#3a4558', fg: stale ? '#9aa2b2' : '#fff', clampW: ch.plotW, clampH: [topY, plotBottom - 30] });
-      taken.push(box, { x: box.x, y: box.y + box.h + 4, w: box.w, h: 22 });
-      pill(ctx, x + chosen.dx, box.y + box.h + 4, tagTxt, { align: chosen.align, clampW: ch.plotW, bg: stale ? '#2a303b' : shownPnl >= 0 ? COL.upBg : COL.downBg, fg: stale ? '#9aa2b2' : '#fff', border: stale ? '#3a4558' : shownPnl >= 0 ? COL.up : COL.down });
+      optCard(ch, taken, `<div class="h num">${esc(E.fmtT(pt.T))}</div><div class="p num"><small>Premium</small>${E.prem(shownV)}</div>` +
+        (d.uncertain ? `<div class="u">Too uncertain to price. Time value left: ${E.prem(d.timeValue)}</div>` : hasRange ? `<div class="r num">Range ${E.prem(d.lo)} to ${E.prem(d.hi)}</div>` : '') +
+        (b.pretrade ? '' : `<div class="r num">P&amp;L <b class="${shownPnl >= 0 ? 'up' : 'down'}">${E.signed(shownPnl)}</b> on ${l.qty}</div>`) +
+        `<div class="ft">Model estimate, not a forecast</div>`, x, y, stale);
     } else if (nx >= 0 && nx <= ch.plotW) {
       const cur = ltp(l.c), y = clampY(ch.pToY(cur));
       dot(ctx, nx, y, stale ? '#c0c6d2' : '#ffd98a', 4.5);
       const pnlNow = b.pretrade ? 0 : l.side * l.qty * (cur - l.avg);
-      const tagTxt = `${E.signed(pnlNow)} on ${l.qty}`;
-      const cands = [{ dx: 12, align: 'left', up: true }, { dx: 12, align: 'left', up: false }, { dx: -12, align: 'right', up: true }, { dx: -12, align: 'right', up: false }];
-      let ch0 = cands.find(c => { const bx = pill(ctx, nx + c.dx, c.up ? y - 10 : y + 10, `${E.prem(cur)} now`, { align: c.align, valign: c.up ? 'bottom' : 'top', measure: true, clampW: ch.plotW, clampH: [topY + 26, plotBottom - 30] }); const tg = { x: bx.x, y: bx.y + bx.h + 4, w: bx.w + 30, h: 22 }; return !overlaps(bx, taken) && (b.pretrade || !overlaps(tg, taken)); }) || cands[0];
-      const box = pill(ctx, nx + ch0.dx, ch0.up ? y - 10 : y + 10, `${E.prem(cur)} now`, { align: ch0.align, valign: ch0.up ? 'bottom' : 'top', bg: 'rgba(23,29,39,.97)', border: '#3a4558', fg: stale ? '#9aa2b2' : '#fff', clampH: [topY + 26, plotBottom - 30], clampW: ch.plotW });
-      taken.push(box);
-      if (!b.pretrade) taken.push(pill(ctx, nx + ch0.dx, box.y + box.h + 4, tagTxt, { align: ch0.align, bg: stale ? '#2a303b' : pnlNow >= 0 ? COL.upBg : COL.downBg, fg: stale ? '#9aa2b2' : '#fff', border: stale ? '#3a4558' : pnlNow >= 0 ? COL.up : COL.down, clampW: ch.plotW }));
+      optCard(ch, taken, `<div class="h num">Now · ${esc(E.fmtT(b.nowT))}</div><div class="p num"><small>${b.pretrade ? 'Last price' : 'Premium'}</small>${E.prem(cur)}</div>` +
+        (b.pretrade ? '' : `<div class="r num">P&amp;L <b class="${pnlNow >= 0 ? 'up' : 'down'}">${E.signed(pnlNow)}</b> on ${l.qty}</div>`) +
+        `<div class="ft">Model estimate, not a forecast</div>`, nx, y, stale);
     }
     if (pts.length > 2) { const [lx, lv] = pts[pts.length - 1]; placePill(ctx, taken, [{ x: lx - 4, y: ch.pToY(lv) - 6, align: 'right', valign: 'bottom' }, { x: lx - 4, y: ch.pToY(lv) + 6, align: 'right' }], `If Nifty stays at ${E.level(b.S0)}`, { fg: stale ? '#9aa2b2' : '#cbbcff', clampH: [topY, plotBottom], required: false }, ch.plotW); }
     const paidTxt = b.pretrade ? `Last price ${E.prem(l.avg)}` : l.side > 0 ? `Paid ${E.prem(l.avg)}` : `Sold at ${E.prem(l.avg)}`;
     placePill(ctx, taken, [{ x: 8, y: yP + 4 }, { x: 8, y: yP - 4, valign: 'bottom' }, { x: 60, y: yP + 4 }, { x: 60, y: yP - 4, valign: 'bottom' }, { x: ch.plotW * 0.5, y: yP + 4 }], paidTxt, { fg: '#e9ecf1' }, ch.plotW);
     drawExitMarkers(ctx, ch, 'opt', taken);
     ctx.globalAlpha = 1;
-  });
+  }
   opt.on('timeLabel', T => minuteLabel(T));
 
   /* ---------- pointer and keyboard on the index chart ---------- */
