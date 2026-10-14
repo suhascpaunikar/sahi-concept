@@ -958,7 +958,9 @@ class SahiChart {
     this.invalidate();
   }
   setData(candles, nowT, lastPrice) { this.candles = candles; this.nowT = nowT; this.lastPrice = lastPrice; this.invalidate(); }
-  setView(t0, t1) { this.view = { t0, t1 }; this.invalidate(); }
+  setView(t0, t1) { this.zoom = null; this.view = { t0, t1 }; this.invalidate(); }
+  // The window that shows n candles of this chart's timeframe across the plot, ending a little past T.
+  spanFor(pxPerCandle) { return Math.max(this.o.tf * 8, this.plotW / pxPerCandle * this.o.tf); }
   setGhost(g) {
     const a = this.ghost;
     if (!a && !g) return;
@@ -1066,7 +1068,7 @@ class SahiChart {
     const { ctx } = this;
     const k = this.plotW / (this.view.t1 - this.view.t0);
     for (const c of this.visible()) {
-      const bw = Math.max(1, Math.min((c.t1 - c.t0) * k * 0.72, 28));
+      const bw = Math.max(1, Math.min((c.t1 - c.t0) * k * 0.62, 24));
       const x = this.tToX((c.t0 + c.t1) / 2);
       const up = c.c >= c.o;
       ctx.fillStyle = ctx.strokeStyle = up ? this.col.up : this.col.down;
@@ -1085,7 +1087,7 @@ class SahiChart {
     const k = this.plotW / (this.view.t1 - this.view.t0);
     ctx.globalAlpha = 0.32;
     for (const c of vis) {
-      const bw = Math.max(1, Math.min((c.t1 - c.t0) * k * 0.72, 28));
+      const bw = Math.max(1, Math.min((c.t1 - c.t0) * k * 0.62, 24));
       const x = this.tToX((c.t0 + c.t1) / 2), h = (c.v || 0) / maxV * hh;
       ctx.fillStyle = c.c >= c.o ? this.col.up : this.col.down;
       ctx.fillRect(Math.round(x - bw / 2), base - h, Math.max(1, Math.round(bw)), h);
@@ -1229,7 +1231,7 @@ class SahiChart {
   }
   // Keep the view between the first candle and the right limit: the axis end, or panT when that is later.
   clampView(t0, t1) {
-    let span = Math.max(this.o.minSpan, Math.min(this.o.maxSpan, t1 - t0));
+    let span = Math.max(Math.min(this.o.minSpan, this.o.tf * 8), Math.min(this.o.maxSpan, t1 - t0));
     const first = this.candles.length ? this.candles[0].t0 : t0;
     const right = Math.max(this.limitT != null ? this.limitT : this.nowT, this.panT != null ? this.panT : -Infinity);
     span = Math.min(span, (right - first) / 0.89);
@@ -1262,6 +1264,7 @@ class SahiChart {
       if (e.button !== 0) return;
       const p = this.local(e);
       if (this.hooks.down && this.hooks.down(this, p, e) === false) return;
+      this.zoom = null;
       this.drag = { x: p.x, t0: this.view.t0, t1: this.view.t1, moved: false };
       cv.style.cursor = 'grabbing';
     });
@@ -1272,19 +1275,80 @@ class SahiChart {
       if (d.moved) this.hooks.viewchange && this.hooks.viewchange(this, false, true);
       this.invalidate();
     });
+    // Zoom: the mouse wheel, a trackpad pinch (Chrome and Firefox send it as a wheel with ctrlKey), Safari's
+    // gesture events, and a two-finger pinch on a touch screen. Every zoom eases to its target span and keeps
+    // the minute under the pointer fixed. A sideways trackpad swipe pans.
     cv.addEventListener('wheel', e => {
       e.preventDefault();
       const p = this.local(e);
-      const T = this.xToT(p.x);
-      const k = Math.exp(e.deltaY * 0.0015);
-      const t0 = T - (T - this.view.t0) * k, t1 = T + (this.view.t1 - T) * k;
-      const [a, b] = this.clampView(t0, t1);
-      this.view = { t0: a, t1: b };
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? this.h : 1;
+      const dx = e.deltaX * unit, dy = e.deltaY * unit;
       this.pointer = p;
-      this.computeY();
-      this.hooks.viewchange && this.hooks.viewchange(this, false, true);
-      this.invalidate();
+      if (!e.ctrlKey && Math.abs(dx) > Math.abs(dy)) { this.zoom = null; this._pan(dx); return; }
+      // a pinch sends small steps many times a second, so it gets a stronger factor than a wheel notch
+      this.zoomBy(Math.exp(Math.max(-1, Math.min(1, dy * (e.ctrlKey ? 0.012 : 0.0018)))), p.x);
     }, { passive: false });
+    let gScale = 1;
+    cv.addEventListener('gesturestart', e => { e.preventDefault(); gScale = 1; });
+    cv.addEventListener('gesturechange', e => {
+      e.preventDefault();
+      const p = this.local(e);
+      this.zoomBy(gScale / e.scale, p.x); gScale = e.scale;
+    });
+    cv.addEventListener('gestureend', e => e.preventDefault());
+    let pinch = null;
+    const mid = ts => { const r = this.cv.getBoundingClientRect(); return { x: ((ts[0].clientX + ts[1].clientX) / 2 - r.left) * (this.w / r.width), d: Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY) }; };
+    cv.addEventListener('touchstart', e => { if (e.touches.length === 2) { e.preventDefault(); pinch = mid(e.touches); } }, { passive: false });
+    cv.addEventListener('touchmove', e => {
+      if (!pinch || e.touches.length !== 2) return;
+      e.preventDefault();
+      const m = mid(e.touches);
+      if (m.d > 10 && pinch.d > 10) this.zoomBy(pinch.d / m.d, m.x);
+      pinch = m;
+    }, { passive: false });
+    cv.addEventListener('touchend', e => { if (e.touches.length < 2) pinch = null; });
+  }
+  _pan(dx) {
+    const dT = dx / this.plotW * (this.view.t1 - this.view.t0);
+    const [a, b] = this.clampView(this.view.t0 + dT, this.view.t1 + dT);
+    this.view = { t0: a, t1: b };
+    this.computeY();
+    this.hooks.viewchange && this.hooks.viewchange(this, false, true);
+    this.invalidate();
+  }
+  // k < 1 zooms in (pinch out), k > 1 zooms out. Steps add up on the target, and each frame closes part of
+  // the gap, so a fast pinch or a run of wheel notches glides instead of jumping.
+  zoomBy(k, x) {
+    if (!(k > 0) || this.drag) return;
+    x = Math.max(0, Math.min(this.plotW, x));
+    const cur = this.view.t1 - this.view.t0;
+    const prev = this.zoom, minS = Math.max(Math.min(this.o.minSpan, this.o.tf * 8), 1);
+    // a pointer that moved mid-glide becomes the new anchor; the target span keeps adding up
+    const z = { x, T: prev && Math.abs(prev.x - x) < 1 ? prev.T : this.xToT(x), span: Math.max(minS, Math.min(this.o.maxSpan, (prev ? prev.span : cur) * k)) };
+    { const f = x / this.plotW, [a, b] = this.clampView(z.T - f * z.span, z.T + (1 - f) * z.span); z.span = b - a; }
+    this.zoom = z;
+    if (!this._zraf) this._zraf = requestAnimationFrame(() => this._zoomStep());
+  }
+  _zoomStep() {
+    this._zraf = null;
+    const z = this.zoom;
+    if (!z) return;
+    const cur = this.view.t1 - this.view.t0;
+    // ease in log space: about 85% of the way in 6 frames at 60 Hz
+    let span = Math.exp(Math.log(cur) + (Math.log(z.span) - Math.log(cur)) * 0.3);
+    const done = Math.abs(Math.log(span / z.span)) < 0.004;
+    if (done) span = z.span;
+    const f = z.x / this.plotW;
+    const [a, b] = this.clampView(z.T - f * span, z.T - f * span + span);
+    const stuck = Math.abs((b - a) - cur) < 1e-6 && !done;
+    this.view = { t0: a, t1: b };
+    this.computeY();
+    const end = done || stuck;
+    if (end) this.zoom = null;
+    // while gliding, tell the app it is a drag-like change (cheap); the last frame is a full one
+    this.hooks.viewchange && this.hooks.viewchange(this, !end, true);
+    this.invalidate();
+    if (!end) this._zraf = requestAnimationFrame(() => this._zoomStep());
   }
 }
 /* =====================================================================
@@ -1541,7 +1605,9 @@ class SahiChart {
     const T = nowT();
     idx.limitT = null; opt.limitT = null;
     st.range = { idx: null, opt: '1' };
-    idx.setView(...idx.clampView(T - 300, T + 24));
+    // about 11 px per candle, the spacing Sahi Charts opens with
+    idx.resize();
+    { const span = idx.spanFor(11); idx.setView(...idx.clampView(T - span * 0.93, T + span * 0.07)); }
     applyRange(opt, st.range.opt);
     renderTf();
   }

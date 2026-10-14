@@ -252,7 +252,9 @@
     const T = nowT();
     idx.limitT = null; opt.limitT = null;
     st.range = { idx: null, opt: '1' };
-    idx.setView(...idx.clampView(T - 300, T + 24));
+    // about 11 px per candle, the spacing Sahi Charts opens with
+    idx.resize();
+    { const span = idx.spanFor(11); idx.setView(...idx.clampView(T - span * 0.93, T + span * 0.07)); }
     applyRange(opt, st.range.opt);
     renderTf();
   }

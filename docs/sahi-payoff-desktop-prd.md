@@ -1,7 +1,7 @@
 # Sahi Payoff (Desktop) PRD
 *Full PRD: the Payoff mode on Sahi's Scalper split view, for Sahi web on desktop browsers and the Sahi Desktop app. Use this to design the screens in Figma and to agree scope with Sahi's product, engineering and compliance leads.*
 
-**Product type:** Web app (desktop), Desktop app · **Depth:** Full PRD · **Version:** v1.5 · **Date:** 14 Oct 2026 · **Status:** Draft
+**Product type:** Web app (desktop), Desktop app · **Depth:** Full PRD · **Version:** v1.6 · **Date:** 14 Oct 2026 · **Status:** Draft
 
 **Owner:** Suhas · **Reviewers / sign-off:** Open item: Sahi product, design, engineering and compliance leads
 > Scope note: Payoff was called Premium What-If in the research. This PRD covers desktop only; mobile gets its own PRD. Order actions from a pinned point are specced here for the Later release. Example values come from the research model (Nifty 25,000, IV 12%, range at IV 10% to 15%) and are illustrative, not market data.
@@ -13,6 +13,8 @@
 > Changes in v1.3: both charts drag left into history and right into empty space up to 3:30 pm on the next trading day, with Payoff on or off (BR-27). Past the axis end, the chart is striped and disabled: no shading, no point, no pin (BR-26). Payoff no longer draws the expected-move cone and has no Expected move toggle (FR-14 removed). The hover readout leads with the P&L: the time, then a larger P&L, then the range; the index level moves to the price-axis label and the "If Nifty stays at" line leaves the readout (it stays in the table, the option chart and D1).
 >
 > Changes in v1.4: the chart toolbar's timeframe and range controls are specified (they are Sahi's existing controls; Payoff doesn't change them). A new timeframe keeps the candle width, so the window grows or shrinks with the candle size; candles start at 9:15 am each session (BR-25). The prototype now runs on real 1-minute data from Zerodha Kite for NIFTY 50 and the NIFTY 19 Oct 22500 Call and Put, up to 12:59 pm on Wed 14 Oct; later times are simulated and other contracts are modelled from the real index. The PRD's worked examples still use the research model (Nifty 25,000).
+>
+> Changes in v1.6: the charts open less crowded, at about 11 px per candle, and zoom smoothly with a trackpad pinch, the mouse wheel or a touch-screen pinch, keeping the minute under the pointer in place; a sideways trackpad swipe pans (BR-29).
 >
 > Changes in v1.5: the crosshair is mirrored between the two charts (BR-28). Hovering the Nifty chart draws a second crosshair on the option chart at the same minute, whatever either timeframe, at the option price that matches the hovered Nifty level; hovering the option chart does the same on Nifty. The other chart scrolls to keep that minute in view. Crosshair time labels show the exact minute.
 
@@ -91,6 +93,7 @@
 | FR-27 | Past the axis end, the charts show a striped, disabled area with the label "After expiry" ("After auto square-off" for intraday-only books, "Expired" once every position has expired) that can't be hovered or pinned (BR-26) | Must | S2, S3 |
 | FR-28 | The trader can drag both charts left into history and right into empty space up to 3:30 pm on the next trading day, with Payoff on or off, and further to the axis end when Payoff is on and that is later (BR-27) | Must | S1, S2, S3 |
 | FR-29 | Hovering either chart mirrors the crosshair on the other: the same minute, whatever each chart's timeframe, and the matching level, with the other chart scrolling to keep it in view (BR-28) | Should | S1, S2 |
+| FR-30 | Pinching out on a trackpad or touch screen, or scrolling the wheel, zooms the chart under the pointer smoothly; a sideways swipe pans; the index chart opens at about 11 px per candle (BR-29) | Should | S1, S2, S3 |
 
 ### 2.2 Non-functional
 | ID | Area | Requirement | Surfaces |
@@ -317,7 +320,7 @@ flowchart LR
 | Hover past candles | Hover · Index chart | Normal crosshair; readout shows "Now" values; stays on S2 | Pointer left of "Now" |
 | Pointer leaves the index chart | Hover | Readout and option chart marker show "Now" values; stays on S2 | Always |
 | Horizon chip | Toolbar control · Payoff header | Fits both charts from now to the chip's time; stays on S2 | Always; none picked on open; the picked chip stays highlighted until the trader drags or zooms the index chart |
-| Scroll or zoom | Scroll · Index chart or option chart | Standard zoom and pan of that chart only; left into history, right to 3:30 pm on the next trading day or the axis end, whichever is later (BR-27); on the index chart it clears the picked chip; stays on S2 | Always |
+| Scroll or zoom | Scroll or pinch · Index chart or option chart | Smooth zoom and pan of that chart only (BR-29); left into history, right to 3:30 pm on the next trading day or the axis end, whichever is later (BR-27); on the index chart it clears the picked chip; stays on S2 | Always |
 | Hover disabled area | Hover · Index chart | No crosshair and no point; the readout shows "Now" values; stays on S2 | Pointer past the axis end |
 | Arrow keys | Keyboard shortcut · Index chart | Tab focuses the index chart with the point one candle after "Now" at the current level; left and right move it one candle; up and down move it 5 points; Shift with up or down moves 25 points; readout and option chart marker follow; stays on S2 | Index chart focused, or the peek key held |
 | Hover expiry marker | Hover · Index chart | Tooltip, e.g. "Weekly expiry · Mon 19 Oct · moved from Tue 20 Oct for a holiday" | Marker shown |
@@ -404,7 +407,7 @@ flowchart LR
 | Hover past candles | Hover · Index chart | Normal crosshair; table shows "Payoff now"; stays on S3 | Pointer left of "Now" |
 | Pointer leaves the index chart | Hover | Table shows "Payoff now"; stays on S3 | Always |
 | Horizon chip | Toolbar control · Payoff header | Fits the index chart from now to that time; stays on S3 | Always; none picked on open |
-| Scroll or zoom | Scroll · Index chart | Standard zoom and pan; left into history, right to 3:30 pm on the next trading day or the latest expiry, whichever is later (BR-27); clears the picked chip; stays on S3 | Always |
+| Scroll or zoom | Scroll or pinch · Index chart | Smooth zoom and pan (BR-29); left into history, right to 3:30 pm on the next trading day or the latest expiry, whichever is later (BR-27); clears the picked chip; stays on S3 | Always |
 | Hover table row | Hover · Payoff table | Draws that leg's strike as a dotted line on the index chart; stays on S3 | Always. Priority: Should |
 | Scroll table | Scroll · Payoff table | Rows scroll; title, Realised today, total and flat case stay pinned | More than 8 legs |
 | Hover expiry marker | Hover · Index chart | Tooltip, e.g. "Weekly expiry · Mon 19 Oct · 2 legs expire" | Marker shown |
@@ -645,6 +648,7 @@ flowchart LR
 | BR-26 | Past the axis end (BR-03), the index chart, and in S2 the option chart, show a disabled area: diagonal stripes tied to the time axis, a thin edge line at the axis end, and a centred label, "After expiry", "After auto square-off" for an intraday-only book, or "Expired" when every position has already expired (then the area starts at "Now"). Inside it there is no shading, crosshair, readout point or pin, and the readout shows "Now" values. It applies to every position, bought or sold, one or several, and to pre-trade | S2, S3 |
 | BR-27 | Both charts drag left back to the first candle loaded and right into empty space up to 3:30 pm on the next trading day, with Payoff on or off. With Payoff on, they drag as far as the axis end when that is later. With Payoff off, the space right of "Now" is empty | S1, S2, S3 |
 | BR-28 | Mirrored crosshair. Hovering one chart draws a second crosshair on the other at the same minute, not snapped to either chart's candles, so it holds whatever each timeframe; the candle that contains that minute is highlighted. Its level matches the hovered one: up to Now, the option's actual price at that minute, moved by what the model says the option gains or loses between Nifty's actual level then and the hovered level (on Nifty's actual level it is the option's actual price); at Now, the live prices; after Now with Payoff on, the Payoff value at the snapped point (BR-16), so it passes through the option chart's marker. Hovering the option chart inverts this to find the Nifty level. With Payoff off, a future minute gets the time line only; nothing is mirrored over the striped area (BR-26), onto the option chart in S3, or with no contract loaded; the option chart's OI panel mirrors time only. When the minute is outside the other chart's view, that chart scrolls the least needed to keep it in view, at its own zoom, clearing that chart's range button or a picked horizon chip. Crosshair time labels show the exact minute, except at the snapped Payoff point. The arrow-key point mirrors too | S1, S2 |
+| BR-29 | Zoom and spacing. The index chart opens with about 11 px per candle on its timeframe (about 60 candles on a 1920 px wide screen), with a little space right of Now; candle bodies take about 60% of each slot, so neighbours have a visible gap. Pinching out on a trackpad zooms in and pinching in zooms out (browsers send a pinch as a wheel with Ctrl, Safari as gesture events); the mouse wheel and a two-finger touch-screen pinch zoom too. Each zoom eases to its new width over a few frames, and the minute under the pointer stays under it. A mostly sideways trackpad swipe pans. Zoom stops at 8 candles across, or 30 minutes if that is less, and at the limits in BR-27; dragging stops a zoom in progress. Zooming clears that chart's range button and, on the index chart, a picked horizon chip (BR-24, BR-25) | S1, S2, S3 |
 
 ## 11. Roles and Permissions
 Not applicable: single role. Every trader who can use the Scalper with F&O enabled can use Payoff; sign-in, F&O activation and Scalper access stay with existing Sahi flows.
@@ -652,7 +656,7 @@ Not applicable: single role. Every trader who can use the Scalper with F&O enabl
 ## 12. Release Plan
 **MVP (first design pass and first release)**
 - Surfaces: S1 (changed), N1, S2, S3, N2.
-- Requirements: FR-01 to FR-13, FR-15 to FR-19, FR-23 to FR-29; NFR-01 to NFR-08.
+- Requirements: FR-01 to FR-13, FR-15 to FR-19, FR-23 to FR-30; NFR-01 to NFR-08.
 
 **Later**
 - Surfaces: D1, M1, N3, and the scheduled exit marker.
@@ -739,6 +743,7 @@ Not applicable: single role. Every trader who can use the Scalper with F&O enabl
 | Suhas's review notes, 14 Oct 2026: the two charts can be on different timeframes; don't extend the chart to expiry when Payoff opens; remove the key hint from the Payoff button; grey out a squared-off leg's P&L | BR-12, BR-24, BR-25, S1, S3 |
 | Suhas's review notes, 14 Oct 2026 (second set): stripes past expiry, drag to 3:30 pm tomorrow, remove the expected-move indicator, a readout that leads with the P&L (frame with title, P&L, range and footer) | FR-06, FR-14, BR-26, BR-27, S2, S3 |
 | Suhas's direction, 14 Oct 2026 (third set): mirror the hovered crosshair, time and level, onto the other chart whatever the timeframe; follow by scrolling; both ways; exact minute with the candle highlighted | FR-29, BR-28 |
+| Suhas's direction, 14 Oct 2026 (fourth set): the charts look compacted; add a smooth pinch-out zoom and space the candles out like Sahi Charts | FR-30, BR-29 |
 | Market data for the prototype: 1-minute candles for NIFTY 50 and the NIFTY 19 Oct 22500 Call and Put from Zerodha Kite (Kite MCP), Tue 29 Sep to 12:59 pm on Wed 14 Oct 2026, in `prototype/payoff/data/` with its handover note | Prototype, BR-25 |
 | [Payoff clickable prototype](https://claude.ai/artifact/59eswEh3yuRh4PwFtFLLnT) (source in `prototype/payoff/` of this repo): hold-to-peek, S1 to S3, N1, N2, D1, M1 and N3 on sample data | S1, S2, S3, D1, M1, BR-23 |
 | [F&O problem bank](https://claude.ai/artifact/KJd28U4GEHTEycdmDBcjpc): P002 No way to see the premium at an index level before setting a stop; P013 No time-based exit; P080 Premium doesn't move with the index, and nobody explains why; P121 Frozen or delayed data looks live; P134 Time decay is invisible until it's lost | P002: S2, D1. P013: D1, M1. P080: S2, S3. P121: N2. P134: flat-case line on S2 and S3 |
