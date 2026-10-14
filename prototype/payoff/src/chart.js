@@ -20,6 +20,8 @@ class SahiChart {
     this.lastPrice = null;
     this.nowT = 0;
     this.limitT = null;
+    // how far right the view may go even without a future zone (empty space to look into)
+    this.panT = null;
     this._bind();
   }
   on(name, fn) { this.hooks[name] = fn; return this; }
@@ -246,11 +248,11 @@ class SahiChart {
     const r = this.cv.getBoundingClientRect();
     return { x: (e.clientX - r.left) * (this.w / r.width), y: (e.clientY - r.top) * (this.h / r.height) };
   }
-  // Keep the view between the first candle and the axis end; the chart can't pan past the axis end.
+  // Keep the view between the first candle and the right limit: the axis end, or panT when that is later.
   clampView(t0, t1) {
     let span = Math.max(this.o.minSpan, Math.min(this.o.maxSpan, t1 - t0));
     const first = this.candles.length ? this.candles[0].s * this.o.tf : t0;
-    const right = this.limitT != null ? this.limitT : this.nowT;
+    const right = Math.max(this.limitT != null ? this.limitT : this.nowT, this.panT != null ? this.panT : -Infinity);
     span = Math.min(span, (right - first) / 0.89);
     const maxRight = right + span * 0.06;
     if (t0 < first - span * 0.05) t0 = first - span * 0.05;

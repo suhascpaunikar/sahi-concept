@@ -5,6 +5,9 @@
    v1.2: Payoff opens on the view the trader already has (no jump to
    expiry), and the Nifty and option charts keep their own timeframe,
    scroll and zoom.
+   v1.3: both charts drag into empty space up to 3:30 pm on the next
+   trading day; past the axis end the chart is striped and disabled; no
+   expected-move drawings; a simpler readout that leads with the P&L.
    ===================================================================== */
 (() => {
   const E = Engine, P = Payoff;
@@ -60,7 +63,7 @@
     clock: 675, pricing: 'live', ticks: true, later: true, orderFail: false,
     scenario: LS.get('scenario', 'single'), product: 'CARRY',
     legs: [], others: [], realised: 0, realisedOther: 0, opt: SHOT_C, lots: 1, oneTap: true,
-    sticky: false, peek: false, pin: null, horizon: null, cone: true,
+    sticky: false, peek: false, pin: null, horizon: null,
     tf: Object.assign({ idx: 3, opt: 5 }, LS.get('tf', {})),
     hover: null, keyPt: null, rowHover: null, noise: 0,
     tipSeen: LS.get('tipSeen', false), hinted: LS.get('hinted', false), demoMin: LS.get('demoMin', innerWidth < 1600),
@@ -190,6 +193,8 @@
     sub: { frac: 0.26, series: OI, lo: 21e5, hi: 43e5, ticks: [25e5, 30e5, 35e5, 40e5], fmt: v => (v / 1e5).toFixed(0) + 'L', color: '#2196f3' }
   });
   const savedViews = { idx: null, opt: null };
+  // Both charts drag right into empty space up to 3:30 pm on the next trading day, Payoff on or off (BR-27).
+  idx.panT = opt.panT = (E.TODAY + 2) * E.SESSION;
 
   // In S2 the option chart switches to the held contract while Payoff is on.
   function heldSingle() {
@@ -210,7 +215,7 @@
   }
   function rebuildData() {
     const T = nowT(), S = S0();
-    const ic = E.candles(idx.o.tf, E.tOf(E.TODAY - 1, E.OPEN), T, (t, c) => E.pathAt(t, c), 11);
+    const ic = E.candles(idx.o.tf, E.tOf(E.HIST_START, E.OPEN), T, (t, c) => E.pathAt(t, c), 11);
     const last = ic[ic.length - 1];
     if (last) { last.c = S; last.h = Math.max(last.h, S); last.l = Math.min(last.l, S); }
     idx.setData(ic, T, S);
@@ -384,16 +389,9 @@
   function dot(ctx, x, y, color, r) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#12161d'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1; }
 
   /* ---------- index chart: S1 indicators from the screenshot ---------- */
-  const EM50 = 22545, EM20 = 22487, OI_SUPPORT = 22700;
+  // The Exp. Move indicator is left out (v1.3); OI Support stays.
+  const OI_SUPPORT = 22700;
   function drawS1Indicators(ctx, ch) {
-    const band = (lvl, color, fill) => {
-      const y = Math.round(ch.pToY(lvl)) + 0.5;
-      if (y < 0 || y > ch.mainH) return;
-      ctx.fillStyle = fill; ctx.fillRect(0, y - 9, ch.plotW, 18);
-      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ch.plotW, y); ctx.stroke(); ctx.lineWidth = 1;
-    };
-    band(EM50, '#e5484d', 'rgba(229,72,77,.10)');
-    band(EM20, '#f0a020', 'rgba(240,160,32,.10)');
     const y = Math.round(ch.pToY(OI_SUPPORT)) + 0.5;
     if (y > 0 && y < ch.mainH) { ctx.strokeStyle = 'rgba(40,188,208,.7)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ch.plotW, y); ctx.stroke(); ctx.setLineDash([]); }
   }
@@ -401,29 +399,54 @@
   function drawS1Labels(ctx, ch) {
     const y = Math.round(ch.pToY(OI_SUPPORT)) + 0.5;
     if (y > 0 && y < ch.mainH) pill(ctx, 100, y, 'OI Support', { valign: 'middle', font: '500 10.5px Inter, system-ui, sans-serif', bg: 'rgba(18,22,29,.95)', fg: '#7fd7e4', border: 'rgba(40,188,208,.5)', padX: 10, lh: 12 });
-    [[EM50, '50.0%', '#e5484d'], [EM20, '20.0%', '#d98a12']].forEach(([lvl, t, c]) => {
-      const yy = ch.pToY(lvl);
-      if (yy < 8 || yy > ch.mainH - 8) return;
-      ctx.font = '600 10.5px Inter, system-ui, sans-serif';
-      const w = ctx.measureText(t).width + 12, x = ch.plotW - w - 4;
-      ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x - 6, yy); ctx.lineTo(x, yy - 9); ctx.lineTo(x + w, yy - 9); ctx.lineTo(x + w, yy + 9); ctx.lineTo(x, yy + 9); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(t, x + 6, yy + 0.5);
-    });
   }
-  idx.on('axis', (ctx, ch) => {
-    const em = $('#emLegend');
-    if (payoffOn()) { em.style.display = 'none'; return; }
-    em.style.display = '';
-    em.style.top = Math.max(8, ch.pToY(EM50) - 30) + 'px';
-  });
+
+  /* ---------- disabled area past the axis end (BR-26) ---------- */
+  // Where nothing can be priced any more: after the last expiry, after the 3:20 pm square-off for an
+  // intraday-only book, or from Now when every position has already expired.
+  function disabledFrom(b) {
+    const end = axisEnd(b);
+    if (end != null && end > b.nowT) return end;
+    return expiredBook(b) ? b.nowT : null;
+  }
+  function disabledLabel(b) {
+    if (!b.legs.length) return 'Expired';
+    return !b.pretrade && b.legs.every(l => l.product === 'INTRADAY') ? 'After auto square-off' : 'After expiry';
+  }
+  // Diagonal stripes, like a disabled control. They are tied to the time axis, so they move with the chart.
+  function drawDisabled(ctx, ch, fromT) {
+    const xa = ch.tToX(fromT), x0 = Math.max(0, xa), x1 = ch.plotW, H = ch.mainH;
+    if (x1 - x0 < 1) return;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x0, 0, x1 - x0, H); ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,255,.025)'; ctx.fillRect(x0, 0, x1 - x0, H);
+    ctx.strokeStyle = 'rgba(255,255,255,.16)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    let x = xa - H;
+    if (x < x0 - H) x += Math.ceil((x0 - H - x) / 8) * 8;
+    for (; x < x1; x += 8) { ctx.moveTo(x, H); ctx.lineTo(x + H, 0); }
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.14)';
+    if (xa >= 0) { ctx.beginPath(); ctx.moveTo(Math.round(xa) + 0.5, 0); ctx.lineTo(Math.round(xa) + 0.5, H); ctx.stroke(); }
+    ctx.restore();
+  }
+  function labelDisabled(ctx, ch, b, taken) {
+    const from = disabledFrom(b);
+    if (from == null) return;
+    const x0 = Math.max(0, ch.tToX(from)), w = ch.plotW - x0;
+    if (w < 120) return;
+    const cx = x0 + w / 2, cy = ch.mainH * (1 - ch.o.volFrac) * 0.5;
+    placePill(ctx, taken, [{ x: cx, y: cy, align: 'center', valign: 'middle' }, { x: cx, y: cy + 40, align: 'center', valign: 'middle' }, { x: cx, y: cy - 40, align: 'center', valign: 'middle' }], disabledLabel(b), { font: '500 11px Inter, system-ui, sans-serif', fg: '#8a92a3', bg: 'rgba(18,22,29,.92)', border: '#2c3442', required: false }, ch.plotW);
+  }
 
   /* ---------- index chart overlays ---------- */
   idx.on('extraRange', ch => {
     const b = book();
     // the same levels with Payoff on or off, so turning it on doesn't rescale the chart
-    const base = [Math.min(EM20 - 10, b.S0), Math.max(OI_SUPPORT + 10, b.S0)];
+    const base = [Math.min(OI_SUPPORT - 10, b.S0), Math.max(OI_SUPPORT + 10, b.S0)];
     if (!payoffOn()) return base;
     if (!pointable(b)) return st.pin ? [Math.min(base[0], st.pin.S - 10), Math.max(base[1], st.pin.S + 10)] : base;
+    // room for a typical move over the future shown, so the shading and breakevens have space (nothing is drawn for it)
     const end = axisEnd(b);
     const tR = Math.min(end, ch.view.t1);
     const half = P.coneHalf(b.S0, E.BASE_IV, b.nowT, tR);
@@ -436,6 +459,7 @@
     if (!payoffOn()) { drawS1Indicators(ctx, ch); return; }
     const b = book();
     const end = axisEnd(b);
+    { const from = disabledFrom(b); if (from != null) drawDisabled(ctx, ch, from); }
     if (end == null || end <= b.nowT) return;
     const a = alpha(); if (a < 1) ch.invalidate();
     ctx.globalAlpha = a;
@@ -450,19 +474,6 @@
     const stale = st.pricing === 'delayed';
     ctx.fillStyle = stale ? 'rgba(160,170,190,.08)' : css('--profit-tint');
     g.cols.forEach(c => c.segs.forEach(s => { if (s.profit) { const y1 = ch.pToY(s.b), y2 = ch.pToY(s.a); ctx.fillRect(c.x, y1, c.w + 0.5, y2 - y1); } }));
-    if (st.cone) {
-      const xs = [];
-      for (let x = nx; x <= Math.min(ex, ch.plotW); x += 4) xs.push(x);
-      xs.push(Math.min(ex, ch.plotW));
-      const up = xs.map(x => [x, ch.pToY(b.S0 + P.coneHalf(b.S0, E.BASE_IV, b.nowT, Math.min(end, ch.xToT(x))))]);
-      const dn = xs.map(x => [x, ch.pToY(b.S0 - P.coneHalf(b.S0, E.BASE_IV, b.nowT, Math.min(end, ch.xToT(x))))]);
-      ctx.fillStyle = 'rgba(216,104,124,.045)';
-      ctx.beginPath(); up.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); dn.slice().reverse().forEach(([x, y]) => ctx.lineTo(x, y)); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = stale ? '#7d8596' : css('--cone'); ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]);
-      [up, dn].forEach(line => { ctx.beginPath(); line.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); });
-      ctx.setLineDash([]); ctx.lineWidth = 1;
-      ch._coneUp = up; ch._coneDn = dn;
-    } else { ch._coneUp = null; ch._coneDn = null; }
     ctx.globalAlpha = 1;
   });
   idx.on('above', (ctx, ch) => {
@@ -471,7 +482,7 @@
     if (!payoffOn()) { drawS1Labels(ctx, ch); drawExitMarkers(ctx, ch, 'idx', taken); return; }
     const b = book();
     const end = axisEnd(b);
-    if (end == null || end <= b.nowT) return;
+    if (end == null || end <= b.nowT) { labelDisabled(ctx, ch, b, taken); return; }
     // labels keep clear of the docked Now readout
     if (docking(b)) taken.push(dockRect(ch, b, $('#readout')));
     ctx.globalAlpha = alpha();
@@ -503,7 +514,8 @@
       const r = placePill(ctx, taken, cands, lines, { bg: 'rgba(30,36,48,.95)', border: '#3a4558' }, ch.plotW);
       hits.idx.push(Object.assign({}, r, { tip: m.tip }));
     });
-    if (g) {
+    // labels belong to the shaded zone; when it is dragged off to the left (into the striped area) they go with it
+    if (g && ch.tToX(end) > 0) {
       // breakeven labels at the selected chip's time, or at the right end of the zone shown
       const allIntraday = !b.pretrade && b.legs.every(l => l.product === 'INTRADAY');
       const hz = currentHorizon(b);
@@ -537,19 +549,10 @@
           placePill(ctx, taken, [{ x: lx - 6, y, align: 'right', valign: up ? 'top' : 'bottom' }, { x: lx - 6, y: up ? y + 26 : y - 26, align: 'right', valign: up ? 'top' : 'bottom' }], `Breakeven ${E.level(r)} ${endWord} ${up ? '↑' : '↓'}`, { fg: beCol, bg: 'rgba(16,20,28,.94)', border: 'rgba(242,184,75,.35)' }, ch.plotW);
         });
       }
-      // cone label on a flatter part of the upper edge, with a background so the dashes don't cross it
-      if (st.cone && ch._coneUp && ch._coneUp.length > 3) {
-        const up = ch._coneUp;
-        const dn = ch._coneDn || up;
-        const cands = [0.82, 0.68, 0.92, 0.55].map(f => { const [x, y] = up[Math.floor((up.length - 1) * f)]; return { x, y: y - 6, align: 'center', valign: 'bottom' }; }).filter(c => c.y > topY + 20)
-          .concat([0.9, 0.75, 0.6].map(f => { const i = Math.floor((up.length - 1) * f); return { x: up[i][0], y: (up[i][1] + dn[i][1]) / 2 - 30, align: 'center', valign: 'middle' }; }), [0.9, 0.75].map(f => { const i = Math.floor((up.length - 1) * f); return { x: dn[i][0], y: dn[i][1] + 6, align: 'center' }; }));
-        if (cands.length) placePill(ctx, taken, cands, 'Typical move (1 SD)', { font: '500 10.5px Inter, system-ui, sans-serif', fg: stale ? '#9aa2b2' : '#f2a6b4', bg: 'rgba(18,22,29,.9)', padX: 10, lh: 12, clampH: [topY + 4, plotBottom] }, ch.plotW);
-      }
       // Profit and Loss labels, in the largest region of a column that is clear of other labels
       if (g.cols.length) {
         const lineRects = [];
         const addPts = pts => pts.forEach(([x, y]) => lineRects.push({ x: x - 1, y: y - 1, w: 2, h: 2 }));
-        if (st.cone && ch._coneUp) { addPts(ch._coneUp); addPts(ch._coneDn || []); }
         g.lines.forEach(l => addPts(l.pts.map(([x, pv]) => [x, ch.pToY(pv)])));
         [[true, 'Profit', stale ? '#8a92a3' : css('--up-2')], [false, 'Loss', stale ? '#8a92a3' : '#f0828f']].forEach(([want, text, color]) => {
           for (const f of [0.62, 0.45, 0.76, 0.3, 0.88]) {
@@ -588,6 +591,7 @@
       const pt = st.hover && st.hover.T ? st.hover : null;
       if (pt) dot(ctx, ch.tToX(pt.T), ch.pToY(pt.S), '#ffffff', 3.5);
     }
+    labelDisabled(ctx, ch, b, taken);
     drawExitMarkers(ctx, ch, 'idx', taken);
     if (st.pin) {
       const x = ch.tToX(st.pin.T), y = ch.pToY(st.pin.S);
@@ -610,11 +614,11 @@
     });
   }
   idx.on('timeLabel', T => E.fmtT(Math.max(0, Math.round(T / idx.o.tf) * idx.o.tf)));
+  // no crosshair over the disabled area
   idx.on('crosshair', (ctx, ch, p) => {
     if (!payoffOn()) return;
-    const end = axisEnd(book());
-    if (end == null) return;
-    if (ch.xToT(p.x) > end + 1) return false;
+    const from = disabledFrom(book());
+    if (from != null && ch.xToT(p.x) > from + 1) return false;
   });
   // In the future zone the crosshair snaps to the same 5-point level the readout uses (BR-16).
   idx.on('crossY', (ch, p) => {
@@ -651,6 +655,7 @@
     hits.opt = [];
     if (!payoffOn() || isS3()) return;
     const b = book();
+    { const from = disabledFrom(b); if (from != null) drawDisabled(ctx, ch, from); }
     if (!pointable(b) && st.pricing !== 'unavailable') return;
     const end = axisEnd(b);
     if (end == null || end <= b.nowT) return;
@@ -1043,7 +1048,8 @@
     const b = book();
     const s3 = isS3();
     const T = pt.T, S = pt.S;
-    const out = { head: `Nifty ${E.level(S)} · ${E.fmtT(T)}` };
+    // The level shows on the price-axis crosshair, so the card leads with the time and the P&L.
+    const out = { head: E.fmtT(T), level: `Nifty ${E.level(S)}` };
     out.pnl = P.pnl(b, S, T); out.label = s3 ? 'Total P&L' : 'P&L';
     if (!s3 && b.legs.length === 1) {
       const d = P.legDetail(b.legs[0], S, T, b);
@@ -1053,7 +1059,6 @@
       const [lo, hi] = P.range(b, S, T);
       out.range = Math.abs(hi - lo) < 1 ? null : `Range ${E.signed(lo)} to ${E.signed(hi)}`;
     }
-    out.flat = `If Nifty stays at ${E.level(b.S0)}: ${E.signed(P.pnl(b, b.S0, T))}`;
     return out;
   }
   // Current P&L at Now: the same figure the platform shows (from last prices, no projections, BR-13).
@@ -1085,7 +1090,9 @@
       // Pointer over past candles, outside the zone, or off the chart: show Now values (BR-13).
       const n = pnlNow(b);
       const label = b.pretrade ? 'Not holding' : isS3() ? 'Total P&L' : 'P&L';
-      html = `<div class="h">Now · ${esc(E.fmtT(b.nowT))}</div><div class="p num ${n >= 0 ? 'up' : 'down'}"><small>Now:</small>${b.pretrade ? `Last price ${E.prem(b.legs[0].avg)}` : `${label} ${E.signed(n)}`}</div><div class="ft">Model estimate, not a forecast</div>`;
+      html = `<div class="h">Now · ${esc(E.fmtT(b.nowT))}</div>` + (b.pretrade
+        ? `<div class="p num"><small>Last price</small>${E.prem(b.legs[0].avg)}</div>`
+        : `<div class="p num ${n >= 0 ? 'up' : 'down'}"><small>${label}</small>${E.signed(n)}</div>`) + `<div class="ft">Model estimate, not a forecast</div>`;
       if (z && z.past && q) { x = q.x; y = q.y; } else docked = true;
       if (z && z.past) announce('now', `Now. ${b.pretrade ? 'Not holding' : `${label} ${E.signed(n)}`}.`);
     } else {
@@ -1093,8 +1100,8 @@
       m.pnl = pointPnl(b, z.S, z.T);
       html = `<div class="h num">${esc(m.head)}</div><div class="p num ${m.pnl >= 0 ? 'up' : 'down'}"><small>${m.label}</small>${E.signed(m.pnl)}</div>` +
         (m.unc ? `<div class="u">${esc(m.unc)}</div>` : m.range ? `<div class="r num">${esc(m.range)}</div>` : '') +
-        `<div class="f num">${esc(m.flat)}</div><div class="ft">Model estimate, not a forecast</div>`;
-      announce(`${z.T}:${z.S}`, [m.head, `${m.label} ${E.signed(m.pnl)}`, m.unc || m.range, m.flat].filter(Boolean).join('. ') + '.');
+        `<div class="ft">Model estimate, not a forecast</div>`;
+      announce(`${z.T}:${z.S}`, [`${m.level} · ${m.head}`, `${m.label} ${E.signed(m.pnl)}`, m.unc || m.range].filter(Boolean).join('. ') + '.');
       x = p ? p.x : ch.tToX(z.T); y = p ? p.y : ch.pToY(z.S);
     }
     setHTML(ro, html);
@@ -1197,7 +1204,6 @@
     const others = otherCount();
     const changed = setHTMLKeepFocus(el, `<span class="sum">${summary(b)}</span>` +
       (hs.length ? `<div class="chips" role="group" aria-label="Fit the view to">${hs.map(h => `<button type="button" data-h="${h.key}" aria-pressed="${!!cur && cur.key === h.key}">${esc(h.label)}</button>`).join('')}</div>` : '') +
-      (live ? `<button type="button" class="tog" id="coneTog" aria-pressed="${st.cone}"><span class="sw"></span>Expected move</button>` : '') +
       (others ? `<button type="button" class="ochip" data-tip="others" aria-label="${others} ${others === 1 ? 'position' : 'positions'} on other charts: ${esc(st.others.map(o => o.und).join(', '))}">${others} ${others === 1 ? 'position' : 'positions'} on other charts</button>` : '') +
       `<span class="mlabel">Model estimate, not a forecast <button type="button" data-tip="model" aria-label="About these values"><svg class="i"><use href="#i-info"/></svg></button></span>` +
       `<span class="mode">${st.sticky || st.pin ? 'Payoff on · Esc to close' : `Holding ${esc(keyName())} · release to hide`}</span>`, n => n.dataset.h || n.id || n.dataset.tip);
@@ -1208,8 +1214,6 @@
       if (h) fitTo(h.T);
       cache = null; log('payoff_horizon_change', `to=${h ? h.label : ''}`); renderUI();
     }));
-    const tog = $('#coneTog');
-    if (tog) tog.addEventListener('click', () => { st.cone = !st.cone; log('payoff_cone_toggle', `on=${st.cone}`); renderUI(); });
     bindTips(el);
   }
   // When the market is closed, that is the message that matters, even if a feed is also delayed.
