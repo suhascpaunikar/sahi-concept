@@ -2,6 +2,9 @@
    Sahi Payoff prototype: Scalper split view with Payoff (PRD v1.0),
    changed to hold-to-peek: hold Option (Mac) or Alt (Windows) to see
    Payoff, release to hide. The toolbar button keeps it on.
+   v1.2: Payoff opens on the view the trader already has (no jump to
+   expiry), and the Nifty and option charts keep their own timeframe,
+   scroll and zoom.
    ===================================================================== */
 (() => {
   const E = Engine, P = Payoff;
@@ -58,6 +61,7 @@
     scenario: LS.get('scenario', 'single'), product: 'CARRY',
     legs: [], others: [], realised: 0, realisedOther: 0, opt: SHOT_C, lots: 1, oneTap: true,
     sticky: false, peek: false, pin: null, horizon: null, cone: true,
+    tf: Object.assign({ idx: 3, opt: 5 }, LS.get('tf', {})),
     hover: null, keyPt: null, rowHover: null, noise: 0,
     tipSeen: LS.get('tipSeen', false), hinted: LS.get('hinted', false), demoMin: LS.get('demoMin', innerWidth < 1600),
     orders: {}, exits: [], events: [], fadeStart: 0, loadingUntil: 0, m1: null, popover: null, closedBannerHidden: false
@@ -124,7 +128,9 @@
   const pointable = b => { const e = axisEnd(b); return e != null && e > b.nowT && st.pricing !== 'unavailable'; };
   const otherCount = () => st.others.length;
   const sessionEnd = () => closed() ? (E.TODAY + 2) * E.SESSION : (E.TODAY + 1) * E.SESSION;
-  const firstT = b => Math.ceil((b.nowT + 1) / 3) * 3;
+  // The point moves in steps of one Nifty candle, whatever timeframe that chart is on.
+  const step = () => idx.o.tf;
+  const firstT = b => Math.ceil((b.nowT + 1) / step()) * step();
   // A point at or before Now shows Now values (BR-13), e.g. after the clock moves on.
   const livePt = (z, b) => (z && z.T && z.T > b.nowT) ? z : null;
   // One P&L per point: a held single position is valued at the tick it would trade at.
@@ -152,14 +158,12 @@
     }
     return list;
   }
-  const defaultHorizon = (b, hs) => isS3() ? (hs[1] || hs[0]) : hs[hs.length - 1];
-  // The chip that is selected, or null after the trader zooms or pans by hand.
+  // The chip the trader picked, or null. Payoff opens with none picked, on the view the trader already had;
+  // zooming or panning by hand clears the pick.
   function currentHorizon(b) {
-    const hs = horizons(b);
-    if (!hs.length || st.horizon === 'custom') return null;
-    return hs.find(h => h.key === st.horizon) || defaultHorizon(b, hs);
+    if (!st.horizon) return null;
+    return horizons(b).find(h => h.key === st.horizon) || null;
   }
-  function fitHorizon(b) { const hs = horizons(b); if (!hs.length) return null; return hs.find(h => h.key === st.horizon) || defaultHorizon(b, hs); }
   function markers(b) {
     const out = [];
     const end = axisEnd(b);
@@ -179,10 +183,10 @@
 
   /* ---------- charts ---------- */
   const COL = { up: '#0b9981', down: '#f23645', upBg: '#0c3a33', downBg: '#3f1820' };
-  const idx = new SahiChart($('#idxCanvas'), { tf: 3, dec: 2 });
+  const idx = new SahiChart($('#idxCanvas'), { tf: st.tf.idx, dec: 2 });
   const OI = [];
   const opt = new SahiChart($('#optCanvas'), {
-    tf: 5, dec: 2, volFrac: 0.1, minY: 0,
+    tf: st.tf.opt, dec: 2, volFrac: 0.1, minY: 0,
     sub: { frac: 0.26, series: OI, lo: 21e5, hi: 43e5, ticks: [25e5, 30e5, 35e5, 40e5], fmt: v => (v / 1e5).toFixed(0) + 'L', color: '#2196f3' }
   });
   const savedViews = { idx: null, opt: null };
@@ -206,20 +210,19 @@
   }
   function rebuildData() {
     const T = nowT(), S = S0();
-    const ic = E.candles(3, E.tOf(E.TODAY - 1, E.OPEN), T, (t, c) => E.pathAt(t, c), 11);
+    const ic = E.candles(idx.o.tf, E.tOf(E.TODAY - 1, E.OPEN), T, (t, c) => E.pathAt(t, c), 11);
     const last = ic[ic.length - 1];
     if (last) { last.c = S; last.h = Math.max(last.h, S); last.l = Math.min(last.l, S); }
     idx.setData(ic, T, S);
     const c = shownOpt();
     if (c) {
-      const oc = E.candles(5, E.tOf(E.TODAY - 3, E.OPEN), T, (t, cc) => E.optionPathAt(c, t, cc), 7 + (c.strike || 0), c.type === 'FUT' ? -Infinity : 0);
+      const oc = E.candles(opt.o.tf, E.tOf(E.TODAY - 3, E.OPEN), T, (t, cc) => E.optionPathAt(c, t, cc), 7 + (c.strike || 0), c.type === 'FUT' ? -Infinity : 0);
       const lp = ltp(c);
       const ol = oc[oc.length - 1];
       if (ol) { ol.c = lp; ol.h = Math.max(ol.h, lp); ol.l = Math.min(ol.l, lp); }
       opt.setData(oc, T, lp);
     } else opt.setData([], T, null);
     if (OI._T !== T) buildOI(T);
-    if (!payoffOn()) defaultViews();
     renderUI();
   }
   function defaultViews() {
@@ -228,18 +231,35 @@
     idx.setView(...idx.clampView(T - 300, T + 24));
     opt.setView(...opt.clampView(E.tOf(E.TODAY - 3, E.OPEN) - 20, T + 60));
   }
+  // A chip fits both charts to the same window; after that each chart scrolls and zooms on its own.
   function fitTo(hT) {
     const T = nowT();
     const span = Math.max(15, hT - T);
     const t0 = T - Math.max(45, span * 0.28), t1 = hT + span * 0.035;
-    const [a, c] = idx.clampView(t0, t1);
-    idx.setView(a, c); opt.setView(a, c);
+    idx.setView(...idx.clampView(t0, t1)); opt.setView(...opt.clampView(t0, t1));
   }
-  function refit(b) { const end = axisEnd(b); idx.limitT = opt.limitT = end; const h = fitHorizon(b); if (h) fitTo(h.T); }
+  // Let the charts scroll as far as the axis end. Only a picked chip moves the view; otherwise it stays put.
+  function refit(b) {
+    const end = axisEnd(b);
+    idx.limitT = opt.limitT = (end != null && end > b.nowT) ? end : null;
+    const h = currentHorizon(b);
+    if (h) fitTo(h.T);
+    else [idx, opt].forEach(ch => ch.setView(...ch.clampView(ch.view.t0, ch.view.t1)));
+  }
+  // Keep each chart's window where it was relative to Now when the clock moves.
+  const shiftView = (v, dT) => v && { t0: v.t0 + dT, t1: v.t1 + dT };
+  function followNow(prevT) {
+    const dT = nowT() - prevT;
+    if (!dT) return;
+    [idx, opt].forEach(ch => { if (prevT <= ch.view.t1 + 1) ch.setView(...ch.clampView(ch.view.t0 + dT, ch.view.t1 + dT)); });
+    savedViews.idx = shiftView(savedViews.idx, dT); savedViews.opt = shiftView(savedViews.opt, dT);
+  }
   function enterPayoff(source) {
     const b = book();
     savedViews.idx = savedViews.idx || idx.view; savedViews.opt = savedViews.opt || opt.view;
-    { const e = axisEnd(b); if (e != null && e > b.nowT) refit(b); }
+    // Payoff opens on the view the trader already has; the chips, dragging or zooming reach further.
+    st.horizon = null;
+    { const e = axisEnd(b); idx.limitT = opt.limitT = (e != null && e > b.nowT) ? e : null; }
     st.fadeStart = performance.now();
     st.loadingUntil = performance.now() + 260;
     setTimeout(() => { idx.invalidate(); renderUI(); }, 280);
@@ -259,7 +279,7 @@
     if (savedViews.opt) opt.setView(savedViews.opt.t0, savedViews.opt.t1);
     savedViews.idx = savedViews.opt = null;
     st.hover = null; st.keyPt = null; st.rowHover = null;
-    if (st.horizon === 'custom') st.horizon = null;
+    st.horizon = null;
     clearTimeout(liveTimer); lastLive = ''; $('#live').textContent = '';
     updateReadout(null); hideTip('canvas'); hideTip('el');
     log('payoff_close', `duration=${((performance.now() - (st.openedAt || performance.now())) / 1000).toFixed(1)}s`);
@@ -400,12 +420,14 @@
   /* ---------- index chart overlays ---------- */
   idx.on('extraRange', ch => {
     const b = book();
-    if (!payoffOn()) return [Math.min(EM20 - 10, b.S0), Math.max(OI_SUPPORT + 10, b.S0)];
-    if (!pointable(b)) return st.pin ? [st.pin.S - 10, st.pin.S + 10] : null;
+    // the same levels with Payoff on or off, so turning it on doesn't rescale the chart
+    const base = [Math.min(EM20 - 10, b.S0), Math.max(OI_SUPPORT + 10, b.S0)];
+    if (!payoffOn()) return base;
+    if (!pointable(b)) return st.pin ? [Math.min(base[0], st.pin.S - 10), Math.max(base[1], st.pin.S + 10)] : base;
     const end = axisEnd(b);
     const tR = Math.min(end, ch.view.t1);
     const half = P.coneHalf(b.S0, E.BASE_IV, b.nowT, tR);
-    return [b.S0 - half * 1.05, b.S0 + half * 1.05];
+    return [Math.min(base[0], b.S0 - half * 1.05), Math.max(base[1], b.S0 + half * 1.05)];
   });
   idx.on('skipDay', T => payoffOn() && markers(book()).some(m => Math.abs(m.T - T) < 1));
   opt.on('skipDay', T => payoffOn() && markers(book()).some(m => Math.abs(m.T - T) < 1));
@@ -540,11 +562,14 @@
             const yc = (y1 + y2) / 2;
             ctx.font = '600 12px Inter, system-ui, sans-serif';
             const w = ctx.measureText(text).width + 8;
-            const r = { x: col.x - w / 2, y: yc - 9, w, h: 18 };
+            // the zone can be a narrow band at the right edge (Payoff opens on the current view): keep the label inside it, or leave it out
+            if (g.x1 - g.x0 < w + 4) break;
+            const cx = Math.max(g.x0 + w / 2 + 2, Math.min(g.x1 - w / 2 - 2, col.x));
+            const r = { x: cx - w / 2, y: yc - 9, w, h: 18 };
             if (overlaps(r, taken) || overlaps(r, lineRects, 0)) continue;
             taken.push(r);
             ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(text, col.x, yc); ctx.textAlign = 'left';
+            ctx.fillText(text, cx, yc); ctx.textAlign = 'left';
             break;
           }
         });
@@ -584,7 +609,7 @@
       hits[which].push(Object.assign({}, r, { tip: x0.tip }));
     });
   }
-  idx.on('timeLabel', T => E.fmtT(Math.max(0, Math.round(T / 3) * 3)));
+  idx.on('timeLabel', T => E.fmtT(Math.max(0, Math.round(T / idx.o.tf) * idx.o.tf)));
   idx.on('crosshair', (ctx, ch, p) => {
     if (!payoffOn()) return;
     const end = axisEnd(book());
@@ -740,10 +765,10 @@
     drawExitMarkers(ctx, ch, 'opt', taken);
     ctx.globalAlpha = 1;
   });
-  opt.on('timeLabel', T => E.fmtT(Math.max(0, Math.round(T / 5) * 5)));
+  opt.on('timeLabel', T => E.fmtT(Math.max(0, Math.round(T / opt.o.tf) * opt.o.tf)));
 
   /* ---------- pointer and keyboard on the index chart ---------- */
-  const snapT = (T, b) => { const end = axisEnd(b); return Math.max(firstT(b), Math.min(end, Math.round(T / 3) * 3)); };
+  const snapT = (T, b) => { const end = axisEnd(b); return Math.max(firstT(b), Math.min(end, Math.round(T / step()) * step())); };
   const snapS = S => Math.round(S / 5) * 5;
   const clampS = S => Math.max(snapS(idx.yr.lo + 5), Math.min(snapS(idx.yr.hi - 5), S));
   function zoneAt(ch, p) {
@@ -798,20 +823,13 @@
     if (!z || !z.T) return;
     placePin(z);
   });
+  // Each chart scrolls and zooms on its own (the two can be on different timeframes).
   idx.on('viewchange', (ch, dragging, byUser) => {
     if (!payoffOn()) return;
-    if (byUser && st.horizon !== 'custom') { st.horizon = 'custom'; renderStrip(book()); }
-    opt.setView(ch.view.t0, ch.view.t1);
+    if (byUser && st.horizon) { st.horizon = null; renderStrip(book()); }
     if (!dragging) cache = null;
     // the point under a still pointer changes when the view moves
     if (ch.pointer && !pinDrag) { st.hover = zoneAt(ch, ch.pointer); updateReadout(ch.pointer); opt.invalidate(); renderTable(); }
-    renderD1();
-  });
-  opt.on('viewchange', (ch, dragging, byUser) => {
-    if (!payoffOn() || isS3()) return;
-    if (byUser && st.horizon !== 'custom') { st.horizon = 'custom'; renderStrip(book()); }
-    const [a, c] = idx.clampView(ch.view.t0, ch.view.t1);
-    idx.setView(a, c); ch.view = { t0: a, t1: c };
     renderD1();
   });
   opt.on('hover', (ch, p) => {
@@ -859,10 +877,10 @@
     if (!pointable(b)) return;
     const end = axisEnd(b);
     // With a pin placed, the arrow keys move the pin (D1); otherwise they move the focused point.
-    const seed = { T: firstT(b) - 3, S: snapS(b.S0) };
+    const seed = { T: firstT(b) - step(), S: snapS(b.S0) };
     const base = st.pin || st.keyPt || (st.hover && st.hover.T ? st.hover : null);
     const from = base || seed;
-    let T = Math.round((from.T + dx * 3) / 3) * 3;
+    let T = Math.round((from.T + dx * step()) / step()) * step();
     if (!base && dx === 0) T = firstT(b);
     T = Math.max(firstT(b), Math.min(end, T));
     // pan first, then change the level only for Up/Down, within the visible range
@@ -879,7 +897,7 @@
   }
   function keepPointInView(pt) {
     const v = idx.view, span = v.t1 - v.t0;
-    if (pt.T > v.t1 - span * 0.04 || pt.T < v.t0) { const [a, c] = idx.clampView(pt.T - span * 0.7, pt.T + span * 0.3); idx.setView(a, c); opt.setView(a, c); st.horizon = 'custom'; renderStrip(book()); }
+    if (pt.T > v.t1 - span * 0.04 || pt.T < v.t0) { idx.setView(...idx.clampView(pt.T - span * 0.7, pt.T + span * 0.3)); st.horizon = null; renderStrip(book()); }
   }
 
   /* ---------- hold-to-peek and other keys ---------- */
@@ -958,6 +976,21 @@
   $('#navPositions').addEventListener('click', () => openPopover('positions'));
   $('#pnlPill').addEventListener('click', () => openPopover('positions'));
   $('#railChain').addEventListener('click', () => openPopover('chain'));
+  // Each chart has its own timeframe, so Nifty can be on 3m while the option is on 5m. The view stays where it is.
+  function renderTf() {
+    document.querySelectorAll('.tfs').forEach(g => g.querySelectorAll('[data-tf]').forEach(bt => {
+      const on = +bt.dataset.tf === st.tf[g.dataset.chart];
+      bt.classList.toggle('on', on); bt.setAttribute('aria-pressed', on);
+    }));
+  }
+  document.querySelectorAll('.tfs [data-tf]').forEach(bt => bt.addEventListener('click', () => {
+    const which = bt.closest('.tfs').dataset.chart, tf = +bt.dataset.tf;
+    if (st.tf[which] === tf) return;
+    st.tf[which] = tf; LS.set('tf', st.tf);
+    (which === 'idx' ? idx : opt).o.tf = tf;
+    cache = null; rebuildData(); renderTf();
+  }));
+  renderTf();
 
   // The order buttons always trade the contract named in the header beside them.
   function trade(side) {
@@ -988,9 +1021,8 @@
     if (st.pin && isS3() !== before.s3) clearPin('positions');
     const b = book();
     if (before.on && payoffOn()) {
-      const end = axisEnd(b);
-      if (end !== before.end || isS3() !== before.s3 || (st.horizon && st.horizon !== 'custom' && !horizons(b).some(h => h.key === st.horizon))) { st.horizon = null; refit(b); }
-      else idx.limitT = opt.limitT = end;
+      if (st.horizon && !horizons(b).some(h => h.key === st.horizon)) st.horizon = null;
+      if (axisEnd(b) !== before.end || isS3() !== before.s3) refit(b);
     }
     if (st.m1) renderM1();
     rebuildData();
@@ -1125,7 +1157,6 @@
     btn.setAttribute('aria-pressed', st.sticky || !!st.pin);
     btn.setAttribute('aria-keyshortcuts', 'Alt');
     btn.classList.toggle('peek', st.peek && !st.sticky && !st.pin);
-    $('#payoffKey').textContent = keyName();
     $('#payoffDesc').textContent = `Hold ${keyWord()} to peek at your breakeven and P&L, or press to keep Payoff on.`;
     renderBanner();
     const bh = bannerBand();
@@ -1221,7 +1252,7 @@
     let hn = $('#hint');
     if (on && !st.hinted && pointable(b)) {
       if (!hn) { hn = document.createElement('div'); hn.id = 'hint'; hn.className = 'hint'; wrap.appendChild(hn); }
-      hn.textContent = 'Move your pointer into the shaded area, or focus the chart and use the arrow keys, to see P&L at any level and time';
+      hn.textContent = 'Move your pointer into the shaded area, or focus the chart and use the arrow keys, to see P&L at any level and time. Drag the chart or pick a date above to look further ahead.';
     } else if (hn) hn.remove();
     let om = $('#optEmpty');
     if (!shownOpt()) {
@@ -1282,12 +1313,14 @@
         if (isSettled) settledSum += pl;
         const fut = l.c.type === 'FUT';
         const sideTxt = fut ? (l.side > 0 ? 'Buy fut' : 'Sell fut') : (l.side > 0 ? 'Buy' : 'Sell');
-        const rng = unavailable || loading || !pt || isSettled ? '' : d.uncertain ? '<span class="unc">Too uncertain to price</span>' : (fut || Math.abs(d.pnlHi - d.pnlLo) < 1) ? '' : `<span class="rg">range ${E.signed(d.pnlLo)} to ${E.signed(d.pnlHi)}</span>`;
+        // A leg squared off before the point is greyed out: its P&L is what the 3:20 pm square-off books, and it still counts in the total.
+        const sq = !isSettled && pt && d.status === 'Squared off';
+        const rng = unavailable || loading || !pt || isSettled || sq ? '' : d.uncertain ? '<span class="unc">Too uncertain to price</span>' : (fut || Math.abs(d.pnlHi - d.pnlLo) < 1) ? '' : `<span class="rg">range ${E.signed(d.pnlLo)} to ${E.signed(d.pnlHi)}</span>`;
         rows += `<tr class="leg" data-leg="${l.id}"><td>${vnarrow ? `<span class="${l.side > 0 ? 'side-b' : 'side-s'}">${l.side > 0 ? 'B' : 'S'}</span> ` : ''}${esc(l.c.label)}${l.product === 'INTRADAY' ? ' <span class="st" style="margin-left:4px">Intraday</span>' : ''}</td>` +
           (vnarrow ? '' : `<td class="${l.side > 0 ? 'side-b' : 'side-s'}">${sideTxt}</td>`) +
           `<td class="n">${l.qty}</td>` + (narrow ? '' : `<td class="n">${E.prem(l.avg)}</td>`) +
-          `<td class="n">${loading ? sk : unavailable && !isSettled ? '—' : E.prem(value)}</td>` +
-          `<td class="n"><span class="${cls(pl)}">${loading ? sk : unavailable && !isSettled ? '—' : E.signed(pl)}</span>${rng}</td>` +
+          `<td class="n${sq ? ' off' : ''}">${loading ? sk : unavailable && !isSettled ? '—' : E.prem(value)}</td>` +
+          `<td class="n${sq ? ' off' : ''}"><span class="${sq ? '' : cls(pl)}"${sq && !loading && !unavailable ? ' data-tip="sq" tabindex="0"' : ''}>${loading ? sk : unavailable && !isSettled ? '—' : E.signed(pl)}</span>${rng}</td>` +
           `<td><span class="st ${stCls(isSettled ? 'Settled' : d.status)}">${isSettled ? 'Settled' : d.status}</span></td></tr>`;
       });
     });
@@ -1309,6 +1342,9 @@
       `<div class="model"><svg class="i" style="width:13px;height:13px"><use href="#i-info"/></svg>Model estimate, not a forecast</div></div>`);
     if (!changed) return;
     const sc2 = el.querySelector('.scroll'); if (sc2) sc2.scrollTop = scrollTop;
+    // a tooltip whose cell was just redrawn would be left floating
+    if (tipNode && !document.body.contains(tipNode)) hideTip('el');
+    bindTips(el);
     el.querySelectorAll('tr.leg').forEach(tr => {
       tr.addEventListener('mouseenter', () => { st.rowHover = b.all.find(l => String(l.id) === tr.dataset.leg); idx.invalidate(); log('payoff_row_hover'); });
       tr.addEventListener('mouseleave', () => { st.rowHover = null; idx.invalidate(); });
@@ -1614,6 +1650,7 @@
     if (key === 'payoff') return (st.sticky || st.pin) ? { text: 'Hide payoff', caps: ['Esc'] } : { text: 'Payoff: breakeven and P&L at any level and time. Hold to peek, or click to keep it on', caps: [k], wrap: true };
     if (key === 'model') return { text: 'Worked out from live option prices, IV and time left. The range shows values if IV moves. Actual prices can differ, especially near expiry.', wrap: true };
     if (key === 'others') return { text: st.others.map(o => o.und).join(', ') };
+    if (key === 'sq') return { text: 'Squared off at 3:20 pm. This is the P&L the square-off books at this Nifty level, and it still counts in the total.', wrap: true };
     return null;
   }
   function placeTip(r, t, cls) {
@@ -1748,7 +1785,7 @@
   // Moves the clock without resetting positions, so time-based states (pin passing, time passed) can be seen.
   function advanceClock(min) {
     if (closed()) { toast('ok', 'The market is already closed.'); return; }
-    const before = snapshot();
+    const before = snapshot(), prevT = nowT();
     const wasOpen = !closed();
     st.clock = Math.min(945, st.clock + min);
     if (st.clock > E.CLOSE && st.clock < 945) st.clock = 945;
@@ -1770,7 +1807,8 @@
     if (!livePt(st.hover, b)) { st.hover = null; st.keyPt = null; }
     if (st.pin && isS3() !== before.s3) clearPin('positions');
     rebuildData();
-    if (payoffOn()) { const b2 = book(); const e = axisEnd(b2); idx.limitT = opt.limitT = e; if (e !== before.end || nowT() > idx.view.t1 - 1 || st.horizon !== 'custom') refit(b2); }
+    if (payoffOn()) { if (st.horizon && !horizons(book()).some(h => h.key === st.horizon)) st.horizon = null; refit(book()); }
+    if (!currentHorizon(book())) followNow(prevT);
     if (st.m1) renderM1();
     renderDemo();
   }
@@ -1779,8 +1817,8 @@
     applyScenario();
     renderDemo();
     cache = null;
-    if (was && payoffOn()) { const b = book(); if (pointable(b)) refit(b); }
-    if (!payoffOn()) defaultViews();
+    defaultViews();
+    if (was && payoffOn()) refit(book());
     renderUI();
   }
 

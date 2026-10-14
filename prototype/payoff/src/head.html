@@ -119,6 +119,7 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .tb { height: 36px; flex: none; display: flex; align-items: center; gap: 1px; padding: 0 8px; font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; }
 .tb .tf { padding: 4px 5px; border-radius: 5px; font-weight: 500; display: inline-flex; align-items: center; gap: 2px; }
 .tb .tf.on { color: var(--text); font-weight: 700; }
+.tb .tfs { display: contents; }
 .tb .tf:hover { color: var(--text); }
 .tb .vsep { width: 1px; height: 16px; background: var(--line-2); margin: 0 6px; flex: none; }
 .tb .right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-left: 6px; }
@@ -136,9 +137,7 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .payoff-btn { height: 28px; display: inline-flex; align-items: center; gap: 7px; padding: 0 8px 0 9px; margin-left: 4px; border-radius: 7px; border: 1px solid var(--line-2); color: var(--text); font-weight: 600; font-size: 12.5px; background: var(--panel-2); }
 .payoff-btn:hover { border-color: #3a4558; background: var(--panel-3); }
 .payoff-btn svg.i { width: 16px; height: 16px; color: var(--breakeven); }
-.payoff-btn kbd { font: 600 10.5px var(--font); min-width: 18px; height: 18px; padding: 0 4px; border-radius: 4px; display: inline-grid; place-items: center; background: var(--panel-3); border: 1px solid var(--line-2); color: var(--text-2); }
 .payoff-btn[aria-pressed="true"] { background: #2a2312; border-color: var(--breakeven); color: #ffe2a6; }
-.payoff-btn[aria-pressed="true"] kbd { background: #3a3018; border-color: #5c4a20; color: #ffe2a6; }
 .payoff-btn.peek { border-color: var(--breakeven); box-shadow: 0 0 0 3px rgba(242, 184, 75, .16); }
 .payoff-btn:disabled { opacity: .45; }
 
@@ -219,6 +218,9 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .ptable tr.leg:hover td { background: rgba(46, 140, 240, .07); }
 .ptable td .rg { display: block; font-size: 10.5px; color: var(--text-3); margin-top: 1px; white-space: nowrap; }
 .ptable td .unc { display: block; font-size: 10.5px; color: var(--warn-ink); margin-top: 1px; }
+/* squared off before the point: shown, but greyed out like a disabled control */
+.ptable td.off, .ptable td.off span { color: var(--text-3); }
+.ptable td.off [data-tip] { cursor: help; text-decoration: underline dotted rgba(108, 117, 134, .6); text-underline-offset: 3px; }
 .side-b { color: var(--up-2); font-weight: 600; } .side-s { color: var(--down); font-weight: 600; }
 .st { display: inline-block; font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 999px; white-space: nowrap; background: var(--panel-3); color: var(--text-2); }
 .st.live { background: var(--ok-bg); color: var(--ok-ink); }
@@ -447,7 +449,7 @@ button.ochip:focus-visible { outline: 2px solid var(--blue); }
         <div class="tb">
           <button class="tf">1D</button><button class="tf">5D</button><button class="tf">1M <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button>
           <span class="vsep"></span>
-          <button class="tf">1m</button><button class="tf x1">2m</button><button class="tf on">3m</button><button class="tf">5m</button><button class="tf x1">10m</button><button class="tf">15m <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button>
+          <span class="tfs" role="group" aria-label="Nifty chart timeframe" data-chart="idx"><button class="tf" data-tf="1">1m</button><button class="tf x1" data-tf="2">2m</button><button class="tf on" data-tf="3">3m</button><button class="tf" data-tf="5">5m</button><button class="tf x1" data-tf="10">10m</button><button class="tf" data-tf="15">15m <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button></span>
           <div class="right">
             <button class="tool" aria-label="Crosshair"><svg class="i"><use href="#i-cross"/></svg><svg class="i cv"><use href="#i-chev"/></svg></button>
             <button class="tool x2" aria-label="Indicators"><svg class="i"><use href="#i-fx"/></svg></button>
@@ -455,7 +457,7 @@ button.ochip:focus-visible { outline: 2px solid var(--blue); }
             <button class="tool" aria-label="Drawing tools"><svg class="i"><use href="#i-pencil"/></svg></button>
             <button class="tool" aria-label="Chart type"><svg class="i"><use href="#i-candle"/></svg><svg class="i cv"><use href="#i-chev"/></svg></button>
             <button class="tool" aria-label="Chart settings"><svg class="i"><use href="#i-gear"/></svg></button>
-            <button class="payoff-btn" id="payoffBtn" aria-pressed="false" data-tip="payoff" aria-describedby="payoffDesc"><svg class="i" aria-hidden="true"><use href="#i-payoff"/></svg>Payoff<kbd id="payoffKey" aria-hidden="true">⌥</kbd></button><span class="sr" id="payoffDesc">Hold Alt to peek at your breakeven and P&amp;L, or press to keep Payoff on.</span>
+            <button class="payoff-btn" id="payoffBtn" aria-pressed="false" data-tip="payoff" aria-describedby="payoffDesc"><svg class="i" aria-hidden="true"><use href="#i-payoff"/></svg>Payoff</button><span class="sr" id="payoffDesc">Hold Alt to peek at your breakeven and P&amp;L, or press to keep Payoff on.</span>
           </div>
         </div>
         <div class="cw" id="idxWrap">
@@ -478,7 +480,7 @@ button.ochip:focus-visible { outline: 2px solid var(--blue); }
         <div class="tb">
           <button class="tf on">1D</button><button class="tf">5D</button><button class="tf">1M <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button>
           <span class="vsep"></span>
-          <button class="tf">1m</button><button class="tf x1">2m</button><button class="tf">3m</button><button class="tf on">5m</button><button class="tf x1">10m</button><button class="tf">15m <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button>
+          <span class="tfs" role="group" aria-label="Option chart timeframe" data-chart="opt"><button class="tf" data-tf="1">1m</button><button class="tf x1" data-tf="2">2m</button><button class="tf" data-tf="3">3m</button><button class="tf on" data-tf="5">5m</button><button class="tf x1" data-tf="10">10m</button><button class="tf" data-tf="15">15m <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button></span>
           <div class="right">
             <button class="tool" aria-label="Crosshair"><svg class="i"><use href="#i-cross"/></svg><svg class="i cv"><use href="#i-chev"/></svg></button>
             <button class="tool x2" aria-label="Indicators"><svg class="i"><use href="#i-fx"/></svg></button>

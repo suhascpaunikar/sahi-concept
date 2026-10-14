@@ -1,12 +1,14 @@
 # Sahi Payoff (Desktop) PRD
 *Full PRD: the Payoff mode on Sahi's Scalper split view, for Sahi web on desktop browsers and the Sahi Desktop app. Use this to design the screens in Figma and to agree scope with Sahi's product, engineering and compliance leads.*
 
-**Product type:** Web app (desktop), Desktop app · **Depth:** Full PRD · **Version:** v1.1 · **Date:** 13 Oct 2026 · **Status:** Draft
+**Product type:** Web app (desktop), Desktop app · **Depth:** Full PRD · **Version:** v1.2 · **Date:** 14 Oct 2026 · **Status:** Draft
 
 **Owner:** Suhas · **Reviewers / sign-off:** Open item: Sahi product, design, engineering and compliance leads
 > Scope note: Payoff was called Premium What-If in the research. This PRD covers desktop only; mobile gets its own PRD. Order actions from a pinned point are specced here for the Later release. Example values come from the research model (Nifty 25,000, IV 12%, range at IV 10% to 15%) and are illustrative, not market data.
 >
 > Changes in v1.1: the P key toggle is replaced by hold-to-peek. Holding ⌥ Option (Mac) or Alt (Windows) shows Payoff and letting go hides it; the Payoff button on the toolbar still keeps it on until it is clicked again or Esc is pressed (BR-23). Copy for the button, its tooltip, N1 and the Payoff header follows.
+>
+> Changes in v1.2: Payoff opens on the view the trader already has. It no longer fits the charts to an expiry; the future zone starts in the space right of "Now", and the trader drags, zooms or picks a horizon chip to look further ahead (BR-24). The index chart and the option chart keep their own timeframe, scroll and zoom, e.g. Nifty on 3m and the option on 5m (BR-25). The Payoff button drops its key hint; its tooltip and N1 still teach the key. In the Payoff table, a leg squared off before the point is greyed out and its P&L still counts in the total (BR-12).
 
 ## 1. Overview
 - **Problem / why:** 87.7% of individual F&O traders lost money in FY26, about 97% mainly buy options, and 59% of index option turnover is in contracts expiring that same day (SEBI). Traders read levels on the Nifty chart, but their P&L lives in premium, and delta, time decay and IV move premium in ways they can't see. On expiry day a 50-point Nifty rise by the close can still leave an at-the-money call below what was paid.
@@ -55,7 +57,7 @@
 | ID | Requirement | Priority | Surfaces |
 |---|---|---|---|
 | FR-01 | The trader can turn Payoff on and off from the index chart toolbar, and can peek at it by holding ⌥ Option (Mac) or Alt (Windows) anywhere in the Scalper; letting go of the key hides it (BR-23) | Must | S1, S2, S3 |
-| FR-02 | The system extends the index chart's future zone to 3:30 pm on the latest expiry among open positions on that index | Must | S2, S3 |
+| FR-02 | The system adds a future zone to the index chart that runs to 3:30 pm on the latest expiry among open positions on that index, without moving the view the trader had when Payoff opened (BR-24) | Must | S2, S3 |
 | FR-03 | The system ends the future zone at today's 3:20 pm auto square-off when every open position is intraday | Must | S2, S3 |
 | FR-04 | The system draws breakeven lines where total open P&L is zero at each moment, and shades the profit side | Must | S2, S3 |
 | FR-05 | The system marks each expiry held, and the auto square-off for intraday positions, with a labelled vertical marker | Must | S2, S3 |
@@ -66,7 +68,7 @@
 | FR-10 | The system shows today's realised P&L from closed positions as its own row, outside the total | Must | S3 |
 | FR-11 | The system leaves out positions on other underlyings and shows how many there are | Must | S2, S3 |
 | FR-12 | The system takes expiry dates from the exchange contract list, including holiday shifts | Must | S2, S3 |
-| FR-13 | The trader can fit the view to today or to any expiry held with horizon chips | Should | S2, S3 |
+| FR-13 | The trader can fit the view to today or to any expiry held with horizon chips; none is picked when Payoff opens (BR-24) | Should | S2, S3 |
 | FR-14 | The system shows the expected-move cone in the future zone, and the trader can hide it | Should | S2, S3 |
 | FR-15 | With no open position, the system prices the contract on the option chart as a buy of the default order quantity at its last price | Should | S2 |
 | FR-16 | On expiry day, when the range is wider than the premium, the system shows time value left instead of the range | Must | S2, S3 |
@@ -78,6 +80,8 @@
 | FR-22 | Later release: from a pin, the trader can schedule an exit at the pinned time, after confirming | Must | D1, M1, N3 |
 | FR-23 | The system labels every value as a model estimate and never suggests a level, strike or trade | Must | S2, S3, D1 |
 | FR-24 | For defined-risk books (spreads, iron condors, iron flies), the table shows max profit and max loss at expiry | Should | S3 |
+| FR-25 | The index chart and the option chart keep their own timeframe, scroll and zoom, with Payoff on or off (BR-25) | Must | S1, S2, S3 |
+| FR-26 | In the Payoff table, a leg squared off before the hovered point shows its value and P&L greyed out, as disabled, and its P&L still counts in the total (BR-12) | Should | S3 |
 
 ### 2.2 Non-functional
 | ID | Area | Requirement | Surfaces |
@@ -104,8 +108,10 @@ Payoff is a mode of the Scalper split view, not a new page. It uses Sahi's exist
 ### Flow 1: Check one position before deciding to hold or exit
 **Actor:** Trader (expiry-day option buyer) · **Starts:** S1 at 10:15 on Mon 19 Oct, holding Buy 65 NIFTY 19 OCT 25000 CE at ₹69.10, carry-forward · **Ends:** S1
 - Trader rests the pointer on the index chart in S1 Scalper split view and holds ⌥ Option (Mac) or Alt (Windows).
-- System opens S2 Payoff mode: one position, switches the option chart to NIFTY 19 OCT 25000 CE if another contract was showing, and extends both charts' future zones to 3:30 pm today.
-- System draws the breakeven line labelled "Breakeven 25,069 at expiry", the profit shading, the "Weekly expiry · Mon 19 Oct" marker and the expected-move cone, with the "Today" horizon chip selected.
+- System opens S2 Payoff mode: one position, and switches the option chart to NIFTY 19 OCT 25000 CE if another contract was showing. Both charts keep the view, timeframe and zoom the trader had (BR-24, BR-25).
+- System draws the breakeven line, the profit shading and the expected-move cone in the space right of "Now", with no horizon chip picked; the breakeven label gives the level at the right edge of the view.
+- Trader clicks the "Today" chip, or drags the index chart left, to bring the rest of today into view.
+- System shows the future zone to 3:30 pm, the "Weekly expiry · Mon 19 Oct" marker and the label "Breakeven 25,069 at expiry".
 - Trader hovers the index chart at 25,050 and 11:15.
 - System shows the readout: "Nifty 25,050 · 11:15, Mon 19 Oct", "P&L +₹1,385", "Range +₹751 to +₹2,355", "If Nifty stays at 25,000: -₹450".
 - System shows on the option chart a marker "₹90.40 at 11:15" with the range "₹80.65 to ₹105.33", next to the "Paid ₹69.10" line and the flat-case line.
@@ -120,11 +126,13 @@ Payoff is a mode of the Scalper split view, not a new page. It uses Sahi's exist
 ### Flow 2: Check a weekly plus monthly book
 **Actor:** Trader (option seller) · **Starts:** S1 at 10:15 on Wed 14 Oct, holding Sell 65 NIFTY 19 OCT 24800 PE at ₹68.26, Sell 65 NIFTY 19 OCT 25200 CE at ₹69.29 and Buy 65 NIFTY 27 OCT 25000 CE at ₹224.15, plus one Bank Nifty position · **Ends:** S1
 - Trader clicks Payoff on the index chart toolbar on S1.
-- System opens S3 Payoff mode: several positions, replaces the option chart with the Payoff table, and extends the future zone to 3:30 pm on Tue 27 Oct.
-- System draws the breakeven lines and profit shading, the markers "Weekly expiry · Mon 19 Oct" (moved from Tue 20 Oct for a holiday) and "Monthly expiry · Tue 27 Oct", the horizon chips "Today", "19 Oct" (selected) and "27 Oct", and the chip "1 position on other charts".
+- System opens S3 Payoff mode: several positions, and replaces the option chart with the Payoff table. The index chart keeps its view; the future zone starts in the space right of "Now" and can be scrolled to 3:30 pm on Tue 27 Oct (BR-24).
+- System draws the breakeven lines and profit shading in that space, the horizon chips "Today", "19 Oct" and "27 Oct" with none picked, and the chip "1 position on other charts".
+- Trader clicks the "19 Oct" chip.
+- System fits the view to Mon 19 Oct and shows the marker "Weekly expiry · Mon 19 Oct" (moved from Tue 20 Oct for a holiday).
 - Trader hovers at 25,100 at 11:15 on Fri 16 Oct.
 - System updates the table: 24800 PE at ₹12.97, P&L +₹3,594; 25200 CE at ₹56.29, P&L +₹845; 27 OCT 25000 CE at ₹249.31, P&L +₹1,635; total open P&L +₹6,074, range +₹5,406 to +₹6,828; "If Nifty stays at 25,000: +₹3,318".
-- Trader clicks the "27 Oct" chip and hovers at 25,100 at 11:15 on Wed 21 Oct.
+- Trader clicks the "27 Oct" chip, which brings in the "Monthly expiry · Tue 27 Oct" marker, and hovers at 25,100 at 11:15 on Wed 21 Oct.
 - System shows the two 19 Oct legs as Expired, valued at intrinsic value of ₹0 at 25,100, with P&L +₹4,437 and +₹4,504; the monthly call at ₹218.27 with P&L -₹383; total +₹8,558, range +₹6,850 to +₹11,151.
 - If a Nifty position was closed earlier today, system shows its P&L in the "Realised today" row above the total.
 - Trader presses Esc.
@@ -214,11 +222,12 @@ flowchart LR
 ## 7. Shared Components
 | Component | Used on | Contents | Behaviour and variants |
 |---|---|---|---|
-| Payoff button | S1, S2, S3 | Label "Payoff", key hint "⌥" (Mac) or "Alt" (Windows) | Toggle: one click keeps Payoff on, the next turns it off; pressed while kept on (by the button or by a pin); highlighted outline while peeking; tooltip "Payoff: breakeven and P&L at any level and time. Hold to peek, or click to keep it on" with the key cap, and "Hide payoff" with an Esc key cap while on; disabled with tooltip "Payoff needs an index with options" |
-| Future zone | S2, S3 | The chart area from the "Now" line to the axis end, on the index chart and (S2) the option chart | Light tint to separate it from past candles; the chart can't pan past the axis end; times in IST |
-| Breakeven line and profit shading | S2, S3 | One line per place where total open P&L is zero; label at the right end, e.g. "Breakeven 25,069 at expiry"; profit side tinted and labelled "Profit", the other side "Loss" | Zero, one or more lines; the label names the axis end, "at expiry" or "at 3:20 pm" for intraday-only books; edge arrow with the level when a line is out of view, e.g. "Breakeven 25,800 ↑"; legend text "Profit at every level shown" or "Loss at every level shown" when no line is in view |
+| Payoff button | S1, S2, S3 | Payoff icon and label "Payoff"; no key hint on the button (the tooltip shows the key) | Toggle: one click keeps Payoff on, the next turns it off; pressed while kept on (by the button or by a pin); highlighted outline while peeking; tooltip "Payoff: breakeven and P&L at any level and time. Hold to peek, or click to keep it on" with the key cap, and "Hide payoff" with an Esc key cap while on; disabled with tooltip "Payoff needs an index with options" |
+| Future zone | S2, S3 | The chart area from the "Now" line to the axis end, on the index chart and (S2) the option chart | Light tint to separate it from past candles; opens on the view the trader already has, so at first only the space right of "Now" shows, and dragging, zooming or a horizon chip brings in more (BR-24); the chart can't pan past the axis end; times in IST |
+| Breakeven line and profit shading | S2, S3 | One line per place where total open P&L is zero; label at the right end, e.g. "Breakeven 25,069 at expiry"; profit side tinted and labelled "Profit", the other side "Loss" | Zero, one or more lines; the label gives the level at the picked chip's time, or at the right edge of the view: "at expiry", "at 3:20 pm" for intraday-only books, or the time, e.g. "at 11:30 am"; the Profit and Loss words are left out when the zone is too narrow to hold them; edge arrow with the level when a line is out of view, e.g. "Breakeven 25,800 ↑"; legend text "Profit at every level shown" or "Loss at every level shown" when no line is in view |
 | Expiry marker | S2, S3 | Vertical dashed line with label, e.g. "Weekly expiry · Mon 19 Oct", "Monthly expiry · Tue 27 Oct", "Auto square-off · 3:20 pm" | Sub-label "moved from Tue 20 Oct" when a holiday shifted it; in month-end week one marker "Weekly and monthly expiry · Tue 27 Oct"; hover tooltip names how many legs expire there |
-| Horizon chips | S2, S3 | "Today", then one chip per expiry held, e.g. "19 Oct", "27 Oct" | Clicking fits the view from now to that time; default is the nearest expiry; intraday-only books show "Today" alone |
+| Horizon chips | S2, S3 | "Today", then one chip per expiry held, e.g. "19 Oct", "27 Oct" | Clicking fits both charts from now to that time; none is picked when Payoff opens, and dragging or zooming the index chart clears the pick (BR-24); intraday-only books show "Today" alone |
+| Timeframe buttons (existing) | S1, S2, S3 | "1m", "2m", "3m", "5m", "10m", "15m" on each chart's toolbar | Each chart has its own, e.g. Nifty on 3m and the option on 5m; changing one keeps that chart's view; unchanged by Payoff (BR-25) |
 | Payoff readout | S2, S3 | "Nifty 25,050 · 11:15, Mon 19 Oct"; "P&L +₹1,385"; "Range +₹751 to +₹2,355"; "If Nifty stays at 25,000: -₹450"; footer "Model estimate, not a forecast" | Follows the pointer with an offset and flips side near chart edges; shows "Now" values when the pointer leaves the future zone; "Too uncertain to price" variant on expiry afternoon |
 | Mode pill | S2, S3 | "Holding ⌥ · release to hide" (Alt on Windows) while peeking; "Payoff on · Esc to close" while kept on | In the Payoff header, after the model label; tells the trader how Payoff will close |
 | Expected-move cone | S2, S3 | Band from Sahi's Expected Move indicator, labelled "Typical move (1 SD)" | Widens from now to the axis end; legend toggle "Expected move", on by default |
@@ -234,8 +243,8 @@ flowchart LR
 **Purpose:** Trade index options on a split view; this release adds the way into Payoff.
 **Layout (top to bottom, left to right):**
 1. Top bar (existing): instrument switcher, 1-Tap toggle, Funds pill, P&L pill.
-2. Left: index chart, e.g. NIFTY 50, with its toolbar: timeframe, indicators, drawing tools, and the new Payoff button at the right end of the toolbar.
-3. Right: option chart with the Call and Put switcher, order panel and option chain (existing).
+2. Left: index chart, e.g. NIFTY 50, with its toolbar: its own timeframe (e.g. 3m), indicators, drawing tools, and the new Payoff button at the right end of the toolbar.
+3. Right: option chart with its own timeframe (e.g. 5m), the Call and Put switcher, order panel and option chain (existing).
 4. Position pills on both charts (existing).
 
 #### Actions & interactions
@@ -243,6 +252,7 @@ flowchart LR
 |---|---|---|---|
 | Payoff | Toolbar control · Index chart toolbar | Keeps Payoff on: opens S2 for zero or one open position on the charted index, S3 for two or more; stays on until clicked again or Esc | The charted instrument has listed options |
 | Hold ⌥ Option (Mac) or Alt (Windows) | Keyboard shortcut (hold) · Anywhere in the Scalper | Hold-to-peek: opens S2 or S3 by position count while the key is held; letting go returns to S1 (BR-23) | Focus is not in a text input; no confirm modal open |
+| Timeframe | Toolbar control · Each chart's toolbar | Changes that chart's candle interval only; the view stays where it is (BR-25) | Always |
 | Hover Payoff | Hover · Index chart toolbar | Tooltip "Payoff: breakeven and P&L at any level and time. Hold to peek, or click to keep it on" with the ⌥ or Alt key cap | Always |
 | Try it | Primary · N1 tip | Opens S2 or S3 by position count | First visit after release |
 | Got it | Tertiary · N1 tip | Closes N1; stays on S1 | First visit after release |
@@ -250,7 +260,7 @@ flowchart LR
 #### Components & content
 | Component / field | Type | Content | Purpose |
 |---|---|---|---|
-| Payoff button | Toolbar control (toggle) | Label "Payoff", key hint "⌥" (Mac) or "Alt" (Windows) | Entry point to Payoff |
+| Payoff button | Toolbar control (toggle) | Payoff icon and label "Payoff"; no key hint (the tooltip shows the key) | Entry point to Payoff |
 | Payoff tooltip | Tooltip with key caps, in the style of the 1-Tap tooltip | Off: "Payoff: breakeven and P&L at any level and time. Hold to peek, or click to keep it on" [⌥]. On: "Hide payoff" [Esc] | Teaches hold-to-peek |
 | N1 Payoff introduction tip | Coach mark, anchored to the Payoff button | "New: hold ⌥ to see your breakeven and P&L at any Nifty level and time. Let go to hide it." (Alt on Windows). Buttons: Try it, Got it | Introduces the feature once |
 
@@ -283,7 +293,7 @@ flowchart LR
 1. Top bar (existing). The Payoff button shows its pressed state.
 2. Payoff header across the index chart: position summary, horizon chips, Expected move toggle, other-charts chip when relevant, model label.
 3. Index chart (left): past candles as usual, a "Now" line, then the future zone to the axis end with the breakeven line, profit shading, expiry marker, expected-move cone, crosshair and Payoff readout.
-4. Option chart (right): switched to the held contract; its future zone matches the index chart's; paid line, flat-case line, and a marker for the hovered time with the premium, its range and a P&L tag.
+4. Option chart (right): switched to the held contract; its future zone runs to the same axis end, but it keeps its own timeframe, scroll and zoom (BR-25); paid line, flat-case line, and a marker for the hovered time with the premium, its range and a P&L tag.
 5. N2 Pricing status banner across both charts when prices aren't live.
 
 #### Actions & interactions
@@ -292,9 +302,9 @@ flowchart LR
 | Hover future zone | Hover · Index chart | Readout follows the pointer; the option chart marker moves to the hovered time; stays on S2 | Pointer between "Now" and the axis end |
 | Hover past candles | Hover · Index chart | Normal crosshair; readout shows "Now" values; stays on S2 | Pointer left of "Now" |
 | Pointer leaves the index chart | Hover | Readout and option chart marker show "Now" values; stays on S2 | Always |
-| Horizon chip | Toolbar control · Payoff header | Fits the view from now to the chip's time; stays on S2 | Always; selected chip highlighted |
+| Horizon chip | Toolbar control · Payoff header | Fits both charts from now to the chip's time; stays on S2 | Always; none picked on open; the picked chip stays highlighted until the trader drags or zooms the index chart |
 | Expected move | Toggle · Payoff header | Shows or hides the cone; stays on S2 | Expected Move data available |
-| Scroll or zoom | Scroll · Index chart | Standard zoom and pan; cannot pan past the axis end; stays on S2 | Always |
+| Scroll or zoom | Scroll · Index chart or option chart | Standard zoom and pan of that chart only; reaches the axis end, not past it; on the index chart it clears the picked chip; stays on S2 | Always |
 | Arrow keys | Keyboard shortcut · Index chart | Tab focuses the index chart with the point one candle after "Now" at the current level; left and right move it one candle; up and down move it 5 points; Shift with up or down moves 25 points; readout and option chart marker follow; stays on S2 | Index chart focused, or the peek key held |
 | Hover expiry marker | Hover · Index chart | Tooltip, e.g. "Weekly expiry · Mon 19 Oct · moved from Tue 20 Oct for a holiday" | Marker shown |
 | Hover breakeven label | Hover · Index chart | Tooltip "Breakeven: the Nifty level where this position's P&L is zero at each time" | Line shown |
@@ -307,12 +317,12 @@ flowchart LR
 | Component / field | Type | Content | Purpose |
 |---|---|---|---|
 | Position summary | Read-only text · Payoff header | Held: "Buy 65 NIFTY 19 OCT 25000 CE at ₹69.10" or "Sell 65 NIFTY 19 OCT 25000 CE at ₹69.10". Pre-trade: "Not holding · priced as a buy of 65 at ₹69.10 (last price)" | Says what is being priced |
-| Horizon chips | Segmented control · Payoff header | "Today" plus the position's expiry date if later, e.g. "Today", "27 Oct". Default: the expiry. Intraday or expiring today: "Today" only | Fits the view |
+| Horizon chips | Segmented control · Payoff header | "Today" plus the position's expiry date if later, e.g. "Today", "27 Oct". None picked when Payoff opens. Intraday or expiring today: "Today" only | Fits the view |
 | Expected move toggle | Toggle · Payoff header | "Expected move". Default: on | Shows how far the index usually moves |
 | Other-charts chip | Status chip · Payoff header | "1 position on other charts"; tooltip lists underlyings | Positions elsewhere aren't silently ignored |
 | Model label | Read-only text with info icon · Payoff header | "Model estimate, not a forecast". Tooltip: "Worked out from live option prices, IV and time left. The range shows values if IV moves. Actual prices can differ, especially near expiry." | Trust and compliance |
 | "Now" line | Chart overlay (vertical line) | Label "Now" | Splits past from future |
-| Future zone | Chart region | From now to 3:30 pm on the expiry date, or 3:20 pm today for intraday | Room to hover future times |
+| Future zone | Chart region | From now to 3:30 pm on the expiry date, or 3:20 pm today for intraday; at first only the part already in view shows | Room to hover future times |
 | Breakeven line | Chart overlay (line) | Label at the right end, e.g. "Breakeven 25,069 at expiry" | Where P&L is zero at each time |
 | Profit shading | Chart overlay (band) | Profit side tinted and labelled "Profit"; the other side labelled "Loss" | Which side makes money, at a glance |
 | Expiry marker | Chart overlay (vertical line) | "Weekly expiry · Mon 19 Oct", "Monthly expiry · Tue 27 Oct" or "Auto square-off · 3:20 pm" | Where the position ends |
@@ -329,12 +339,13 @@ flowchart LR
 | Screen | Loading | First values being worked out | Overlays fade in; readout "Pricing your position…" |
 | Screen | Pre-trade | No open position on the charted index; a contract is on the option chart | Summary "Not holding · priced as a buy of 65 at ₹69.10 (last price)"; paid line labelled "Last price"; no order actions |
 | Screen | Empty | No open position and no contract on the option chart | Message on the index chart "Pick a contract on the option chart to see its payoff"; no overlays |
-| Screen | First run | First time this trader opens Payoff | Hint in the future zone "Move your pointer into the shaded area to see P&L at any level and time"; it goes after the first hover |
+| Screen | Opened | Payoff turns on | Both charts keep their view, timeframe and zoom; the future zone shows in the space right of "Now"; no chip picked (BR-24) |
+| Screen | First run | First time this trader opens Payoff | Hint in the future zone "Move your pointer into the shaded area to see P&L at any level and time. Drag the chart or pick a date above to look further ahead."; it goes after the first hover |
 | Position | Bought call | Long call | One breakeven line above the index, rising toward strike plus premium; profit above it |
 | Position | Bought put | Long put | One breakeven line below the index, falling toward strike minus premium; profit below it |
 | Position | Sold call or put | Short option | The same line a buyer would see; profit shading on the other side |
 | Position | Several fills | Same contract bought in parts | One position at the average price and total quantity |
-| Position | Monthly | Expiry more than one week away | Chips "Today" and the expiry; view opens fitted to the expiry; flatter breakeven line |
+| Position | Monthly | Expiry more than one week away | Chips "Today" and the expiry; the view opens where it was and the expiry chip fits it; flatter breakeven line |
 | Position | Expiring today | Expiry date is today | Future zone ends at 3:30 pm today; chip "Today" only |
 | Position | Intraday | Product is intraday | Future zone ends at 3:20 pm today; marker "Auto square-off · 3:20 pm" |
 | Position | Expired today | After 3:30 pm on expiry day | Summary "Expired · settled at ₹X · P&L ₹Y"; no future zone or readout; gone the next session |
@@ -353,7 +364,7 @@ flowchart LR
 - Trader holds ⌥ or Alt to peek, or clicks Payoff to keep it on.
 - System prices the position, or the contract on the option chart if nothing is held, and draws the overlays.
 - Trader hovers future times and levels on the index chart and reads the readout and the option chart marker.
-- Trader fits the view to today or to the expiry with the horizon chips.
+- Trader drags or zooms to look further ahead, or fits the view to today or to the expiry with the horizon chips.
 - If prices aren't live, system flags it with N2 and greys the values.
 - Trader lets go of the key, or, if Payoff was kept on, presses Esc or the button, and returns to S1.
 
@@ -379,7 +390,8 @@ flowchart LR
 | Hover future zone | Hover · Index chart | Readout follows the pointer; the table recalculates for that point; stays on S3 | Pointer between "Now" and the axis end |
 | Hover past candles | Hover · Index chart | Normal crosshair; table shows "Payoff now"; stays on S3 | Pointer left of "Now" |
 | Pointer leaves the index chart | Hover | Table shows "Payoff now"; stays on S3 | Always |
-| Horizon chip | Toolbar control · Payoff header | Fits the view from now to that time; stays on S3 | Always |
+| Horizon chip | Toolbar control · Payoff header | Fits the index chart from now to that time; stays on S3 | Always; none picked on open |
+| Scroll or zoom | Scroll · Index chart | Standard zoom and pan; reaches the axis end, not past it; clears the picked chip; stays on S3 | Always |
 | Expected move | Toggle · Payoff header | Shows or hides the cone | Expected Move data available |
 | Hover table row | Hover · Payoff table | Draws that leg's strike as a dotted line on the index chart; stays on S3 | Always. Priority: Should |
 | Scroll table | Scroll · Payoff table | Rows scroll; title, Realised today, total and flat case stay pinned | More than 8 legs |
@@ -393,7 +405,7 @@ flowchart LR
 | Component / field | Type | Content | Purpose |
 |---|---|---|---|
 | Book summary | Read-only text · Payoff header | "3 positions · 2 expiries" | Says what is being priced |
-| Horizon chips | Segmented control · Payoff header | "Today" plus one chip per expiry held, e.g. "19 Oct", "27 Oct". Default: the nearest expiry | Fits the view |
+| Horizon chips | Segmented control · Payoff header | "Today" plus one chip per expiry held, e.g. "19 Oct", "27 Oct". None picked when Payoff opens | Fits the view |
 | Expected move toggle | Toggle · Payoff header | "Expected move". Default: on | Context for how likely a level is |
 | Other-charts chip | Status chip · Payoff header | "1 position on other charts"; tooltip lists underlyings | Positions elsewhere aren't silently ignored |
 | Model label | Read-only text with info icon · Payoff header | "Model estimate, not a forecast". Tooltip: "Worked out from live option prices, IV and time left. The range shows values if IV moves. Actual prices can differ, especially near expiry." | Trust and compliance |
@@ -406,6 +418,7 @@ flowchart LR
 | Group header row | Table row | "19 Oct · Weekly · 2 legs", "27 Oct · Monthly · 1 leg" | Separates expiries |
 | Leg row | Table row | e.g. "NIFTY 19 OCT 24800 PE · Sell · 65 · ₹68.26 · ₹12.97 · +₹3,594 (range +₹2,724 to +₹4,024) · Live" | One leg; futures rows show Side "Buy fut" or "Sell fut" and no range |
 | Status chip | Status chip | Values: Live, Expires today, Expired, Squared off, Settled | Each leg's state at the point |
+| Squared-off values | Table cells, greyed out (disabled colour) | Value and P&L of a leg squared off before the point, in the disabled text colour, with no range line. Tooltip on the P&L: "Squared off at 3:20 pm. This is the P&L the square-off books at this Nifty level, and it still counts in the total." | The leg is no longer open at the point, but its P&L is still part of the book |
 | Realised today row | Table row (pinned) | "Realised today +₹1,200" | Closed positions' P&L, outside the total |
 | Total row | Table row (pinned) | "Total open P&L +₹6,074", second line "Range +₹5,406 to +₹6,828" | The book at the point |
 | Flat-case row | Table row (pinned) | "If Nifty stays at 25,000: +₹3,318" | The cost or gain of waiting |
@@ -415,7 +428,8 @@ flowchart LR
 | Scope | State | When | What the user sees |
 |---|---|---|---|
 | Screen | Loading | First values being worked out | Table rows as skeletons; readout "Pricing your positions…" |
-| Screen | First run | First time this trader opens Payoff | Hint in the future zone "Move your pointer into the shaded area to see P&L at any level and time"; it goes after the first hover |
+| Screen | Opened | Payoff turns on | The index chart keeps its view, timeframe and zoom; the future zone shows in the space right of "Now"; no chip picked (BR-24) |
+| Screen | First run | First time this trader opens Payoff | Hint in the future zone "Move your pointer into the shaded area to see P&L at any level and time. Drag the chart or pick a date above to look further ahead."; it goes after the first hover |
 | Book | Long straddle or strangle | Bought call and put, same expiry | Two breakeven lines moving apart over time; loss between them |
 | Book | Short straddle or strangle | Sold call and put, same expiry | The same two lines; profit between them |
 | Book | Iron condor or iron fly | Four legs, same expiry | Two lines; profit between them; max profit and loss row |
@@ -427,7 +441,7 @@ flowchart LR
 | Book | Calendar spread | Sold weekly, bought monthly, same strike | Two lines until the weekly expiry, then one; the widest ranges |
 | Book | Month-end week | Weekly and monthly are the same contract | One marker, "Weekly and monthly expiry · Tue 27 Oct" |
 | Row | Expired | Hovered time is past the leg's expiry | Status Expired; value is intrinsic value at the hovered level |
-| Row | Squared off | Intraday leg in a book with carry-forward legs, hovered after 3:20 pm today | Status Squared off; value at 3:20 pm at the hovered level |
+| Row | Squared off | Intraday leg in a book with carry-forward legs, hovered after 3:20 pm today | Status Squared off; value at 3:20 pm at the hovered level; value and P&L greyed out as disabled, no range line; the P&L still counts in the total |
 | Row | Expires today | Leg expires today | Status Expires today; "Too uncertain to price" replaces the range when it is wider than the premium |
 | Book | All intraday | Every leg intraday | Future zone ends at 3:20 pm today; chip "Today" only |
 | Table | Realised row hidden | Nothing closed today | Row not shown |
@@ -443,9 +457,9 @@ flowchart LR
 
 #### Workflow
 - Trader turns Payoff on from S1 with two or more positions on the charted index.
-- System replaces the option chart with the Payoff table and draws the overlays to the latest expiry.
+- System replaces the option chart with the Payoff table and draws the overlays in the view the trader already had; they run to the latest expiry.
 - Trader hovers future points; the table and readout update for each.
-- Trader uses the horizon chips to look past the first expiry; legs past their expiry show Expired.
+- Trader drags, zooms or uses the horizon chips to look ahead and past the first expiry; legs past their expiry show Expired, and intraday legs past 3:20 pm show Squared off, greyed out.
 - If positions open or close so that one or none remains, system switches to S2.
 - Trader turns Payoff off and returns to S1 with the option chart back.
 
@@ -603,11 +617,11 @@ flowchart LR
 | BR-09 | The range shows P&L if IV moves up or down from its current level. Open item: method and width. The research examples use IV 10% and 15% around a current 12%; the proposal is to set the width from past expiry days so that about 80% of outcomes land inside | S2, S3, D1 |
 | BR-10 | On a contract's expiry day, when the range is wider than the premium at the point, the range is replaced by "Too uncertain to price. Time value left: ₹X. Worth at expiry at this level: ₹Y" | S2, S3, D1 |
 | BR-11 | At any point past a leg's expiry, the leg shows Expired and is valued at its intrinsic value at the hovered level (decided 13 Oct). After 3:30 pm on expiry day, positions that expired that day show their settled P&L, then drop off at the next session | S2, S3 |
-| BR-12 | In a book that also holds carry-forward legs, an intraday leg shows Squared off after the auto square-off, valued at the square-off time at the hovered level (Assumption) | S3 |
+| BR-12 | In a book that also holds carry-forward legs, an intraday leg shows Squared off after the auto square-off, valued at the square-off time at the hovered level (Assumption). Its value and P&L show greyed out, as disabled, with no range, and its P&L still counts in the total | S3 |
 | BR-13 | Left of the "Now" line, Payoff shows no projected values; the readout and the right pane show current P&L | S2, S3 |
 | BR-14 | With no open position on the charted index, Payoff prices the contract on the option chart as a buy of the default order quantity (Order Defaults) at its last traded price, or one lot when no default is set (Assumption). Pre-trade never offers order actions | S2, D1 |
 | BR-15 | The future zone shows trading hours only (9:15 am to 3:30 pm on trading days), with a separator at each new day, as past candles do (Assumption). Open item: how decay over nights, weekends and holidays is counted (the research counted trading minutes only: 375 a session, 252 sessions a year) | S2, S3 |
-| BR-16 | The hovered time snaps to the chart's candle interval and the level to the nearest 5 index points (Assumption). P&L shows in whole rupees, premiums to 2 decimals and index levels in whole points. Order prices from a pin round to the contract's tick size (₹0.05) | S2, S3, D1, M1 |
+| BR-16 | The hovered time snaps to the index chart's candle interval and the level to the nearest 5 index points (Assumption). P&L shows in whole rupees, premiums to 2 decimals and index levels in whole points. Order prices from a pin round to the contract's tick size (₹0.05) | S2, S3, D1, M1 |
 | BR-17 | Overlays, the readout and the right pane recompute as prices update, at most once a second while the pointer is still, so lines don't jitter (Assumption). The "Now" line moves with the clock | S2, S3 |
 | BR-18 | When any input (index, futures, option price or IV) is older than the threshold, values are greyed and N2 shows the time of the last update. Open item: threshold in seconds. Outside market hours, "Now" is the last close and the future zone starts at the next session's 9:15 am | S2, S3, N2 |
 | BR-19 | Payoff never ranks or suggests levels, strikes or trades, and never opens a new position: it has no buy button, and the Later-release actions only close or protect positions already held. Every value carries "Model estimate, not a forecast". In-app copy and marketing go through compliance, and marketing never shows projected gains (SEBI consultation on a common advertisement code, 23 Jun 2026) | All |
@@ -615,6 +629,8 @@ flowchart LR
 | BR-21 | Later release: exit at a time is a new order type owned by Orders. It closes the open quantity at market at the pinned time, with Market Price Protection, and is cancelled if the position is closed earlier. From S3, "Exit all at" closes every leg still open at that time; legs that expire or square off before then are left alone. It is not offered for an intraday position at the auto square-off time. Open item: leg order and margin handling for multi-leg exits | D1, M1 |
 | BR-22 | Later release: targets and stops trigger on the option's price, not on the index level, and D1 and M1 say so. Open item: whether Sahi can trigger on the index level instead, which would match the pinned point exactly | D1, M1 |
 | BR-23 | Hold-to-peek: holding ⌥ Option (Mac) or Alt (Windows) shows Payoff (S2 or S3 by position count) and letting go hides it. The peek starts after the key has been held alone for about 140 ms (Assumption), so a shortcut that starts with the same key (⌘ ⌥ 1 for 1-Tap, Alt+Tab) runs as before and doesn't open Payoff. While the key is held, the arrow keys move the point and Enter pins it; any other key ends the peek. The peek ends when the window loses focus, and doesn't start while focus is in a text input or a confirm modal (M1) is open. Clicking the Payoff button keeps Payoff on until it is clicked again or Esc is pressed. In the Later release, a pin placed while peeking keeps Payoff on after the key is let go, until the pin is removed. Open item: on Windows, a lone Alt press can move focus to the browser menu bar; confirm the web app can suppress it on every supported browser, and pick a fallback key if not | S1, S2, S3, N1, D1 |
+| BR-24 | Turning Payoff on, by the button, the peek key or N1, doesn't move or rescale the time axis of either chart: the view the trader had stays, and the future zone shows in whatever space lies right of "Now". The charts can then scroll as far as the axis end (BR-03) and no further. A horizon chip fits the charts from now to its time; none is picked on open, and dragging or zooming the index chart clears the pick. Turning Payoff off returns each chart to the view it had before. The price scale may shift a little to make room for the Payoff header (Assumption). Open item: whether the future zone needs a minimum width on open (today it is the chart's right margin) | S2, S3 |
+| BR-25 | The index chart and the option chart each keep their own timeframe, e.g. Nifty on 3m and the option on 5m, and scroll and zoom on their own, with Payoff on or off. Changing a timeframe keeps that chart's view. A horizon chip moves both charts to the same window; after that each moves on its own. The hovered point snaps to the index chart's candles, and the option chart shows its marker only when that time is in its view | S1, S2, S3 |
 
 ## 11. Roles and Permissions
 Not applicable: single role. Every trader who can use the Scalper with F&O enabled can use Payoff; sign-in, F&O activation and Scalper access stay with existing Sahi flows.
@@ -622,7 +638,7 @@ Not applicable: single role. Every trader who can use the Scalper with F&O enabl
 ## 12. Release Plan
 **MVP (first design pass and first release)**
 - Surfaces: S1 (changed), N1, S2, S3, N2.
-- Requirements: FR-01 to FR-19, FR-23, FR-24; NFR-01 to NFR-08.
+- Requirements: FR-01 to FR-19, FR-23 to FR-26; NFR-01 to NFR-08.
 
 **Later**
 - Surfaces: D1, M1, N3, and the scheduled exit marker.
@@ -630,7 +646,7 @@ Not applicable: single role. Every trader who can use the Scalper with F&O enabl
 - Needs Orders to build exit at a time (BR-21) and to confirm BR-20 and BR-22.
 
 **Waiting for confirmation before build**
-- Pricing model (BR-08), range method (BR-09), freshness threshold (BR-18), auto square-off time (BR-04), decay over nights and weekends (BR-15), single futures layout (BR-02), compliance wording (Model label, order notes), Windows availability of the Sahi Desktop app (NFR-08), the hold-to-peek key on Windows browsers (BR-23).
+- Pricing model (BR-08), range method (BR-09), freshness threshold (BR-18), auto square-off time (BR-04), decay over nights and weekends (BR-15), single futures layout (BR-02), compliance wording (Model label, order notes), Windows availability of the Sahi Desktop app (NFR-08), the hold-to-peek key on Windows browsers (BR-23), the future zone's width on open (BR-24).
 
 **Launch criteria**
 1. Accuracy: on a back-test of past expiry days, the range covers at least the target share of outcomes (NFR-02).
@@ -696,6 +712,8 @@ Not applicable: single role. Every trader who can use the Scalper with F&O enabl
 | 40 | 12 Measurement | Assumption: a guardrail breach pauses the rollout |
 | 41 | BR-23 | Open item: whether a lone Alt press can be suppressed on every supported Windows browser, and a fallback peek key if not |
 | 42 | BR-23 | Assumption: the peek starts after the key is held alone for about 140 ms |
+| 43 | BR-24 | Open item: whether the future zone needs a minimum width when Payoff opens, since it starts as the chart's right margin |
+| 44 | BR-24 | Assumption: the price scale may shift a little to make room for the Payoff header; the time axis never moves |
 
 ## 14. References
 | Reference | Relates to |
@@ -703,6 +721,7 @@ Not applicable: single role. Every trader who can use the Scalper with F&O enabl
 | [Payoff: Research](https://claude.ai/code/artifact/db924cf6-6005-4d30-8c76-5a615ebfd113), 12 Oct 2026, with its Scenarios tab (13 Oct): model, worked example, existing tools, validation plan, every position combination and the 13 Oct decisions | 1, 1.1, S2, S3, BR-03 to BR-12 |
 | Suhas's flow sketch, shared in chat on 13 Oct 2026: hot key, breakeven line on the index chart, hover readout, one position's P&L on the option chart, a table for several positions | S1, S2, S3 |
 | Suhas's direction, 13 Oct 2026: hold Option (Mac) or Alt (Windows) to peek, let go to hide; the toolbar button keeps Payoff on | BR-23, S1, N1 |
+| Suhas's review notes, 14 Oct 2026: the two charts can be on different timeframes; don't extend the chart to expiry when Payoff opens; remove the key hint from the Payoff button; grey out a squared-off leg's P&L | BR-12, BR-24, BR-25, S1, S3 |
 | [Payoff clickable prototype](https://claude.ai/artifact/59eswEh3yuRh4PwFtFLLnT) (source in `prototype/payoff/` of this repo): hold-to-peek, S1 to S3, N1, N2, D1, M1 and N3 on sample data | S1, S2, S3, D1, M1, BR-23 |
 | [F&O problem bank](https://claude.ai/artifact/KJd28U4GEHTEycdmDBcjpc): P002 No way to see the premium at an index level before setting a stop; P013 No time-based exit; P080 Premium doesn't move with the index, and nobody explains why; P121 Frozen or delayed data looks live; P134 Time decay is invisible until it's lost | P002: S2, D1. P013: D1, M1. P080: S2, S3. P121: N2. P134: flat-case line on S2 and S3 |
 | [SEBI study: Profitability of Individual Traders, FY25 to FY26](https://www.sebi.gov.in/sebi_data/attachdocs/aug-2026/1787233506209.pdf) and [SEBI press release 50/2026, reproduced by TaxGuru](https://taxguru.in/?p=1072039) | 1, 1.1 |

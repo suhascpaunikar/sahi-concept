@@ -7,7 +7,7 @@ Two feature concepts for Sahi, each with a PRD and a clickable prototype: **Mirr
 | Path | What it is |
 |---|---|
 | `docs/sahi-mirror-mobile-prd.md` | Full PRD v2.0, rewritten from the web desktop PRD v1.1 for the Sahi iOS and Android app |
-| `docs/sahi-payoff-desktop-prd.md` | Payoff (desktop) PRD v1.0: the Payoff mode on the Scalper split view, for Sahi web and the Sahi Desktop app |
+| `docs/sahi-payoff-desktop-prd.md` | Payoff (desktop) PRD v1.2: the Payoff mode on the Scalper split view, for Sahi web and the Sahi Desktop app |
 | `docs/sahi-payoff-desktop-prd.html` | The same Payoff PRD as a styled page with contents, linked IDs and an open-items filter. Open it in a browser |
 | `prototype/index.html` | Clickable phone prototype of the Mirror PRD. One self-contained file, no build step |
 | `prototype/payoff/index.html` | Clickable desktop prototype of the Payoff PRD on the Scalper split view. One self-contained file, no build step |
@@ -45,7 +45,9 @@ Open `prototype/payoff/index.html` in a desktop browser. It draws the Sahi Scalp
 
 - **Hold ⌥ Option (Mac) or Alt (Windows)** to peek at Payoff; let go to hide it.
 - **Click Payoff** on the index chart toolbar to keep it on; **Esc** turns it off.
+- Payoff opens on the view you already have, so the shaded future zone starts as the space right of Now. Drag or scroll the chart, or click a date chip (Today, 19 Oct, 27 Oct), to look further ahead.
 - Move the pointer into the shaded future zone, or use the arrow keys (Shift for 25 points), to read P&L at any level and time.
+- Each chart has its own timeframe (1m to 15m) and scrolls and zooms on its own, so Nifty can be on 3m while the option is on 5m.
 - Click the future zone, or press Enter, to pin a point and set a target, a stop or an exit time (Later release).
 - **Buy at MKT**, **Sell at MKT**, the **Option Chain** and **Positions** in the right rail all work, so you can open and close positions and watch Payoff switch between one position and several.
 
