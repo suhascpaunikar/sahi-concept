@@ -227,6 +227,12 @@ const Engine = (() => {
     const b = lastBarBefore(bars, T);
     return b ? b.c : price(c, pathAt(T), T);
   }
+  // Price at an instant inside a minute, moving from that bar's open to its close, as pathAt does for the index.
+  function optionAt(c, T) {
+    const bars = optionBars(c), i = Math.floor(T) - BASE;
+    const b = i >= 0 && i < bars.length ? bars[i] : null;
+    return b ? b.o + (b.c - b.o) * (T - Math.floor(T)) : optionPriceAt(c, T);
+  }
   // The close of the last bar that ended at or before T (e.g. the previous session's close).
   function optionCloseBefore(c, T) { const b = lastBarBefore(optionBars(c), T); return b ? b.c : price(c, pathAt(T, true), T); }
 
@@ -276,7 +282,7 @@ const Engine = (() => {
   return {
     OPEN, CLOSE, SESSION, YEAR, SQOFF, LOT, TICK, HOLIDAYS, DAYS, TODAY, EXPIRIES, DEFAULT_NOW, S_DEFAULT, PREV_CLOSE, HIST_START, REAL_END_T, SOURCE: RD.source,
     baseIv: () => BASE_IV, tOf, split, fmtT, clock, dayOfT, dayIdx, dateInfo, expiryByKey, bs, solveIv, roundTick, pathAt, contract, isReal, calibrate, price, intrinsic,
-    optionPriceAt, optionCloseBefore, indexCandles, optionCandles, tauOf, inr, rupees, signed, level, px, prem, settleS, rng
+    optionPriceAt, optionAt, optionCloseBefore, indexCandles, optionCandles, tauOf, inr, rupees, signed, level, px, prem, settleS, rng
   };
 })();
 if (typeof module !== 'undefined') module.exports = Engine;

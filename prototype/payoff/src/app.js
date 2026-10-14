@@ -203,7 +203,7 @@
   const OI = [];
   const opt = new SahiChart($('#optCanvas'), {
     tf: st.tf.opt, dec: 2, volFrac: 0.1, minY: 0,
-    sub: { frac: 0.26, series: OI, fmt: v => (v / 1e5).toFixed(v < 1e6 ? 1 : 0).replace(/\.0$/, '') + 'L', color: '#2196f3' }
+    sub: { frac: 0.26, series: OI, fmt: v => v < 1e5 ? (v / 1e3).toFixed(v < 1e4 ? 1 : 0).replace(/\.0$/, '') + 'K' : (v / 1e5).toFixed(v < 1e6 ? 1 : 0).replace(/\.0$/, '') + 'L', color: '#2196f3' }
   });
   const savedViews = { idx: null, opt: null };
   // Both charts drag right into empty space up to 3:30 pm on the next trading day, Payoff on or off (BR-27).
@@ -653,7 +653,8 @@
   }
   // Crosshair time labels show the exact minute on both charts, so a mirrored crosshair reads the same time
   // whatever each chart's timeframe; in the future zone, the snapped Payoff point (BR-16).
-  idx.on('timeLabel', T => { const b = book(); return E.fmtT(payoffOn() && pointable(b) && T > b.nowT ? snapT(T, b) : Math.max(0, Math.round(T))); });
+  const minuteLabel = T => E.fmtT(Math.max(0, Math.floor(T)) + 1e-6);
+  idx.on('timeLabel', T => { const b = book(); return payoffOn() && pointable(b) && T > b.nowT ? E.fmtT(snapT(T, b)) : minuteLabel(T); });
   // no crosshair over the disabled area
   idx.on('crosshair', (ctx, ch, p) => {
     if (!payoffOn()) return;
@@ -811,7 +812,7 @@
     drawExitMarkers(ctx, ch, 'opt', taken);
     ctx.globalAlpha = 1;
   });
-  opt.on('timeLabel', T => E.fmtT(Math.max(0, Math.round(T))));
+  opt.on('timeLabel', T => minuteLabel(T));
 
   /* ---------- pointer and keyboard on the index chart ---------- */
   const snapT = (T, b) => { const end = axisEnd(b); return Math.max(firstT(b), Math.min(end, Math.round(T / step()) * step())); };
@@ -896,17 +897,22 @@
   // on, it is the Payoff value; with Payoff off, the future gets the time line only. The other chart scrolls to
   // keep the mirrored time in view, at its own zoom.
   const mirrorOn = () => !!shownOpt() && !(payoffOn() && isS3());
-  const roundLvl = (c, v) => c.type === 'FUT' ? v : Math.max(0, E.roundTick(v));
-  // The option's actual price and Nifty's actual level at T (at Now: the live values).
+  const roundLvl = (c, v) => c.type === 'FUT' ? v : Math.max(E.TICK, E.roundTick(v));
+  // The option's actual price and Nifty's actual level at the same instant T (at Now: the live values).
   function actualsAt(c, T, b) {
     if (T >= b.nowT - 0.01) return { o: ltp(c), s: b.S0 };
-    return { o: E.optionPriceAt(c, T), s: E.pathAt(T) };
+    return { o: E.optionAt(c, T), s: E.pathAt(T) };
   }
+  // After Now there is a level only where Payoff has a point: Payoff on, prices loading, inside the axis end.
+  const futureOk = (T, b) => payoffOn() && pointable(b) && !blocked(T, b);
   const blocked = (T, b) => { if (!payoffOn()) return false; const from = disabledFrom(b); return from != null && T > from + 1; };
   function optLevel(c, T, S) {
     const b = book();
     if (T <= b.nowT) { const a = actualsAt(c, T, b); return roundLvl(c, a.o + E.price(c, S, T) - E.price(c, a.s, T)); }
-    if (!payoffOn() || blocked(T, b)) return null;
+    if (!futureOk(T, b)) return null;
+    // the same value the option chart's Payoff marker shows
+    const l = b.legs[0];
+    if (!isS3() && l && l.c === c) return b.pretrade ? P.legDetail(l, S, T, b).value : heldPrem(l, S, T, b);
     return roundLvl(c, E.price(c, S, T));
   }
   // The Nifty level that gives option price P at time T (option value is monotonic in the index level).
@@ -914,7 +920,7 @@
     const b = book();
     let target;
     if (T <= b.nowT) { const a = actualsAt(c, T, b); target = P - a.o + E.price(c, a.s, T); }
-    else if (!payoffOn() || blocked(T, b)) return null;
+    else if (!futureOk(T, b)) return null;
     else target = P;
     if (c.type === 'FUT') return target;
     const f = S => E.price(c, S, T) - target;
@@ -924,44 +930,52 @@
     return (lo + hi) / 2;
   }
   // Keep the mirrored time in the other chart's view: shift it the least needed, at its own zoom.
+  // Scrolls only when the minute is outside the view, then leaves an 8% margin.
   function follow(ch, which, T) {
     const v = ch.view, span = v.t1 - v.t0, m = span * 0.08;
-    if (T >= v.t0 + m && T <= v.t1 - m) return;
-    const t0 = T < v.t0 + m ? T - m : T + m - span;
+    if (T >= v.t0 && T <= v.t1) return;
+    const t0 = T < v.t0 ? T - m : T + m - span;
     const [a, c] = ch.clampView(t0, t0 + span);
     if (Math.abs(a - v.t0) < 1e-6) return;
     ch.setView(a, c);
+    ch.computeY();
     if (st.range[which]) { st.range[which] = null; renderTf(); }
-    if (which === 'idx' && st.horizon) { st.horizon = null; renderStrip(book()); }
+    if (which === 'idx') {
+      if (st.horizon) { st.horizon = null; renderStrip(book()); }
+      if (payoffOn()) { updateReadout(null); renderD1(); }
+    }
   }
-  function mirrorPoint(T, S) {
+  function mirrorPoint(T, S, noFollow) {
     const c = shownOpt();
+    T = Math.max(0, T);
     if (!mirrorOn() || blocked(T, book())) { opt.setGhost(null); return; }
     const lvl = S == null ? null : optLevel(c, T, S);
-    follow(opt, 'opt', T);
+    if (!noFollow) follow(opt, 'opt', T);
     opt.setGhost({ T, p: lvl, label: lvl == null ? null : lvl.toFixed(2) });
   }
-  function mirrorFromIdx(p) {
+  function mirrorFromIdx(p, noFollow) {
     if (!p || p.x > idx.plotW || p.y > idx.h - idx.o.timeH) { opt.setGhost(null); return; }
     // in the future zone, the same snapped point the readout uses (BR-16)
     const z = payoffOn() ? zoneAt(idx, p) : null;
-    if (z && z.T) mirrorPoint(z.T, z.S);
-    else mirrorPoint(idx.xToT(p.x), p.y <= idx.mainH ? idx.yToP(p.y) : null);
+    if (z && z.T) mirrorPoint(z.T, z.S, noFollow);
+    else mirrorPoint(idx.xToT(p.x), p.y <= idx.mainH ? idx.yToP(p.y) : null, noFollow);
   }
-  function mirrorFromOpt(p) {
+  function mirrorFromOpt(p, noFollow) {
     if (!p || !mirrorOn() || p.x > opt.plotW || p.y > opt.h - opt.o.timeH) { idx.setGhost(null); return; }
-    const T = opt.xToT(p.x);
+    const T = Math.max(0, opt.xToT(p.x));
     if (blocked(T, book())) { idx.setGhost(null); return; }
     const S = p.y <= opt.mainH ? idxLevel(shownOpt(), T, opt.yToP(p.y)) : null;
-    follow(idx, 'idx', T);
+    if (!noFollow) follow(idx, 'idx', T);
     idx.setGhost({ T, p: S, label: S == null ? null : S.toFixed(2) });
   }
   // After data, a tick, Payoff or the clock change, recompute the mirror for wherever the pointer is.
+  // Never scrolls: only real pointer moves and arrow keys do. Scales first, since a data change can rescale a chart.
   function refreshMirror() {
-    if (idx.pointer) mirrorFromIdx(idx.pointer);
-    else if (st.keyPt && payoffOn()) mirrorPoint(st.keyPt.T, st.keyPt.S);
+    idx.computeY(); opt.computeY();
+    if (idx.pointer) mirrorFromIdx(idx.pointer, true);
+    else if (st.keyPt && payoffOn() && document.activeElement === idx.cv && !opt.pointer) mirrorPoint(st.keyPt.T, st.keyPt.S, true);
     else opt.setGhost(null);
-    if (opt.pointer) mirrorFromOpt(opt.pointer); else idx.setGhost(null);
+    if (opt.pointer) mirrorFromOpt(opt.pointer, true); else idx.setGhost(null);
   }
   // Keyboard: focusing the chart puts the point one candle after Now at the current level (PRD S2/S3).
   $('#idxCanvas').addEventListener('blur', () => { if (!idx.pointer) opt.setGhost(null); });
@@ -970,7 +984,7 @@
     const b = book();
     if (!pointable(b)) return;
     st.keyPt = st.hover = { T: firstT(b), S: snapS(b.S0) };
-    updateReadout(null); idx.invalidate(); opt.invalidate(); renderTable();
+    updateReadout(null); mirrorPoint(st.keyPt.T, st.keyPt.S); idx.invalidate(); opt.invalidate(); renderTable();
   });
 
   let sampleT = 0;
@@ -995,7 +1009,7 @@
     const was = st.pin;
     log('payoff_pin_close');
     setPayoff(() => { st.pin = null; }, 'pin');
-    if (payoffOn()) { st.keyPt = st.hover = { T: was.T, S: was.S }; updateReadout(null); idx.invalidate(); opt.invalidate(); renderTable(); }
+    if (payoffOn()) { st.keyPt = st.hover = { T: was.T, S: was.S }; updateReadout(null); mirrorPoint(was.T, was.S); idx.invalidate(); opt.invalidate(); renderTable(); }
     if (returnFocus) focusNS($(payoffOn() ? '#idxCanvas' : '#payoffBtn'));
   }
 
@@ -1137,6 +1151,7 @@
       if (which === 'idx' && st.horizon) { st.horizon = null; renderStrip(book()); }
     }
     renderTf();
+    refreshMirror();
   }
   document.querySelectorAll('.tfs [data-tf]').forEach(bt => bt.addEventListener('click', () => setTf(bt.closest('.tfs').dataset.chart, +bt.dataset.tf)));
   let tfMenu = null;
@@ -1176,7 +1191,7 @@
     st.range[which] = bt.dataset.range;
     applyRange(chartOf(which), st.range[which]);
     if (which === 'idx' && st.horizon) { st.horizon = null; renderStrip(book()); }
-    cache = null; renderTf(); renderUI();
+    cache = null; renderTf(); renderUI(); refreshMirror();
   }));
   renderTf();
 
@@ -2009,6 +2024,7 @@
     defaultViews();
     if (was && payoffOn()) refit(book());
     renderUI();
+    refreshMirror();
   }
 
   /* ---------- live ticks ---------- */

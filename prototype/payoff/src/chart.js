@@ -270,10 +270,11 @@ class SahiChart {
     if (g.p != null) {
       // a level above or below the view is tagged at that edge with an arrow
       const ty = Math.max(this.o.padTop + 9, Math.min(this.mainH - 9, y));
-      const label = (g.label || g.p.toFixed(this.o.dec)) + (inY ? '' : y < this.o.padTop ? ' ↑' : ' ↓');
+      // out of view: arrow first and a shorter number, so it fits the axis
+      const label = inY ? (g.label || g.p.toFixed(this.o.dec)) : (y < this.o.padTop ? '↑ ' : '↓ ') + (Math.abs(g.p) >= 1000 ? Math.round(g.p) : g.p.toFixed(1));
       this.tag(this.plotW, ty, label, '#2f4f9e', '#fff');
     }
-    const label = Engine.fmtT(Math.round(g.T));
+    const label = Engine.fmtT(Math.max(0, Math.floor(g.T)) + 1e-6);
     ctx.font = '600 11px Inter, system-ui, sans-serif';
     const tw = ctx.measureText(label).width + 14;
     const tx = Math.max(0, Math.min(this.plotW - tw, x - tw / 2));
@@ -327,6 +328,7 @@ class SahiChart {
         if (Math.abs(p.x - this.drag.x) > 3) this.drag.moved = true;
         this.view = { t0: a, t1: b };
         this.pointer = p;
+        this.computeY();
         this.hooks.viewchange && this.hooks.viewchange(this, true);
         this.invalidate();
         return;
@@ -359,6 +361,7 @@ class SahiChart {
       const [a, b] = this.clampView(t0, t1);
       this.view = { t0: a, t1: b };
       this.pointer = p;
+      this.computeY();
       this.hooks.viewchange && this.hooks.viewchange(this, false, true);
       this.invalidate();
     }, { passive: false });
