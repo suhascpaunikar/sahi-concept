@@ -803,16 +803,21 @@
       if (yRaw !== y) { ctx.fillStyle = '#ffd98a'; ctx.font = '700 11px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(yRaw < y ? '▲' : '▼', x, yRaw < y ? y - 10 : y + 12); ctx.textAlign = 'left'; }
       const shownV = b.pretrade ? d.value : heldPrem(l, pt.S, pt.T, b);
       const shownPnl = pointPnl(b, pt.S, pt.T);
-      optCard(ch, taken, `<div class="h num">${esc(E.fmtT(pt.T))}</div><div class="p num"><small>Premium</small>${E.prem(shownV)}</div>` +
-        (d.uncertain ? `<div class="u">Too uncertain to price. Time value left: ${E.prem(d.timeValue)}</div>` : hasRange ? `<div class="r num">Range ${E.prem(d.lo)} to ${E.prem(d.hi)}</div>` : '') +
-        (b.pretrade ? '' : `<div class="r num">P&amp;L <b class="${shownPnl >= 0 ? 'up' : 'down'}">${E.signed(shownPnl)}</b> on ${l.qty}</div>`) +
+      // the P&L leads, as in the index chart's readout; with nothing held the premium takes its place
+      optCard(ch, taken, `<div class="h num">${esc(E.fmtT(pt.T))}</div>` + (b.pretrade
+        ? `<div class="p num"><small>Premium</small>${E.prem(shownV)}</div>` + (hasRange && !d.uncertain ? `<div class="r num">Range ${E.prem(d.lo)} to ${E.prem(d.hi)}</div>` : '')
+        : `<div class="p num ${shownPnl >= 0 ? 'up' : 'down'}"><small>P&amp;L</small>${E.signed(shownPnl)}</div>` +
+          (!d.uncertain && Math.abs(d.pnlHi - d.pnlLo) >= 1 ? `<div class="r num">Range ${E.signed(d.pnlLo)} to ${E.signed(d.pnlHi)}</div>` : '') +
+          `<div class="r num">Premium ${E.prem(shownV)}</div>`) +
+        (d.uncertain ? `<div class="u">Too uncertain to price. Time value left: ${E.prem(d.timeValue)}</div>` : '') +
         `<div class="ft">Model estimate, not a forecast</div>`, x, y, stale);
     } else if (nx >= 0 && nx <= ch.plotW) {
       const cur = ltp(l.c), y = clampY(ch.pToY(cur));
       dot(ctx, nx, y, stale ? '#c0c6d2' : '#ffd98a', 4.5);
       const pnlNow = b.pretrade ? 0 : l.side * l.qty * (cur - l.avg);
-      optCard(ch, taken, `<div class="h num">Now · ${esc(E.fmtT(b.nowT))}</div><div class="p num"><small>${b.pretrade ? 'Last price' : 'Premium'}</small>${E.prem(cur)}</div>` +
-        (b.pretrade ? '' : `<div class="r num">P&amp;L <b class="${pnlNow >= 0 ? 'up' : 'down'}">${E.signed(pnlNow)}</b> on ${l.qty}</div>`) +
+      optCard(ch, taken, `<div class="h num">Now · ${esc(E.fmtT(b.nowT))}</div>` + (b.pretrade
+        ? `<div class="p num"><small>Last price</small>${E.prem(cur)}</div>`
+        : `<div class="p num ${pnlNow >= 0 ? 'up' : 'down'}"><small>P&amp;L</small>${E.signed(pnlNow)}</div><div class="r num">Premium ${E.prem(cur)}</div>`) +
         `<div class="ft">Model estimate, not a forecast</div>`, nx, y, stale);
     }
     if (pts.length > 2) { const [lx, lv] = pts[pts.length - 1]; placePill(ctx, taken, [{ x: lx - 4, y: ch.pToY(lv) - 6, align: 'right', valign: 'bottom' }, { x: lx - 4, y: ch.pToY(lv) + 6, align: 'right' }], `If Nifty stays at ${E.level(b.S0)}`, { fg: stale ? '#9aa2b2' : '#cbbcff', clampH: [topY, plotBottom], required: false }, ch.plotW); }
