@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sahi Payoff Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: Sahi Scalper split view at desktop size (index chart left, option chart right, icon rails on both sides),
+   scaled down to fit smaller windows. Single dark theme, matching the Sahi platform screenshots. */
+:root {
+  color-scheme: dark;
+  --app: #070709;
+  --topbar: #1a1519;
+  --panel: #12161d;
+  --panel-2: #181d26;
+  --panel-3: #212835;
+  --chart-bg: #12161d;
+  --chart-grid: rgba(255, 255, 255, 0.035);
+  --line: #1c2330;
+  --line-2: #2a3342;
+  --text: #e9ecf1;
+  --text-2: #a7afbc;
+  --text-3: #6c7586;
+  --up: #0b9981;
+  --up-2: #22b89c;
+  --chg: #28bcd0;
+  --down: #f23645;
+  --down-2: #f0596b;
+  --buy: #2096a6;
+  --sell: #c43a5b;
+  --amber: #f5a524;
+  --amber-line: #ab7b6c;
+  --blue: #2e8cf0;
+  --violet: #a48bff;
+  --breakeven: #f2b84b;
+  --cone: #d8687c;
+  --profit-tint: rgba(31, 164, 142, 0.13);
+  --future-tint: rgba(120, 150, 210, 0.045);
+  --cross: rgba(200, 208, 222, 0.42);
+  --tooltip: #e8e8f1;
+  --tooltip-ink: #2e3138;
+  --cap: #2e3138;
+  --scrim: rgba(3, 6, 10, 0.6);
+  --warn-bg: #2f2410;
+  --warn-ink: #f4c46a;
+  --err-bg: #3a1419;
+  --err-ink: #ff98a4;
+  --ok-bg: #0f2c27;
+  --ok-ink: #6fe0c8;
+  --proto: #7c6cf2;
+  --font: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--app); color: var(--text); font: 13px/1.4 var(--font); -webkit-font-smoothing: antialiased; overflow: hidden; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .45; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.num { font-variant-numeric: tabular-nums; }
+.up { color: var(--up-2); } .down { color: var(--down-2); }
+.chg.up, .sub.up { color: var(--chg); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+#fit { position: fixed; inset: 0; overflow: hidden; }
+#app { position: absolute; top: 0; left: 0; transform-origin: 0 0; display: grid; grid-template-rows: 62px 1fr; background: var(--app); }
+
+/* ---------- top bar ---------- */
+.top { display: flex; align-items: center; gap: 14px; padding: 0 22px 0 16px; position: relative; background: var(--topbar); }
+.logo { width: 34px; height: 34px; border-radius: 9px; background: #f4f6f8; display: grid; place-items: center; }
+.logo svg { width: 22px; height: 22px; }
+.ib { width: 30px; height: 30px; display: inline-grid; place-items: center; border-radius: 6px; color: var(--text-2); }
+.ib:hover { background: var(--panel-3); color: var(--text); }
+.inst { display: flex; align-items: baseline; gap: 6px; font-size: 15px; font-weight: 600; letter-spacing: .01em; }
+.inst .chg { font-size: 12.5px; font-weight: 500; }
+.inst .ib { width: 22px; height: 22px; align-self: center; }
+.onetap { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; }
+.tap { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 16px 0 13px; border-radius: 999px; border: 1.5px solid var(--amber-line); background: #29252c; box-shadow: 0 0 10px rgba(171, 123, 108, .25); font-size: 15px; font-weight: 600; }
+.tap svg { fill: var(--amber); stroke: none; width: 16px; height: 16px; }
+.tap[aria-pressed="false"] { border-color: var(--line-2); background: var(--panel-2); color: var(--text-2); box-shadow: none; }
+.tap[aria-pressed="false"] svg { fill: var(--text-3); }
+.navr { margin-left: auto; display: flex; align-items: center; gap: 28px; }
+.navr > button { font-size: 14px; font-weight: 600; color: var(--text); }
+.pnlpill { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px 0 14px; border-radius: 999px; border: 1px solid var(--line-2); font-size: 15px; font-weight: 600; }
+.pnlpill small { font-size: 12px; color: var(--text-2); font-weight: 500; }
+
+/* ---------- body ---------- */
+.body { display: grid; grid-template-columns: 64px 1fr 78px; min-height: 0; }
+.rail { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 0 12px; min-height: 0; }
+.rail .ri { width: 58px; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 8px 2px; border-radius: 10px; color: var(--text-2); font-size: 10px; line-height: 1.15; text-align: center; }
+.rail .ri svg.i { width: 20px; height: 20px; }
+.rail .ri:hover { color: var(--text); }
+.rail .ri.on { color: var(--text); font-weight: 600; }
+.rail .ri.on .ic { background: #1d2637; }
+.rail .ri .ic { width: 40px; height: 32px; display: grid; place-items: center; border-radius: 10px; }
+.rail .sep { flex: 1; }
+.rail.r { border-left: 1px solid var(--line); gap: 2px; padding-top: 10px; }
+.rail.r .ri { width: 72px; padding: 6px 2px; }
+.rail.r .ri .ic { height: 26px; }
+.rail.r .ri.on { color: var(--blue); }
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: #0f5f63; display: grid; place-items: center; font-weight: 600; color: #e6fbf7; margin-top: 8px; }
+.work { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 2px 10px 10px 2px; min-width: 0; min-height: 0; position: relative; }
+
+/* ---------- panels ---------- */
+.panel { container-type: inline-size; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: clip; position: relative; }
+.ph { height: 46px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 14px; border-bottom: 1px solid var(--line); }
+.ph .nm { display: flex; align-items: baseline; gap: 7px; font-weight: 600; font-size: 14px; white-space: nowrap; min-width: 0; flex: 1 1 auto; overflow: hidden; }
+.ph .nm > * { flex: none; }
+.ph .nm #optTitle { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ph .nm .sub { font-weight: 500; font-size: 11.5px; }
+.ph .nm u { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--text-3); }
+.ud { display: inline-grid; place-items: center; width: 14px; height: 18px; color: var(--text-2); align-self: center; border-radius: 3px; }
+.ud:hover { color: var(--text); background: var(--panel-3); }
+.ud svg { width: 10px; height: 14px; }
+.ph .tools { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.ph .tools .ib { width: 28px; height: 28px; }
+.tb { height: 36px; flex: none; display: flex; align-items: center; gap: 1px; padding: 0 8px; font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; }
+.tb .tf { padding: 4px 5px; border-radius: 5px; font-weight: 500; display: inline-flex; align-items: center; gap: 2px; }
+.tb .tf.on { color: var(--text); font-weight: 700; }
+.tb .tfs, .tb .rgs { display: contents; }
+.tfmenu { position: fixed; z-index: 60; min-width: 160px; padding: 4px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line-2); box-shadow: 0 12px 30px -10px rgba(0, 0, 0, .7); display: grid; }
+.tfmenu button { display: flex; justify-content: space-between; gap: 18px; padding: 7px 10px; border-radius: 6px; font-size: 12.5px; color: var(--text-2); text-align: left; }
+.tfmenu button:hover, .tfmenu button:focus-visible { background: var(--panel-3); color: var(--text); }
+.tfmenu button[aria-checked="true"] { color: var(--text); font-weight: 600; }
+.tfmenu .k { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.src-pill { position: absolute; left: 52px; top: 14px; z-index: 2; height: 24px; display: inline-flex; align-items: center; padding: 0 8px; border-radius: 5px; font-size: 11px; font-weight: 600; color: #c4b5fd; background: rgba(30, 24, 52, .92); border: 1px solid rgba(167, 139, 250, .45); pointer-events: none; }
+.src-pill:empty { display: none; }
+.tb .tf:hover { color: var(--text); }
+.tb .vsep { width: 1px; height: 16px; background: var(--line-2); margin: 0 6px; flex: none; }
+.tb .right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-left: 6px; }
+.tb .tool { height: 28px; min-width: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 2px; border-radius: 6px; color: var(--text-2); padding: 0 4px; }
+.tb .tool:hover { background: var(--panel-3); color: var(--text); }
+.tb .tool svg.i { width: 18px; height: 18px; }
+.tb .tool .cv { width: 9px; height: 9px; stroke-width: 2.2; }
+
+@container (max-width: 680px) { .tb .x1 { display: none; } }
+@container (max-width: 610px) { .tb .x2 { display: none; } .ph .tools .ib:nth-child(2) { display: none; } }
+@container (max-width: 560px) { .ph .nm .sub { display: none; } }
+@container (max-width: 720px) { #optChg { display: none; } #optPanel .ph .tools .ib:nth-child(2) { display: none; } }
+@container (max-width: 600px) { #optPanel .ph .tools { display: none; } }
+/* Payoff toolbar button */
+.payoff-btn { height: 28px; display: inline-flex; align-items: center; gap: 7px; padding: 0 8px 0 9px; margin-left: 4px; border-radius: 7px; border: 1px solid var(--line-2); color: var(--text); font-weight: 600; font-size: 12.5px; background: var(--panel-2); }
+.payoff-btn:hover { border-color: #3a4558; background: var(--panel-3); }
+.payoff-btn svg.i { width: 16px; height: 16px; color: var(--breakeven); }
+.payoff-btn[aria-pressed="true"] { background: #2a2312; border-color: var(--breakeven); color: #ffe2a6; }
+.payoff-btn.peek { border-color: var(--breakeven); box-shadow: 0 0 0 3px rgba(242, 184, 75, .16); }
+.payoff-btn:disabled { opacity: .45; }
+
+.cw { position: relative; flex: 1; min-height: 0; overflow: clip; }
+.cw canvas { position: absolute; inset: 0; display: block; }
+.cw canvas.grab { cursor: grab; }
+.cw canvas:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; border-radius: 0 0 8px 8px; }
+.badge-n { position: absolute; left: 14px; top: 14px; height: 24px; padding: 0 7px; display: inline-flex; align-items: center; gap: 4px; border-radius: 5px; background: var(--panel-2); border: 1px solid var(--line-2); font-size: 11.5px; font-weight: 600; color: var(--text); z-index: 2; pointer-events: none; }
+.badge-n svg { width: 8px; height: 8px; fill: currentColor; stroke: none; }
+.wm { position: absolute; left: 14px; bottom: 36px; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 6px; background: rgba(20, 26, 36, .92); border: 1px solid var(--line-2); font-size: 10.5px; font-weight: 600; z-index: 2; pointer-events: none; }
+.wm svg { width: 13px; height: 13px; }
+.oi-label { position: absolute; left: 16px; top: 0; font-size: 11.5px; color: var(--text-2); z-index: 2; pointer-events: none; }
+.oi-label b { color: var(--blue); font-weight: 500; }
+
+/* order controls in the option panel header */
+.ord { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
+.ph .tools { flex: none; gap: 0; }
+.ph .tools .ib { border-radius: 0; border-left: 1px solid #1d2128; width: 32px; }
+.ph .tools .ib:first-child { border-left: 0; }
+.mkt { white-space: nowrap; height: 30px; display: inline-flex; align-items: center; gap: 4px; padding: 0 9px; border-radius: 6px; font-size: 10.5px; font-weight: 600; line-height: 1.05; color: #fff; text-align: left; }
+.mkt svg { width: 12px; height: 12px; fill: #ffd65a; stroke: none; }
+.mkt.buy { background: var(--buy); } .mkt.sell { background: var(--sell); }
+.mkt:hover { filter: brightness(1.08); }
+.qty { height: 30px; display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--line-2); border-radius: 7px; padding: 0 3px; }
+.qty button { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; color: var(--text); background: var(--panel-3); }
+.qty button:hover { background: #2c3445; }
+.qty .qv { min-width: 40px; text-align: center; line-height: 1; }
+.qty .qv b { display: block; font-size: 13px; }
+.qty .qv small { font-size: 9px; color: var(--text-3); }
+
+/* ---------- payoff header strip (over the index chart) ---------- */
+.pstrip { position: absolute; left: 0; right: 64px; top: 0; padding-top: calc(8px + var(--bh, 0px)) !important; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 8px 12px; background: linear-gradient(180deg, rgba(18, 22, 29, .98), rgba(18, 22, 29, .9)); border-bottom: 1px solid var(--line); }
+.pstrip .sum { font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+.pstrip .sum .muted { color: var(--text-2); font-weight: 500; }
+.chips { display: inline-flex; border: 1px solid var(--line-2); border-radius: 7px; overflow: hidden; }
+.chips button { padding: 4px 10px; font-size: 12px; font-weight: 500; color: var(--text-2); border-right: 1px solid var(--line-2); }
+.chips button:last-child { border-right: 0; }
+.chips button[aria-pressed="true"] { background: var(--panel-3); color: var(--text); font-weight: 600; }
+.ochip { font-size: 11.5px; padding: 3px 8px; border-radius: 999px; background: var(--panel-3); color: var(--text-2); border: 1px solid var(--line-2); }
+.mlabel { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-3); margin-left: auto; white-space: nowrap; }
+.mlabel button { color: var(--text-3); display: inline-grid; place-items: center; }
+.mlabel button:hover { color: var(--text); }
+.mlabel svg.i { width: 14px; height: 14px; }
+.mode { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #2a2312; color: #ffd98a; border: 1px solid #5c4a20; white-space: nowrap; }
+
+/* readout */
+.readout { position: absolute; z-index: 6; width: max-content; min-width: 196px; max-width: 250px; padding: 12px 15px 11px; border-radius: 12px; background: rgba(23, 29, 39, .97); border: 1px solid var(--line-2); box-shadow: 0 12px 30px -10px rgba(0, 0, 0, .7); pointer-events: none; }
+.readout .h { font-size: 12.5px; color: var(--text-2); font-weight: 500; }
+/* the P&L leads: the boldest line in the card, at the v1.2 size (18px) */
+.readout .p { display: flex; align-items: baseline; gap: 7px; font-size: 18px; font-weight: 700; line-height: 1.2; margin-top: 6px; letter-spacing: -.01em; }
+.readout .p small { font-size: 11px; font-weight: 600; color: var(--text-2); letter-spacing: 0; }
+.readout .r { font-size: 12.5px; color: var(--text-2); margin-top: 7px; }
+.readout .r b { font-weight: 600; }
+.readout .u { font-size: 11.5px; color: var(--warn-ink); margin-top: 7px; line-height: 1.35; }
+.readout .ft { margin-top: 11px; padding-top: 9px; border-top: 1px solid var(--line-2); font-size: 11px; color: var(--text-3); }
+.readout.stale .p, .readout.stale .r { color: var(--text-3) !important; }
+.hint { position: absolute; z-index: 5; max-width: 260px; padding: 8px 10px; border-radius: 8px; background: rgba(23, 29, 39, .94); border: 1px dashed #4a5568; font-size: 12px; color: var(--text-2); pointer-events: none; }
+.cmsg { position: absolute; inset: 0; display: grid; place-items: center; z-index: 5; pointer-events: none; }
+.cmsg div { padding: 12px 16px; border-radius: 9px; background: rgba(23, 29, 39, .96); border: 1px solid var(--line-2); font-size: 13px; color: var(--text); max-width: 360px; text-align: center; }
+.loading { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); z-index: 6; font-size: 12px; padding: 5px 10px; border-radius: 999px; background: var(--panel-3); color: var(--text-2); border: 1px solid var(--line-2); }
+
+/* S3 payoff table */
+.ptable { position: absolute; inset: 0; z-index: 5; background: var(--panel); display: flex; flex-direction: column; padding-top: var(--bh, 0px); }
+.ptable .tt { flex: none; padding: 12px 14px 10px; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ptable .tt h3 { margin: 0; font-size: 13.5px; font-weight: 600; }
+.ptable .tt span { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+.ptable .scroll { flex: 1; overflow: auto; min-height: 0; }
+.ptable table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.ptable th { position: sticky; top: 0; background: var(--panel-2); text-align: left; font-weight: 500; font-size: 11px; color: var(--text-3); padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; z-index: 1; }
+.ptable th.n, .ptable td.n { text-align: right; }
+.ptable td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.ptable tr.g td { background: rgba(255, 255, 255, .02); font-size: 11px; color: var(--text-2); font-weight: 600; padding: 6px 10px; letter-spacing: .02em; }
+.ptable tr.leg:hover td { background: rgba(46, 140, 240, .07); }
+.ptable td .rg { display: block; font-size: 10.5px; color: var(--text-3); margin-top: 1px; white-space: nowrap; }
+.ptable td .unc { display: block; font-size: 10.5px; color: var(--warn-ink); margin-top: 1px; }
+/* squared off before the point: shown, but greyed out like a disabled control */
+.ptable td.off, .ptable td.off span { color: var(--text-3); }
+.ptable td.off [data-tip] { cursor: help; text-decoration: underline dotted rgba(108, 117, 134, .6); text-underline-offset: 3px; }
+.side-b { color: var(--up-2); font-weight: 600; } .side-s { color: var(--down); font-weight: 600; }
+.st { display: inline-block; font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 999px; white-space: nowrap; background: var(--panel-3); color: var(--text-2); }
+.st.live { background: var(--ok-bg); color: var(--ok-ink); }
+.st.today { background: var(--warn-bg); color: var(--warn-ink); }
+.st.exp, .st.set { background: #222833; color: #b8c0cc; }
+.st.sq { background: #24203a; color: #c7bcff; }
+.ptable .foot { flex: none; border-top: 1px solid var(--line-2); background: var(--panel-2); font-variant-numeric: tabular-nums; }
+.ptable .foot > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 14px; font-size: 12.5px; border-bottom: 1px solid var(--line); }
+.ptable .foot > div:last-child { border-bottom: 0; }
+.ptable .foot .tot { font-size: 14px; font-weight: 700; }
+.ptable .foot .tot small { display: block; font-size: 11px; font-weight: 500; color: var(--text-2); text-align: right; }
+.ptable .foot .lbl { color: var(--text-2); }
+.ptable .foot .model { font-size: 10.5px; color: var(--text-3); justify-content: flex-start; gap: 6px; }
+.ptable.stale td, .ptable.stale .foot { color: var(--text-3); }
+.ptable.stale .up, .ptable.stale .down { color: var(--text-3); }
+
+.skel { display: inline-block; height: 10px; width: 56px; border-radius: 4px; background: linear-gradient(90deg, #1f2633, #2a3242, #1f2633); background-size: 200% 100%; animation: sk 1s linear infinite; vertical-align: middle; }
+@keyframes sk { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+.d1.stale .vals, .d1.stale .vals .up, .d1.stale .vals .down { color: var(--text-3) !important; }
+button.ochip { cursor: default; }
+button.ochip:focus-visible { outline: 2px solid var(--blue); }
+/* N2 banner */
+.n2 { position: absolute; left: 2px; right: 10px; top: 2px; z-index: 20; display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 8px; font-size: 12.5px; background: var(--warn-bg); color: var(--warn-ink); border: 1px solid #5a4418; }
+.n2.err { background: var(--err-bg); color: var(--err-ink); border-color: #6b2730; }
+.n2.closed { background: #16202e; color: #b9cbe6; border-color: #2a3a52; }
+.n2 svg.i { width: 16px; height: 16px; }
+.n2 .act { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.n2 .act button { padding: 4px 10px; border-radius: 6px; border: 1px solid currentColor; font-weight: 600; font-size: 12px; }
+.n2 .act button.x { border: 0; padding: 2px; }
+
+/* tooltip with key caps, like the 1-Tap tooltip */
+.tip { position: fixed; z-index: 100; display: flex; align-items: center; gap: 10px; padding: 6px 7px 6px 14px; border-radius: 999px; background: var(--tooltip); color: var(--tooltip-ink); font-size: 12.5px; font-weight: 500; box-shadow: 0 8px 24px -8px rgba(0, 0, 0, .7); pointer-events: none; white-space: nowrap; }
+.tip.wrap { white-space: normal; border-radius: 12px; padding: 8px 8px 8px 14px; line-height: 1.4; }
+.tip.nocaps { padding-right: 14px; }
+.tip .caps { padding-left: 10px; border-left: 1px solid #c2c3cf; align-self: stretch; align-items: center; }
+.caps { display: inline-flex; gap: 4px; flex: none; }
+.caps kbd { font: 600 11px var(--font); min-width: 22px; height: 22px; padding: 0 6px; display: inline-grid; place-items: center; border-radius: 5px; background: var(--cap); border: 0; color: #fff; }
+
+/* N1 coach mark */
+.coach { position: fixed; z-index: 90; width: 290px; padding: 14px 14px 12px; border-radius: 11px; background: #1d2431; border: 1px solid #3a4558; box-shadow: 0 18px 40px -14px rgba(0, 0, 0, .8); }
+.coach::before { content: ""; position: absolute; top: -6px; right: 40px; width: 12px; height: 12px; background: #1d2431; border-left: 1px solid #3a4558; border-top: 1px solid #3a4558; transform: rotate(45deg); }
+.coach .new { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; color: var(--breakeven); text-transform: uppercase; }
+.coach p { margin: 5px 0 12px; font-size: 13px; line-height: 1.45; }
+.coach .row { display: flex; justify-content: flex-end; gap: 8px; }
+.btn { height: 30px; padding: 0 12px; border-radius: 7px; font-weight: 600; font-size: 12.5px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn.pri { background: var(--blue); color: #fff; }
+.btn.pri:hover { filter: brightness(1.08); }
+.btn.sec { border: 1px solid var(--line-2); color: var(--text); background: var(--panel-2); }
+.btn.sec:hover { background: var(--panel-3); }
+.btn.ter { color: var(--text-2); }
+.btn.ter:hover { color: var(--text); }
+.btn.wide { width: 100%; height: 34px; }
+.btn .spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .35); border-top-color: #fff; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* D1 pinned card */
+.d1 { position: absolute; z-index: 8; width: 270px; overflow-y: auto; border-radius: 11px; background: #1a202b; border: 1px solid #3a4558; box-shadow: 0 18px 44px -14px rgba(0, 0, 0, .85); padding: 12px 13px 11px; }
+.d1 .hd { display: flex; align-items: flex-start; gap: 8px; }
+.d1 .hd h4 { margin: 0; font-size: 12.5px; font-weight: 600; line-height: 1.35; flex: 1; }
+.d1 .hd h4 small { display: block; color: var(--text-3); font-weight: 500; font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 2px; }
+.d1 .vals { margin: 10px 0 8px; display: grid; gap: 4px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.d1 .vals .big { font-size: 17px; font-weight: 700; }
+.d1 .vals .m { color: var(--text-2); }
+.d1 .note { font-size: 11.5px; color: var(--text-2); line-height: 1.4; padding: 8px 9px; background: rgba(255, 255, 255, .03); border-radius: 7px; margin-bottom: 9px; }
+.d1 .acts { display: grid; gap: 6px; }
+.d1 .helper { font-size: 11px; color: var(--text-3); margin-top: -2px; }
+.d1 .ml { margin-top: 9px; font-size: 10.5px; color: var(--text-3); display: flex; align-items: center; gap: 5px; }
+.d1 .ml svg.i { width: 13px; height: 13px; }
+.d1 .proto-note { font-size: 11px; color: #c8bfff; background: rgba(124, 108, 242, .12); border: 1px dashed rgba(124, 108, 242, .5); border-radius: 7px; padding: 6px 8px; margin-bottom: 8px; }
+
+/* M1 modal */
+.scrim { position: fixed; inset: 0; z-index: 70; background: var(--scrim); display: grid; place-items: center; }
+.m1 { width: 440px; max-width: calc(100vw - 32px); border-radius: 13px; background: #171d27; border: 1px solid #3a4558; box-shadow: 0 30px 70px -20px rgba(0, 0, 0, .9); }
+.m1 .mh { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 10px; }
+.m1 .mh h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.m1 .mb { padding: 0 18px 6px; display: grid; gap: 10px; font-size: 13px; }
+.m1 .mb .pos { color: var(--text-2); font-size: 12.5px; }
+.m1 .mb .order { padding: 10px 12px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--line-2); display: grid; gap: 4px; }
+.m1 .mb .pl { font-weight: 600; font-variant-numeric: tabular-nums; }
+.m1 .mb .tn { font-size: 12px; color: var(--text-2); line-height: 1.45; }
+.m1 .mb .msg { padding: 9px 11px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-ink); font-size: 12.5px; }
+.m1 .mb .helper { font-size: 12px; color: var(--text-3); }
+.m1 .mf { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 18px 16px; }
+
+/* N3 toast */
+.toasts { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 95; display: grid; gap: 8px; justify-items: center; }
+.toast { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 14px; border-radius: 10px; background: #1f2633; border: 1px solid #3a4558; font-size: 13px; box-shadow: 0 14px 34px -12px rgba(0, 0, 0, .8); }
+.toast.ok svg.i { color: var(--up-2); } .toast.err { border-color: #6b2730; } .toast.err svg.i { color: var(--down); }
+.toast button { color: var(--text-3); display: grid; place-items: center; }
+
+/* popovers: positions and option chain */
+.pop { position: fixed; z-index: 60; max-width: calc(100vw - 110px); background: #161c26; border: 1px solid #344052; border-radius: 12px; box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .85); display: flex; flex-direction: column; max-height: 76vh; }
+.pop .poph { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.pop .poph h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.pop .popb { overflow: auto; }
+.pop table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.pop th { text-align: left; font-weight: 500; font-size: 11px; color: var(--text-3); padding: 7px 12px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #161c26; }
+.pop td { padding: 7px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.pop .n { text-align: right; }
+.pop .xb { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line-2); }
+.pop .xb:hover { background: var(--panel-3); }
+.pop .empty { padding: 22px 14px; color: var(--text-2); text-align: center; }
+.chain td.k { text-align: center; font-weight: 600; background: rgba(255, 255, 255, .02); }
+.chain td.atm { color: var(--breakeven); }
+.chain .cp { width: 100%; text-align: right; padding: 2px 6px; border-radius: 5px; }
+.chain .cp.pe { text-align: left; }
+.chain .cp:hover { background: rgba(46, 140, 240, .14); }
+.chain .cp.sel { background: rgba(46, 140, 240, .22); color: #fff; }
+.chain .ex { display: flex; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.chain .ex button { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line-2); font-size: 12px; color: var(--text-2); }
+.chain .ex button[aria-pressed="true"] { background: var(--panel-3); color: var(--text); border-color: #3a4558; }
+
+/* ---------- prototype controls (not part of the product) ---------- */
+.demo { position: fixed; left: 10px; top: 10px; bottom: 10px; z-index: 80; width: 312px; display: flex; flex-direction: column; border-radius: 13px; background: #14111f; border: 1px solid #3b3366; box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .9); font-size: 12px; }
+.demo .dh { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #2a2450; }
+.demo .dh b { font-size: 12.5px; }
+.demo .dh .tag { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #c8bfff; background: rgba(124, 108, 242, .18); padding: 2px 6px; border-radius: 4px; }
+.demo .dh button { margin-left: auto; color: #b7add9; }
+.demo .db { overflow: auto; padding: 10px 12px 12px; display: grid; gap: 12px; }
+.demo .grp { display: grid; gap: 6px; }
+.demo .gl { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #9b91c8; }
+.demo .seg { display: flex; flex-wrap: wrap; gap: 5px; }
+.demo .seg button { padding: 5px 8px; border-radius: 999px; border: 1px solid #2f2a52; color: #cfc9ea; font-size: 11.5px; background: #1b1730; }
+.demo .seg button[aria-pressed="true"] { background: var(--proto); color: #fff; border-color: var(--proto); }
+.demo select { width: 100%; padding: 6px 8px; border-radius: 8px; background: #1b1730; color: #e8e4ff; border: 1px solid #2f2a52; font: inherit; }
+.demo .keys { display: grid; gap: 5px; color: #cfc9ea; }
+.demo .keys div { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.demo .keys .caps kbd { background: #221d3c; border-color: #4a4380; }
+.demo .row { display: flex; gap: 6px; flex-wrap: wrap; }
+.demo .row button { padding: 6px 9px; border-radius: 8px; border: 1px solid #2f2a52; color: #e8e4ff; background: #1b1730; font-size: 11.5px; }
+.demo .row button:hover { border-color: var(--proto); }
+.demo .log { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; color: #b7add9; display: grid; gap: 2px; max-height: 96px; overflow: auto; }
+.demo .note { color: #a59cc9; line-height: 1.4; }
+.demo.min .db { display: none; }
+.demo.min { width: auto; top: var(--pill-top, 12px); bottom: auto; left: var(--pill-left, 14px); background: transparent; border: 0; box-shadow: none; }
+.dpill { width: 56px; padding: 8px 0 7px; display: flex; flex-direction: column; align-items: center; gap: 4px; border-radius: 10px; background: #1f1a33; border: 1px dashed #6a5ec4; color: #d3ccff; font-size: 10px; font-weight: 600; }
+.dpill:hover { background: #2a2346; }
+.dpill svg.i { width: 18px; height: 18px; }
+#fit.docked { left: 332px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9.5 4v16"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.5 2 4.5 13.5h6.2L9.8 22l9.2-12.2h-6.3z"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-4.3-4.3"/></symbol>
+    <symbol id="i-ud" viewBox="0 0 10 14"><path d="M5 1 9 5.5H1zM5 13 1 8.5h8z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-alarm" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.2 1.6M4.5 3.5 2.2 5.8M19.5 3.5l2.3 2.3"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M18 21l-6-4.3L6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5"/></symbol>
+    <symbol id="i-cross" viewBox="0 0 24 24"><path d="M12 3v7M12 14v7M3 12h7M14 12h7"/></symbol>
+    <symbol id="i-fx" viewBox="0 0 24 24"><path d="M9.5 20c-1.5 0-2-1-1.7-2.4L10.3 6C10.7 4.4 11.6 4 13 4M7 9h6.5M14 12l5 6M19 12l-5 6"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><path d="M16.75 13.5v6.5M13.5 16.75H20"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20l1.2-4.6L15.6 5a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8zM14 6.6l3.4 3.4M5 15.5 8.5 19"/></symbol>
+    <symbol id="i-candle" viewBox="0 0 24 24"><path d="M8 3v3M8 16v5M16 4v4M16 17v3"/><rect x="5.5" y="6" width="5" height="10" rx="1"/><rect x="13.5" y="8" width="5" height="9" rx="1"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.1"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.4"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.2v.1"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-payoff" viewBox="0 0 24 24"><path d="M3 20h18" opacity=".5"/><path d="M3 12h18" stroke-dasharray="2 2.4" opacity=".7"/><path d="M3 16.5h7L20.5 5"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M9.5 14.5 14.5 9.5M10.6 6.2l1.5-1.5a4.2 4.2 0 0 1 6 6l-1.5 1.5M13.4 17.8l-1.5 1.5a4.2 4.2 0 0 1-6-6l1.5-1.5"/></symbol>
+    <symbol id="i-stocks" viewBox="0 0 24 24"><path d="M3.5 4v16h17"/><path d="m7 15 3.5-4 3 2.5L19 7"/></symbol>
+    <symbol id="i-seller" viewBox="0 0 24 24"><path d="M12 3c-4.4 0-8 3.2-8 7.2 0 1.6.6 3 1.6 4.2L12 21l6.4-6.6c1-1.2 1.6-2.6 1.6-4.2C20 6.2 16.4 3 12 3z"/><path d="m9 10 2 2 4-4"/></symbol>
+    <symbol id="i-binoc" viewBox="0 0 24 24"><circle cx="6.5" cy="15.5" r="3.5"/><circle cx="17.5" cy="15.5" r="3.5"/><path d="M10 15.5h4M5 12l2.5-7h2L10 12M19 12l-2.5-7h-2L14 12"/></symbol>
+    <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M10 9.5V20"/></symbol>
+    <symbol id="i-rupee" viewBox="0 0 24 24"><path d="M7 4.5h10M7 9h10M7 4.5h3.5a4.5 4.5 0 0 1 0 9H7l8 6.5"/></symbol>
+    <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M8 9v6M11 9v6M14 9v6M17 9v6"/></symbol>
+    <symbol id="i-chain" viewBox="0 0 24 24"><path d="M10 13.5a4 4 0 0 0 5.7.4l2.6-2.6a4 4 0 0 0-5.7-5.7l-1.4 1.4M14 10.5a4 4 0 0 0-5.7-.4l-2.6 2.6a4 4 0 0 0 5.7 5.7l1.4-1.4"/></symbol>
+    <symbol id="i-depth" viewBox="0 0 24 24"><path d="M4 7h9M4 11h13M4 15h7M4 19h11M17 4l3 3-3 3"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></symbol>
+    <symbol id="i-oi" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="13" rx="2"/><path d="M8 13v-3M12 13V8M16 13v-5M8 21h8M12 17v4"/></symbol>
+    <symbol id="i-brief" viewBox="0 0 24 24"><rect x="3.5" y="7" width="17" height="12.5" rx="2"/><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M3.5 12.5h17"/></symbol>
+    <symbol id="i-atm" viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+    <symbol id="i-heat" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M3.5 10h17M3.5 15h17M10 4v16M15 10v10"/></symbol>
+    <symbol id="i-sahi" viewBox="0 0 24 24"><path d="M5 9.2 12.6 4h6.4l-7.6 5.2zM5 14.8 12.6 9.6H19l-7.6 5.2zM5 20.2l7.6-5.2H19l-7.6 5.2z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5"/><path d="M12 14v7"/></symbol>
+  </defs>
+</svg>
+<div id="fit">
+<div id="app">
+  <header class="top">
+    <div class="logo" aria-label="Sahi"><svg viewBox="0 0 24 24" style="color:#0b0e13"><use href="#i-sahi"/></svg></div>
+    <button class="ib" aria-label="Layout"><svg class="i"><use href="#i-sidebar"/></svg></button>
+    <button class="ib" style="width:20px;margin-left:-12px" aria-label="Layout options"><svg class="i" style="width:14px;height:14px"><use href="#i-chev"/></svg></button>
+    <div class="inst"><span>NIFTY50</span> <span class="num" id="topIdx">22721.95</span> <span class="chg num up" id="topChg">+358.60 (1.60%)</span> <button class="ib" aria-label="Change instrument"><svg class="i" style="width:15px;height:15px"><use href="#i-chev"/></svg></button></div>
+    <div class="onetap">
+      <button class="tap" id="tapBtn" aria-pressed="true" data-tip="tap"><svg><use href="#i-bolt"/></svg><span id="tapLbl">1-Tap ON</span></button>
+      <button class="ib" aria-label="Instant trade settings"><svg class="i"><use href="#i-gear"/></svg></button>
+    </div>
+    <nav class="navr">
+      <button>Holdings</button>
+      <button>Orders</button>
+      <button id="navPositions">Positions</button>
+      <button class="pnlpill" id="pnlPill"><small>P&amp;L:</small><span class="num" id="pnlTop">₹0.00</span><svg class="i" style="width:14px;height:14px;color:var(--text-2)"><use href="#i-chev"/></svg></button>
+    </nav>
+  </header>
+  <div class="body">
+    <nav class="rail l" aria-label="Sahi sections">
+      <button class="ri on"><span class="ic"><svg class="i" style="fill:none"><use href="#i-bolt"/></svg></span>Scalper</button>
+      <button class="ri"><span class="ic"><svg class="i"><use href="#i-link"/></svg></span>Options<br>Trader</button>
+      <button class="ri"><span class="ic"><svg class="i"><use href="#i-stocks"/></svg></span>Stocks</button>
+      <button class="ri"><span class="ic"><svg class="i"><use href="#i-seller"/></svg></span>Options<br>Seller</button>
+      <button class="ri"><span class="ic"><svg class="i"><use href="#i-binoc"/></svg></span>Market<br>Watch</button>
+      <button class="ri"><span class="ic"><svg class="i"><use href="#i-layout"/></svg></span>Custom</button>
+      <span class="sep"></span>
+      <button class="ri" aria-label="Funds"><span class="ic"><svg class="i"><use href="#i-rupee"/></svg></span></button>
+      <button class="ri" aria-label="Full screen"><span class="ic"><svg class="i"><use href="#i-full"/></svg></span></button>
+      <span class="avatar">S</span>
+    </nav>
+    <main class="work" id="work">
+      <section class="panel" id="idxPanel" aria-label="Index chart">
+        <div class="ph">
+          <svg class="i" style="color:var(--text-2)"><use href="#i-search"/></svg>
+          <div class="nm"><span>NIFTY50</span><button class="ud" aria-label="Switch"><svg><use href="#i-ud"/></svg></button><span class="num" id="idxLtp">22721.95</span><span class="sub num up" id="idxChg">+358.60 (1.60%)</span><span style="margin-left:6px">Spot</span><button class="ud" aria-label="Spot or futures"><svg><use href="#i-ud"/></svg></button></div>
+          <div class="tools"><button class="ib" aria-label="Alerts"><svg class="i"><use href="#i-alarm"/></svg></button><button class="ib" aria-label="Save"><svg class="i"><use href="#i-bookmark"/></svg></button><button class="ib" aria-label="Expand"><svg class="i"><use href="#i-expand"/></svg></button></div>
+        </div>
+        <div class="tb">
+          <span class="rgs" role="group" aria-label="Nifty chart range" data-chart="idx"><button class="tf" data-range="1" title="Last session">1D</button><button class="tf" data-range="5" title="Last 5 sessions">5D</button><button class="tf" data-range="all" title="All the data, about a month">1M <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button></span>
+          <span class="vsep"></span>
+          <span class="tfs" role="group" aria-label="Nifty chart timeframe" data-chart="idx"><button class="tf" data-tf="1">1m</button><button class="tf x1" data-tf="2">2m</button><button class="tf on" data-tf="3">3m</button><button class="tf" data-tf="5">5m</button><button class="tf x1" data-tf="10">10m</button><button class="tf" data-more="1" aria-haspopup="menu" aria-expanded="false"><span class="lbl">15m</span> <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button></span>
+          <div class="right">
+            <button class="tool" aria-label="Crosshair"><svg class="i"><use href="#i-cross"/></svg><svg class="i cv"><use href="#i-chev"/></svg></button>
+            <button class="tool x2" aria-label="Indicators"><svg class="i"><use href="#i-fx"/></svg></button>
+            <button class="tool x2" aria-label="Templates"><svg class="i"><use href="#i-grid"/></svg></button>
+            <button class="tool" aria-label="Drawing tools"><svg class="i"><use href="#i-pencil"/></svg></button>
+            <button class="tool" aria-label="Chart type"><svg class="i"><use href="#i-candle"/></svg><svg class="i cv"><use href="#i-chev"/></svg></button>
+            <button class="tool" aria-label="Chart settings"><svg class="i"><use href="#i-gear"/></svg></button>
+            <button class="payoff-btn" id="payoffBtn" aria-pressed="false" data-tip="payoff" aria-describedby="payoffDesc"><svg class="i" aria-hidden="true"><use href="#i-payoff"/></svg>Payoff</button><span class="sr" id="payoffDesc">Hold Alt to peek at your breakeven and P&amp;L, or press to keep Payoff on.</span>
+          </div>
+        </div>
+        <div class="cw" id="idxWrap">
+          <canvas id="idxCanvas" tabindex="0" aria-label="NIFTY50 chart. With Payoff on, use arrow keys to move the point."></canvas>
+          <span class="badge-n">3 <svg viewBox="0 0 10 10"><path d="M1 3h8L5 8z"/></svg></span>
+          <span class="wm"><svg viewBox="0 0 24 24" style="color:#fff"><use href="#i-sahi"/></svg>SAHI Charts</span>
+        </div>
+      </section>
+      <section class="panel" id="optPanel" aria-label="Option chart">
+        <div class="ph">
+          <div class="nm" id="optName"><u id="optTitle">NIFTY 27 Oct 22500</u><span id="optType">Call</span><button class="ud" id="cpSwitch" aria-label="Switch Call and Put"><svg><use href="#i-ud"/></svg></button><span class="num" id="optLtp">470.00</span><span class="sub num up" id="optChg">+266.35 (130.79%)</span></div>
+          <div class="ord">
+            <button class="mkt buy" id="buyBtn"><svg><use href="#i-bolt"/></svg><span>Buy at<br>MKT</span></button>
+            <div class="qty"><button id="qMinus" aria-label="Fewer lots"><svg class="i" style="width:13px;height:13px"><use href="#i-minus"/></svg></button><span class="qv"><b class="num" id="qVal">65</b><small id="qLots">1 Lot</small></span><button id="qPlus" aria-label="More lots"><svg class="i" style="width:13px;height:13px"><use href="#i-plus"/></svg></button></div>
+            <button class="mkt sell" id="sellBtn"><span>Sell at<br>MKT</span><svg><use href="#i-bolt"/></svg></button>
+          </div>
+          <div class="tools"><button class="ib" aria-label="Alerts"><svg class="i"><use href="#i-alarm"/></svg></button><button class="ib" aria-label="Save"><svg class="i"><use href="#i-bookmark"/></svg></button><button class="ib" aria-label="Expand"><svg class="i"><use href="#i-expand"/></svg></button></div>
+        </div>
+        <div class="tb">
+          <span class="rgs" role="group" aria-label="Option chart range" data-chart="opt"><button class="tf" data-range="1" title="Last session">1D</button><button class="tf" data-range="5" title="Last 5 sessions">5D</button><button class="tf" data-range="all" title="All the data, about a month">1M <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button></span>
+          <span class="vsep"></span>
+          <span class="tfs" role="group" aria-label="Option chart timeframe" data-chart="opt"><button class="tf" data-tf="1">1m</button><button class="tf x1" data-tf="2">2m</button><button class="tf" data-tf="3">3m</button><button class="tf on" data-tf="5">5m</button><button class="tf x1" data-tf="10">10m</button><button class="tf" data-more="1" aria-haspopup="menu" aria-expanded="false"><span class="lbl">15m</span> <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button></span>
+          <div class="right">
+            <button class="tool" aria-label="Crosshair"><svg class="i"><use href="#i-cross"/></svg><svg class="i cv"><use href="#i-chev"/></svg></button>
+            <button class="tool x2" aria-label="Indicators"><svg class="i"><use href="#i-fx"/></svg></button>
+            <button class="tool x2" aria-label="Templates"><svg class="i"><use href="#i-grid"/></svg></button>
+            <button class="tool" aria-label="Drawing tools"><svg class="i"><use href="#i-pencil"/></svg></button>
+            <button class="tool" aria-label="Chart type"><svg class="i"><use href="#i-candle"/></svg><svg class="i cv"><use href="#i-chev"/></svg></button>
+            <button class="tool" aria-label="Chart settings"><svg class="i"><use href="#i-gear"/></svg></button>
+          </div>
+        </div>
+        <div class="cw" id="optWrap">
+          <canvas id="optCanvas" aria-label="Option chart"></canvas>
+          <span class="badge-n">1 <svg viewBox="0 0 10 10"><path d="M1 3h8L5 8z"/></svg></span>
+          <span class="src-pill" id="optSrc"></span>
+          <span class="oi-label" id="oiLabel">OI: <b>35L</b></span>
+          <span class="wm"><svg viewBox="0 0 24 24" style="color:#fff"><use href="#i-sahi"/></svg>SAHI Charts</span>
+        </div>
+      </section>
+    </main>
+    <nav class="rail r" aria-label="Tools">
+      <button class="ri"><span class="ic"><svg class="i"><use href="#i-list"/></svg></span>Watchlist</button>
+      <button class="ri"><span class="ic"><svg class="i"><use href="#i-scan"/></svg></span>Scanners</button>
+      <button class="ri" id="railChain"><span class="ic"><svg class="i"><use href="#i-chain"/></svg></span>Option<br>Chain</button>
+      <button class="ri"><span class="ic"><svg class="i"><use href="#i-depth"/></svg></span>Market<br>Depth</button>
+      <button class="ri"><span class="ic"><svg class="i"><use href="#i-spark"/></svg></span>SAHI AI<br>Analysis</button>
+      <button class="ri"><span class="ic"><svg class="i"><use href="#i-oi"/></svg></span>OI Analysis</button>
+      <button class="ri" id="railPositions"><span class="ic"><svg class="i"><use href="#i-brief"/></svg></span>Positions</button>
+      <button class="ri"><span class="ic"><svg class="i"><use href="#i-atm"/></svg></span>ATM<br>Analysis</button>
+      <button class="ri"><span class="ic"><svg class="i"><use href="#i-heat"/></svg></span>Sector<br>Heatmap</button>
+      <button class="ri" aria-label="Alerts"><span class="ic"><svg class="i"><use href="#i-alarm"/></svg></span></button>
+      <span class="sep"></span>
+      <button class="ri"><span class="ic"><svg class="i"><use href="#i-plus"/></svg></span>Customise</button>
+    </nav>
+  </div>
+</div>
+</div>
+<div id="layer"></div>
+<div class="sr" aria-live="polite" id="live"></div>
