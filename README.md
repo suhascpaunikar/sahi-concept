@@ -7,11 +7,12 @@ Two feature concepts for Sahi, each with a PRD and a clickable prototype: **Mirr
 | Path | What it is |
 |---|---|
 | `docs/sahi-mirror-mobile-prd.md` | Full PRD v2.0, rewritten from the web desktop PRD v1.1 for the Sahi iOS and Android app |
-| `docs/sahi-payoff-desktop-prd.md` | Payoff (desktop) PRD v1.3: the Payoff mode on the Scalper split view, for Sahi web and the Sahi Desktop app |
+| `docs/sahi-payoff-desktop-prd.md` | Payoff (desktop) PRD v1.4: the Payoff mode on the Scalper split view, for Sahi web and the Sahi Desktop app |
 | `docs/sahi-payoff-desktop-prd.html` | The same Payoff PRD as a styled page with contents, linked IDs and an open-items filter. Open it in a browser |
 | `prototype/index.html` | Clickable phone prototype of the Mirror PRD. One self-contained file, no build step |
 | `prototype/payoff/index.html` | Clickable desktop prototype of the Payoff PRD on the Scalper split view. One self-contained file, no build step |
 | `prototype/payoff/src/` | Sources for the Payoff prototype; `sh prototype/payoff/src/build.sh` rebuilds `index.html` |
+| `prototype/payoff/data/` | Real 1-minute Kite data the prototype runs on (CSVs and handover note); `python3 prototype/payoff/data/build_data.py` regenerates `src/data.js` |
 
 ## Sahi Mirror: mobile concept
 
@@ -47,14 +48,14 @@ Open `prototype/payoff/index.html` in a desktop browser. It draws the Sahi Scalp
 - **Click Payoff** on the index chart toolbar to keep it on; **Esc** turns it off.
 - Payoff opens on the view you already have, so the shaded future zone starts as the space right of Now. Drag or scroll the chart, or click a date chip (Today, 19 Oct, 27 Oct), to look further ahead.
 - Move the pointer into the shaded future zone, or use the arrow keys (Shift for 25 points), to read P&L at any level and time.
-- Each chart has its own timeframe (1m to 15m) and scrolls and zooms on its own, so Nifty can be on 3m while the option is on 5m.
+- Each chart has its own timeframe and scrolls and zooms on its own, so Nifty can be on 3m while the option is on 5m. The 15m chevron opens 30m and 1h; 1D, 5D and 1M show the last session, five sessions or the whole month.
 - Drag either chart left into history or right into empty space up to 3:30 pm tomorrow, with Payoff on or off. Past the position's expiry the chart is striped and disabled.
 - Click the future zone, or press Enter, to pin a point and set a target, a stop or an exit time (Later release).
 - **Buy at MKT**, **Sell at MKT**, the **Option Chain** and **Positions** in the right rail all work, so you can open and close positions and watch Payoff switch between one position and several.
 
-The **Demo controls** panel (bottom left) switches the sample positions, the clock (including after the close), pricing states (live, delayed, unavailable), Mac or Windows keys, the Later release and whether orders succeed. It also shows the analytics events as they fire.
+The **Demo controls** panel (bottom left) switches the sample positions, the clock (replayed real times today, then simulated times and the close), pricing states (live, delayed, unavailable), Mac or Windows keys, the Later release and whether orders succeed. It also shows the analytics events as they fire.
 
-All prices are generated sample data for Tue 13 Oct 2026, matched to the Sahi screenshot (NIFTY50 22,721.95; NIFTY 27 Oct 22500 Call ₹470.00). Payoff values come from a Black-Scholes model on trading time with IV held at its current level, as in the PRD's research.
+NIFTY 50 and the NIFTY 19 Oct 22500 Call and Put run on real 1-minute data from Zerodha Kite, Tue 29 Sep to 12:59 pm on Wed 14 Oct 2026, and "Now" opens at that last real minute. Later times are simulated from the real close, and other strikes and expiries are modelled from the real index. The option chart says "Modelled prices" or "Simulated after 12:59 pm" when that applies. Payoff values come from a Black-Scholes model on trading time, with IV taken from the real prices and held, as in the PRD's research.
 
 ### Payoff surfaces covered
 

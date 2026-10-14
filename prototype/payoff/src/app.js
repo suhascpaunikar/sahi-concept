@@ -8,6 +8,8 @@
    v1.3: both charts drag into empty space up to 3:30 pm on the next
    trading day; past the axis end the chart is striped and disabled; no
    expected-move drawings; a simpler readout that leads with the P&L.
+   v1.4: real 1-minute data from Zerodha Kite (Nifty and the 19 Oct 22500
+   Call and Put) up to 12:59 pm on Wed 14 Oct; simulated after that.
    ===================================================================== */
 (() => {
   const E = Engine, P = Payoff;
@@ -29,42 +31,52 @@
     if (changed && key) { const n = [...el.querySelectorAll('button, [tabindex]')].find(x => keyOf(x) === key); focusNS(n); }
     return changed;
   }
-  const SHOT_C = C('CE', 22500, '2026-10-27');
+  // The two contracts with real data from Kite.
+  const CE19 = C('CE', 22500, '2026-10-19'), PE19 = C('PE', 22500, '2026-10-19');
   // Focus without letting the browser scroll a clipped panel to reach the element.
   const focusNS = el => { if (el) el.focus({ preventScroll: true }); };
   let legId = 1;
   const leg = (c, side, avg, product = 'CARRY', qty = E.LOT) => ({ id: legId++, c, side, qty, avg, product });
 
-  /* ---------- scenarios (all sample data) ---------- */
+  /* ---------- scenarios ---------- */
+  // Entry prices come from the data at the time each position was opened: real for the 19 Oct 22500 pair,
+  // modelled from the real index for other contracts. Intraday positions were opened at 9:20 am today.
+  const at = (c, day, h, m) => E.roundTick(Math.max(E.TICK, E.optionPriceAt(c, E.tOf(E.dayIdx(day), h * 60 + m))));
+  const today = E.DAYS[E.TODAY].key;
+  const entry = (c, p, day, h, m) => p === 'INTRADAY' ? at(c, today, 9, 20) : at(c, day, h, m);
   const SCEN = {
-    single: { name: 'One call · 27 Oct 22500', group: 'One position (S2)', product: true, legs: p => [leg(SHOT_C, 1, 412.6, p)], opt: SHOT_C },
-    expiry: { name: 'Expiry-day call · 13 Oct 22750', group: 'One position (S2)', product: true, legs: p => [leg(C('CE', 22750, '2026-10-13'), 1, 78.4, p)], opt: C('CE', 22750, '2026-10-13') },
-    soldput: { name: 'Sold put · 19 Oct 22500', group: 'One position (S2)', product: true, legs: p => [leg(C('PE', 22500, '2026-10-19'), -1, 171.2, p)], opt: C('PE', 22500, '2026-10-19') },
-    pretrade: { name: 'Not holding · pre-trade', group: 'No position (S2)', legs: () => [], opt: SHOT_C },
+    single: { name: 'Bought call · 19 Oct 22500', group: 'One position (S2)', product: true, legs: p => [leg(CE19, 1, entry(CE19, p, '2026-10-09', 10, 0), p)], opt: CE19 },
+    boughtput: { name: 'Bought put · 19 Oct 22500', group: 'One position (S2)', product: true, legs: p => [leg(PE19, 1, entry(PE19, p, '2026-10-13', 14, 0), p)], opt: PE19 },
+    soldput: { name: 'Sold put · 19 Oct 22500', group: 'One position (S2)', product: true, legs: p => [leg(PE19, -1, entry(PE19, p, '2026-10-12', 11, 0), p)], opt: PE19 },
+    pretrade: { name: 'Not holding · pre-trade', group: 'No position (S2)', legs: () => [], opt: CE19 },
     empty: { name: 'Not holding · no contract loaded', group: 'No position (S2)', legs: () => [], opt: null },
     book: {
-      name: 'Weekly + monthly book', group: 'Several positions (S3)', opt: SHOT_C, realised: 1240,
+      name: 'Weekly + monthly book', group: 'Several positions (S3)', opt: CE19, realised: 1240,
       others: [{ id: 'bn1', label: 'BANKNIFTY 27 Oct 51500 Call', und: 'BANKNIFTY', side: 1, qty: 30, avg: 612.4, ltp: 655.2, product: 'Carry forward' }],
-      legs: () => [leg(C('PE', 22500, '2026-10-19'), -1, 171.2), leg(C('CE', 22950, '2026-10-19'), -1, 128.4), leg(SHOT_C, 1, 412.6)]
+      legs: () => [leg(PE19, -1, at(PE19, '2026-10-08', 10, 30)), leg(C('CE', 22950, '2026-10-19'), -1, at(C('CE', 22950, '2026-10-19'), '2026-10-08', 10, 30)), leg(C('CE', 22500, '2026-10-27'), 1, at(C('CE', 22500, '2026-10-27'), '2026-10-09', 11, 0))]
     },
-    condor: { name: 'Iron condor · 19 Oct', group: 'Several positions (S3)', opt: C('PE', 22500, '2026-10-19'), legs: () => [leg(C('PE', 22300, '2026-10-19'), 1, 112.1), leg(C('PE', 22500, '2026-10-19'), -1, 171.2), leg(C('CE', 22950, '2026-10-19'), -1, 128.4), leg(C('CE', 23150, '2026-10-19'), 1, 71.9)] },
-    straddle: { name: 'Long straddle · 27 Oct 22700', group: 'Several positions (S3)', opt: C('CE', 22700, '2026-10-27'), legs: () => [leg(C('CE', 22700, '2026-10-27'), 1, 338.5), leg(C('PE', 22700, '2026-10-27'), 1, 352.2)] },
-    calendar: { name: 'Calendar spread · 22700 Call', group: 'Several positions (S3)', opt: C('CE', 22700, '2026-10-27'), legs: () => [leg(C('CE', 22700, '2026-10-19'), -1, 241.3), leg(C('CE', 22700, '2026-10-27'), 1, 336.1)] },
-    expweek: { name: 'Expiring today + weekly', group: 'Several positions (S3)', opt: C('CE', 22700, '2026-10-19'), legs: () => [leg(C('CE', 22700, '2026-10-13'), -1, 128.6), leg(C('CE', 22700, '2026-10-19'), 1, 236.4)] },
-    futures: { name: 'Futures + protective put', group: 'Several positions (S3)', opt: C('PE', 22500, '2026-10-27'), legs: () => [leg(C('FUT', 0, '2026-10-27'), 1, 22640), leg(C('PE', 22500, '2026-10-27'), 1, 262.4)] },
-    mixed: { name: 'Intraday + carry-forward', group: 'Several positions (S3)', opt: SHOT_C, legs: () => [leg(C('CE', 22700, '2026-10-13'), 1, 104.3, 'INTRADAY'), leg(C('PE', 22500, '2026-10-19'), -1, 171.2)] }
+    condor: { name: 'Iron condor · 19 Oct', group: 'Several positions (S3)', opt: PE19, legs: () => [[C('PE', 22200, '2026-10-19'), 1], [PE19, -1], [C('CE', 22900, '2026-10-19'), -1], [C('CE', 23100, '2026-10-19'), 1]].map(([c, sd]) => leg(c, sd, at(c, '2026-10-12', 10, 0))) },
+    straddle: { name: 'Long straddle · 19 Oct 22500', group: 'Several positions (S3)', opt: CE19, legs: () => [leg(CE19, 1, at(CE19, '2026-10-13', 9, 30)), leg(PE19, 1, at(PE19, '2026-10-13', 9, 30))] },
+    shortstraddle: { name: 'Short straddle · 19 Oct 22500', group: 'Several positions (S3)', opt: CE19, legs: () => [leg(CE19, -1, at(CE19, '2026-10-12', 15, 0)), leg(PE19, -1, at(PE19, '2026-10-12', 15, 0))] },
+    calendar: { name: 'Calendar spread · 22500 Call', group: 'Several positions (S3)', opt: CE19, legs: () => [leg(CE19, -1, at(CE19, '2026-10-09', 14, 0)), leg(C('CE', 22500, '2026-10-27'), 1, at(C('CE', 22500, '2026-10-27'), '2026-10-09', 14, 0))] },
+    futures: { name: 'Futures + protective put', group: 'Several positions (S3)', opt: C('PE', 22500, '2026-10-27'), legs: () => [leg(C('FUT', 0, '2026-10-27'), 1, at(C('FUT', 0, '2026-10-27'), '2026-10-08', 10, 0)), leg(C('PE', 22500, '2026-10-27'), 1, at(C('PE', 22500, '2026-10-27'), '2026-10-08', 10, 0))] },
+    mixed: { name: 'Intraday call + carry-forward put', group: 'Several positions (S3)', opt: CE19, legs: () => [leg(CE19, 1, at(CE19, today, 9, 20), 'INTRADAY'), leg(PE19, -1, at(PE19, '2026-10-12', 11, 0))] }
   };
-  const CLOCKS = [[570, '9:30 am'], [675, '11:15 am'], [810, '1:30 pm'], [905, '3:05 pm'], [945, '3:45 pm · closed']];
+  // Real data runs to 12:59 pm today; later presets continue on simulated prices.
+  const REAL_END_MOD = E.REAL_END_T - E.tOf(E.TODAY, E.OPEN) + E.OPEN;
+  const CLOCKS = [[570, '9:30 am'], [675, '11:15 am'], [REAL_END_MOD, `${E.clock(REAL_END_MOD)} · latest data`], [905, '3:05 pm · simulated'], [945, '3:45 pm · closed']];
 
   /* ---------- state ---------- */
   const isMac = /Mac|iPhone|iPad/.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '');
   const st = {
     platform: LS.get('platform', isMac ? 'mac' : 'win'),
-    clock: 675, pricing: 'live', ticks: true, later: true, orderFail: false,
-    scenario: LS.get('scenario', 'single'), product: 'CARRY',
-    legs: [], others: [], realised: 0, realisedOther: 0, opt: SHOT_C, lots: 1, oneTap: true,
+    clock: REAL_END_MOD, pricing: 'live', ticks: true, later: true, orderFail: false,
+    scenario: (k => SCEN[k] ? k : 'single')(LS.get('scenario', 'single')), product: 'CARRY',
+    legs: [], others: [], realised: 0, realisedOther: 0, opt: CE19, lots: 1, oneTap: true,
     sticky: false, peek: false, pin: null, horizon: null,
     tf: Object.assign({ idx: 3, opt: 5 }, LS.get('tf', {})),
+    // range presets (1D, 5D, 1M) per chart; cleared when the trader drags or zooms that chart
+    range: { idx: null, opt: '1' },
     hover: null, keyPt: null, rowHover: null, noise: 0,
     tipSeen: LS.get('tipSeen', false), hinted: LS.get('hinted', false), demoMin: LS.get('demoMin', innerWidth < 1600),
     orders: {}, exits: [], events: [], fadeStart: 0, loadingUntil: 0, m1: null, popover: null, closedBannerHidden: false
@@ -80,7 +92,7 @@
   const ltp = c => c.type === 'FUT' ? Math.round(S0() * 20) / 20 : expired(c) ? E.roundTick(E.intrinsic(c, E.settleS(c))) : Math.max(E.TICK, E.roundTick(E.price(c, S0(), nowT())));
   const keyName = () => st.platform === 'mac' ? '⌥' : 'Alt';
   const keyWord = () => st.platform === 'mac' ? 'Option' : 'Alt';
-  const optPrevClose = c => (c === SHOT_C) ? E.SHOT.prevClose : Math.max(E.TICK, E.roundTick(E.optionPathAt(c, E.tOf(E.TODAY, E.OPEN), true)));
+  const optPrevClose = c => Math.max(E.TICK, E.roundTick(E.optionCloseBefore(c, E.tOf(E.TODAY, E.OPEN))));
   const timeLong = T => E.fmtT(T);
 
   function squareOffIntraday() {
@@ -186,11 +198,12 @@
 
   /* ---------- charts ---------- */
   const COL = { up: '#0b9981', down: '#f23645', upBg: '#0c3a33', downBg: '#3f1820' };
-  const idx = new SahiChart($('#idxCanvas'), { tf: st.tf.idx, dec: 2 });
+  // An index has no volume, so the Nifty chart keeps only a sliver for it.
+  const idx = new SahiChart($('#idxCanvas'), { tf: st.tf.idx, dec: 2, volFrac: 0.03 });
   const OI = [];
   const opt = new SahiChart($('#optCanvas'), {
     tf: st.tf.opt, dec: 2, volFrac: 0.1, minY: 0,
-    sub: { frac: 0.26, series: OI, lo: 21e5, hi: 43e5, ticks: [25e5, 30e5, 35e5, 40e5], fmt: v => (v / 1e5).toFixed(0) + 'L', color: '#2196f3' }
+    sub: { frac: 0.26, series: OI, fmt: v => (v / 1e5).toFixed(v < 1e6 ? 1 : 0).replace(/\.0$/, '') + 'L', color: '#2196f3' }
   });
   const savedViews = { idx: null, opt: null };
   // Both charts drag right into empty space up to 3:30 pm on the next trading day, Payoff on or off (BR-27).
@@ -203,38 +216,44 @@
     return null;
   }
   const shownOpt = () => heldSingle() || st.opt;
-  function buildOI(T) {
-    OI.length = 0;
-    const r = E.rng(5);
-    const t0 = E.tOf(E.TODAY - 3, E.OPEN), t1 = E.tOf(E.TODAY, E.DEFAULT_NOW - E.tOf(E.TODAY, E.OPEN) + E.OPEN);
-    // Shape follows the Sahi screenshot: about 25L rising to 40L, ending at 35L.
-    const A = [[0, 24.4], [0.22, 25.2], [0.4, 26.5], [0.47, 31.5], [0.5, 30.2], [0.62, 33.8], [0.72, 36.2], [0.8, 37.6], [0.86, 40.6], [0.9, 38.4], [0.95, 37.9], [1, 35]];
-    const at = f => { let i = 0; while (i < A.length - 2 && A[i + 1][0] < f) i++; const [fa, va] = A[i], [fb, vb] = A[i + 1]; return va + (vb - va) * Math.max(0, Math.min(1, (f - fa) / (fb - fa))); };
-    for (let t = t0; t <= T; t += 5) { const f = Math.min(1, (t - t0) / (t1 - t0)); OI.push({ T: t, v: (at(f) + (r() - 0.5) * 0.35) * 1e5 }); }
-    OI._T = T;
-  }
+  let calT = null;
   function rebuildData() {
-    const T = nowT(), S = S0();
-    const ic = E.candles(idx.o.tf, E.tOf(E.HIST_START, E.OPEN), T, (t, c) => E.pathAt(t, c), 11);
+    const T = nowT();
+    // real contracts take their IV from their real price at Now, so the model starts where the market is
+    if (calT !== T) { E.calibrate(T); calT = T; cache = null; }
+    const S = S0(), from = E.tOf(E.HIST_START, E.OPEN);
+    const ic = E.indexCandles(idx.o.tf, from, T);
     const last = ic[ic.length - 1];
     if (last) { last.c = S; last.h = Math.max(last.h, S); last.l = Math.min(last.l, S); }
     idx.setData(ic, T, S);
     const c = shownOpt();
     if (c) {
-      const oc = E.candles(opt.o.tf, E.tOf(E.TODAY - 3, E.OPEN), T, (t, cc) => E.optionPathAt(c, t, cc), 7 + (c.strike || 0), c.type === 'FUT' ? -Infinity : 0);
+      const oc = E.optionCandles(c, opt.o.tf, from, T);
       const lp = ltp(c);
       const ol = oc[oc.length - 1];
       if (ol) { ol.c = lp; ol.h = Math.max(ol.h, lp); ol.l = Math.min(ol.l, lp); }
       opt.setData(oc, T, lp);
-    } else opt.setData([], T, null);
-    if (OI._T !== T) buildOI(T);
+      OI.length = 0;
+      oc.forEach(k => { if (k.oi != null) OI.push({ T: Math.min(k.t1, T), v: k.oi }); });
+    } else { opt.setData([], T, null); OI.length = 0; }
     renderUI();
   }
+  // The window a range preset shows: the last 1 or 5 sessions, or all the data (1M), up to Now.
+  function rangeView(key) {
+    const T = nowT(), last = E.dayOfT(T);
+    const first = key === '1' ? last : key === '5' ? last - 4 : E.HIST_START;
+    const t0 = Math.max(E.HIST_START, first) * E.SESSION;
+    const span = Math.max(30, T - t0);
+    return [t0 - span * 0.01, T + span * 0.06];
+  }
+  function applyRange(ch, key) { ch.setView(...ch.clampView(...rangeView(key))); }
   function defaultViews() {
     const T = nowT();
     idx.limitT = null; opt.limitT = null;
+    st.range = { idx: null, opt: '1' };
     idx.setView(...idx.clampView(T - 300, T + 24));
-    opt.setView(...opt.clampView(E.tOf(E.TODAY - 3, E.OPEN) - 20, T + 60));
+    applyRange(opt, st.range.opt);
+    renderTf();
   }
   // A chip fits both charts to the same window; after that each chart scrolls and zooms on its own.
   function fitTo(hT) {
@@ -242,6 +261,7 @@
     const span = Math.max(15, hT - T);
     const t0 = T - Math.max(45, span * 0.28), t1 = hT + span * 0.035;
     idx.setView(...idx.clampView(t0, t1)); opt.setView(...opt.clampView(t0, t1));
+    st.range = { idx: null, opt: null }; renderTf();
   }
   // Let the charts scroll as far as the axis end. Only a picked chip moves the view; otherwise it stays put.
   function refit(b) {
@@ -256,7 +276,10 @@
   function followNow(prevT) {
     const dT = nowT() - prevT;
     if (!dT) return;
-    [idx, opt].forEach(ch => { if (prevT <= ch.view.t1 + 1) ch.setView(...ch.clampView(ch.view.t0 + dT, ch.view.t1 + dT)); });
+    [[idx, 'idx'], [opt, 'opt']].forEach(([ch, k]) => {
+      if (st.range[k]) applyRange(ch, st.range[k]);
+      else if (prevT <= ch.view.t1 + 1) ch.setView(...ch.clampView(ch.view.t0 + dT, ch.view.t1 + dT));
+    });
     savedViews.idx = shiftView(savedViews.idx, dT); savedViews.opt = shiftView(savedViews.opt, dT);
   }
   function enterPayoff(source) {
@@ -389,8 +412,8 @@
   function dot(ctx, x, y, color, r) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#12161d'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1; }
 
   /* ---------- index chart: S1 indicators from the screenshot ---------- */
-  // The Exp. Move indicator is left out (v1.3); OI Support stays.
-  const OI_SUPPORT = 22700;
+  // The Exp. Move indicator is left out (v1.3); OI Support stays, at 22500 where the real put OI is highest.
+  const OI_SUPPORT = 22500;
   function drawS1Indicators(ctx, ch) {
     const y = Math.round(ch.pToY(OI_SUPPORT)) + 0.5;
     if (y > 0 && y < ch.mainH) { ctx.strokeStyle = 'rgba(40,188,208,.7)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ch.plotW, y); ctx.stroke(); ctx.setLineDash([]); }
@@ -399,6 +422,19 @@
   function drawS1Labels(ctx, ch) {
     const y = Math.round(ch.pToY(OI_SUPPORT)) + 0.5;
     if (y > 0 && y < ch.mainH) pill(ctx, 100, y, 'OI Support', { valign: 'middle', font: '500 10.5px Inter, system-ui, sans-serif', bg: 'rgba(18,22,29,.95)', fg: '#7fd7e4', border: 'rgba(40,188,208,.5)', padX: 10, lh: 12 });
+  }
+
+  /* ---------- where the real data ends ---------- */
+  // Once the clock is past the last real minute, the candles after it are simulated: mark the hand-over.
+  function drawSimMark(ctx, ch, taken) {
+    if (nowT() <= E.REAL_END_T) return;
+    const x = Math.round(ch.tToX(E.REAL_END_T)) + 0.5;
+    if (x < 0 || x > ch.plotW) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(167,139,250,.55)'; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(x, ch.o.padTop); ctx.lineTo(x, ch.mainH); ctx.stroke();
+    ctx.restore();
+    const y = ch.mainH * (1 - ch.o.volFrac) - 26;
+    placePill(ctx, taken, [{ x: x + 5, y }, { x: x - 5, y, align: 'right' }, { x: x + 5, y: y - 28 }], 'Simulated after ' + E.clock(REAL_END_MOD), { font: '500 10.5px Inter, system-ui, sans-serif', fg: '#c4b5fd', bg: 'rgba(30,24,52,.92)', border: 'rgba(167,139,250,.45)', padX: 10, lh: 12, required: false }, ch.plotW);
   }
 
   /* ---------- disabled area past the axis end (BR-26) ---------- */
@@ -442,14 +478,14 @@
   /* ---------- index chart overlays ---------- */
   idx.on('extraRange', ch => {
     const b = book();
-    // the same levels with Payoff on or off, so turning it on doesn't rescale the chart
-    const base = [Math.min(OI_SUPPORT - 10, b.S0), Math.max(OI_SUPPORT + 10, b.S0)];
+    // the candles set the scale with Payoff on or off; the OI Support line shows only when it falls in range
+    const base = [b.S0, b.S0];
     if (!payoffOn()) return base;
     if (!pointable(b)) return st.pin ? [Math.min(base[0], st.pin.S - 10), Math.max(base[1], st.pin.S + 10)] : base;
     // room for a typical move over the future shown, so the shading and breakevens have space (nothing is drawn for it)
     const end = axisEnd(b);
     const tR = Math.min(end, ch.view.t1);
-    const half = P.coneHalf(b.S0, E.BASE_IV, b.nowT, tR);
+    const half = P.coneHalf(b.S0, E.baseIv(), b.nowT, tR);
     return [Math.min(base[0], b.S0 - half * 1.05), Math.max(base[1], b.S0 + half * 1.05)];
   });
   idx.on('skipDay', T => payoffOn() && markers(book()).some(m => Math.abs(m.T - T) < 1));
@@ -479,6 +515,7 @@
   idx.on('above', (ctx, ch) => {
     const taken = [];
     ch._taken = taken;
+    drawSimMark(ctx, ch, taken);
     if (!payoffOn()) { drawS1Labels(ctx, ch); drawExitMarkers(ctx, ch, 'idx', taken); return; }
     const b = book();
     const end = axisEnd(b);
@@ -666,6 +703,7 @@
   });
   opt.on('above', (ctx, ch) => {
     const taken = [];
+    drawSimMark(ctx, ch, taken);
     const b = book();
     const shown = shownOpt();
     const inPayoff = payoffOn() && !isS3();
@@ -830,6 +868,7 @@
   });
   // Each chart scrolls and zooms on its own (the two can be on different timeframes).
   idx.on('viewchange', (ch, dragging, byUser) => {
+    if (byUser && st.range.idx) { st.range.idx = null; renderTf(); }
     if (!payoffOn()) return;
     if (byUser && st.horizon) { st.horizon = null; renderStrip(book()); }
     if (!dragging) cache = null;
@@ -837,6 +876,7 @@
     if (ch.pointer && !pinDrag) { st.hover = zoneAt(ch, ch.pointer); updateReadout(ch.pointer); opt.invalidate(); renderTable(); }
     renderD1();
   });
+  opt.on('viewchange', (ch, dragging, byUser) => { if (byUser && st.range.opt) { st.range.opt = null; renderTf(); } });
   opt.on('hover', (ch, p) => {
     const hit = hits.opt.find(h => p.x >= h.x && p.x <= h.x + h.w && p.y >= h.y && p.y <= h.y + h.h);
     if (hit) showCanvasTip(ch, hit); else hideTip('canvas');
@@ -902,7 +942,7 @@
   }
   function keepPointInView(pt) {
     const v = idx.view, span = v.t1 - v.t0;
-    if (pt.T > v.t1 - span * 0.04 || pt.T < v.t0) { idx.setView(...idx.clampView(pt.T - span * 0.7, pt.T + span * 0.3)); st.horizon = null; renderStrip(book()); }
+    if (pt.T > v.t1 - span * 0.04 || pt.T < v.t0) { idx.setView(...idx.clampView(pt.T - span * 0.7, pt.T + span * 0.3)); st.horizon = null; st.range.idx = null; renderTf(); renderStrip(book()); }
   }
 
   /* ---------- hold-to-peek and other keys ---------- */
@@ -950,6 +990,7 @@
   window.addEventListener('blur', () => { altDown = false; clearTimeout(peekTimer); peekTimer = null; if (st.peek) setPayoff(() => { st.peek = false; }, 'key'); });
   function cancelPeek() { if (st.peek) setPayoff(() => { st.peek = false; }, 'key'); }
   function onEsc(e) {
+    if (tfMenu) { e.preventDefault(); closeTfMenu(true); return; }
     if (st.m1) { if (st.m1.submitting) return; e.preventDefault(); closeM1(); return; }
     if (st.popover) { closePopover(); return; }
     if (st.pin) { e.preventDefault(); removePin(); return; }
@@ -981,19 +1022,78 @@
   $('#navPositions').addEventListener('click', () => openPopover('positions'));
   $('#pnlPill').addEventListener('click', () => openPopover('positions'));
   $('#railChain').addEventListener('click', () => openPopover('chain'));
-  // Each chart has its own timeframe, so Nifty can be on 3m while the option is on 5m. The view stays where it is.
+  /* ---------- timeframes and ranges (each chart has its own) ---------- */
+  // Nifty can be on 3m while the option is on 5m. The chevron on 15m opens the longer timeframes.
+  const MORE_TF = [[15, '15 minutes', '15m'], [30, '30 minutes', '30m'], [60, '1 hour', '1h']];
+  const chartOf = which => which === 'idx' ? idx : opt;
   function renderTf() {
-    document.querySelectorAll('.tfs').forEach(g => g.querySelectorAll('[data-tf]').forEach(bt => {
-      const on = +bt.dataset.tf === st.tf[g.dataset.chart];
+    document.querySelectorAll('.tfs').forEach(g => {
+      const tf = st.tf[g.dataset.chart];
+      g.querySelectorAll('[data-tf]').forEach(bt => { const on = +bt.dataset.tf === tf; bt.classList.toggle('on', on); bt.setAttribute('aria-pressed', on); });
+      const more = g.querySelector('[data-more]'), m = MORE_TF.find(x => x[0] === tf);
+      more.classList.toggle('on', !!m);
+      more.querySelector('.lbl').textContent = m ? m[2] : '15m';
+      more.setAttribute('aria-label', m ? `Timeframe ${m[1]}. More timeframes` : 'More timeframes');
+    });
+    document.querySelectorAll('.rgs').forEach(g => g.querySelectorAll('[data-range]').forEach(bt => {
+      const on = st.range[g.dataset.chart] === bt.dataset.range;
       bt.classList.toggle('on', on); bt.setAttribute('aria-pressed', on);
     }));
   }
-  document.querySelectorAll('.tfs [data-tf]').forEach(bt => bt.addEventListener('click', () => {
-    const which = bt.closest('.tfs').dataset.chart, tf = +bt.dataset.tf;
-    if (st.tf[which] === tf) return;
-    st.tf[which] = tf; LS.set('tf', st.tf);
-    (which === 'idx' ? idx : opt).o.tf = tf;
-    cache = null; rebuildData(); renderTf();
+  // A new timeframe keeps the candle width, so the window grows or shrinks with the candle size, anchored at its
+  // right edge. With a range preset picked (1D, 5D, 1M) the window stays on that range.
+  function setTf(which, tf) {
+    const ch = chartOf(which), prev = st.tf[which];
+    if (prev === tf) return;
+    st.tf[which] = tf; LS.set('tf', st.tf); ch.o.tf = tf;
+    cache = null; rebuildData();
+    if (st.range[which]) applyRange(ch, st.range[which]);
+    else {
+      const v = ch.view, span = (v.t1 - v.t0) * tf / prev;
+      ch.setView(...ch.clampView(v.t1 - span, v.t1));
+      if (which === 'idx' && st.horizon) { st.horizon = null; renderStrip(book()); }
+    }
+    renderTf();
+  }
+  document.querySelectorAll('.tfs [data-tf]').forEach(bt => bt.addEventListener('click', () => setTf(bt.closest('.tfs').dataset.chart, +bt.dataset.tf)));
+  let tfMenu = null;
+  function closeTfMenu(focusBack) {
+    if (!tfMenu) return;
+    const { el, btn } = tfMenu;
+    tfMenu = null; el.remove(); btn.setAttribute('aria-expanded', 'false');
+    if (focusBack) focusNS(btn);
+  }
+  function openTfMenu(btn) {
+    closeTfMenu();
+    const which = btn.closest('.tfs').dataset.chart;
+    const el = document.createElement('div');
+    el.className = 'tfmenu'; el.setAttribute('role', 'menu'); el.setAttribute('aria-label', 'More timeframes');
+    el.innerHTML = MORE_TF.map(([tf, long, short]) => `<button type="button" role="menuitemradio" aria-checked="${st.tf[which] === tf}" data-tf="${tf}"><span>${long}</span><span class="k">${short}</span></button>`).join('');
+    document.body.appendChild(el);
+    const r = btn.getBoundingClientRect();
+    el.style.left = Math.max(8, Math.min(innerWidth - el.offsetWidth - 8, r.left)) + 'px';
+    el.style.top = (r.bottom + 4) + 'px';
+    btn.setAttribute('aria-expanded', 'true');
+    tfMenu = { el, btn };
+    const items = [...el.querySelectorAll('button')];
+    items.forEach(b => b.addEventListener('click', () => { closeTfMenu(true); setTf(which, +b.dataset.tf); }));
+    el.addEventListener('keydown', e => {
+      const k = items.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); focusNS(items[(k + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]); }
+      else if (e.key === 'Tab') closeTfMenu();
+    });
+    focusNS(el.querySelector('[aria-checked="true"]') || items[0]);
+  }
+  document.querySelectorAll('.tfs [data-more]').forEach(bt => bt.addEventListener('click', e => { e.stopPropagation(); if (tfMenu && tfMenu.btn === bt) closeTfMenu(true); else openTfMenu(bt); }));
+  document.addEventListener('mousedown', e => { if (tfMenu && !tfMenu.el.contains(e.target) && !tfMenu.btn.contains(e.target)) closeTfMenu(); });
+  window.addEventListener('resize', () => closeTfMenu());
+  // 1D, 5D and 1M show the last session, the last five, or all the data, up to Now.
+  document.querySelectorAll('.rgs [data-range]').forEach(bt => bt.addEventListener('click', () => {
+    const which = bt.closest('.rgs').dataset.chart;
+    st.range[which] = bt.dataset.range;
+    applyRange(chartOf(which), st.range[which]);
+    if (which === 'idx' && st.horizon) { st.horizon = null; renderStrip(book()); }
+    cache = null; renderTf(); renderUI();
   }));
   renderTf();
 
@@ -1153,7 +1253,9 @@
       $('#optLtp').textContent = lp.toFixed(2);
       $('#optChg').textContent = `${oc >= 0 ? '+' : '−'}${Math.abs(oc).toFixed(2)} (${(Math.abs(oc) / pc * 100).toFixed(2)}%)`;
       $('#optChg').className = 'sub num ' + (oc >= 0 ? 'up' : 'down');
-    } else { $('#optTitle').textContent = 'No contract loaded'; $('#optType').textContent = ''; $('#optLtp').textContent = ''; $('#optChg').textContent = ''; }
+      // say when a price isn't from the real data
+      $('#optSrc').textContent = !E.isReal(c) ? 'Modelled prices' : nowT() > E.REAL_END_T ? `Simulated after ${E.clock(REAL_END_MOD)}` : '';
+    } else { $('#optTitle').textContent = 'No contract loaded'; $('#optType').textContent = ''; $('#optLtp').textContent = ''; $('#optChg').textContent = ''; $('#optSrc').textContent = ''; }
     $('#qVal').textContent = st.lots * E.LOT; $('#qLots').textContent = `${st.lots} Lot${st.lots > 1 ? 's' : ''}`;
     const open = st.legs.reduce((a, l) => a + l.side * l.qty * (ltp(l.c) - l.avg), 0) + st.others.reduce((a, o) => a + o.side * o.qty * (o.ltp - o.avg), 0);
     const tot = open + st.realised + st.realisedOther;
@@ -1600,7 +1702,7 @@
     const p = $('#pop');
     if (p && !p.contains(e.target) && !e.target.closest('#railPositions,#railChain,#navPositions,#pnlPill,#openChain,#demo')) closePopover();
   });
-  let chainExp = '2026-10-27';
+  let chainExp = '2026-10-19';
   function renderPopover() {
     let p = $('#pop');
     if (!st.popover) { if (p) p.remove(); return; }
@@ -1617,7 +1719,7 @@
       p.querySelectorAll('[data-exit]').forEach(b2 => b2.addEventListener('click', () => { const id = b2.dataset.exit; exitLeg(isNaN(+id) ? id : +id); }));
     } else {
       p.style.width = '400px'; p.setAttribute('aria-label', 'Option chain');
-      const exps = ['2026-10-13', '2026-10-19', '2026-10-27', '2026-11-03'].filter(k => !expired(C('CE', 22700, k)));
+      const exps = ['2026-10-19', '2026-10-27', '2026-11-03'].filter(k => !expired(C('CE', 22700, k)));
       if (!exps.includes(chainExp)) chainExp = exps[0];
       const S = S0(), atm = Math.round(S / 100) * 100;
       const strikes = []; for (let k = atm - 500; k <= atm + 500; k += 100) strikes.push(k);
@@ -1626,7 +1728,7 @@
       if (!setHTMLKeepFocus(p, `<div class="poph"><h3>Option chain · NIFTY</h3><button class="ib" id="popx" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>` +
         `<div class="chain"><div class="ex">${exps.map(k => `<button data-x="${k}" aria-pressed="${k === chainExp}">${E.expiryByKey(k).info.short}${E.expiryByKey(k).movedFrom ? '*' : ''}</button>`).join('')}</div>` +
         `<div class="popb"><table><thead><tr><th class="n">Call LTP</th><th style="text-align:center">Strike</th><th>Put LTP</th></tr></thead><tbody>${rows}</tbody></table></div>` +
-        `<div style="padding:8px 12px;color:var(--text-3);font-size:11px">*19 Oct expiry moved from Tue 20 Oct (Dussehra). Click a price to load it on the option chart.</div></div>`, n => n.dataset.c || n.dataset.x || n.id)) { placePop(p, rail); return; }
+        `<div style="padding:8px 12px;color:var(--text-3);font-size:11px">*19 Oct expiry moved from Tue 20 Oct (Dussehra). The 19 Oct 22500 Call and Put are real Kite prices; the rest are modelled. Click a price to load it on the option chart.</div></div>`, n => n.dataset.c || n.dataset.x || n.id)) { placePop(p, rail); return; }
       p.querySelectorAll('[data-x]').forEach(b2 => b2.addEventListener('click', () => { chainExp = b2.dataset.x; renderPopover(); }));
       p.querySelectorAll('[data-c]').forEach(b2 => b2.addEventListener('click', () => {
         const m = b2.dataset.c.match(/^NIFTY-(\d{4}-\d{2}-\d{2})-(\d*)-(CE|PE)$/);
@@ -1756,14 +1858,14 @@
       `<div><span>Close</span><span class="caps"><kbd>Esc</kbd></span></div></div></div>` +
       `<div class="grp"><span class="gl">Positions</span><select id="dscen" aria-label="Sample positions">${Object.entries(groups).map(([g, items]) => `<optgroup label="${esc(g)}">${items.map(([kk, n]) => `<option value="${kk}" ${kk === st.scenario ? 'selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>`).join('')}</select>` +
       (sc.product ? seg('product', st.product, [['CARRY', 'Carry forward'], ['INTRADAY', 'Intraday']]) : '') + `</div>` +
-      `<div class="grp"><span class="gl">Clock · Tue 13 Oct${CLOCKS.some(c => c[0] === st.clock) ? '' : ` · now ${E.clock(Math.min(st.clock, E.CLOSE))}`}</span>${seg('clock', st.clock, CLOCKS)}</div>` +
+      `<div class="grp"><span class="gl">Clock · ${E.DAYS[E.TODAY].label}${CLOCKS.some(c => c[0] === st.clock) ? '' : ` · now ${E.clock(Math.min(st.clock, E.CLOSE))}`}</span>${seg('clock', st.clock, CLOCKS)}</div>` +
       `<div class="grp"><span class="gl">Simulate</span><div class="row"><button id="dadv">Clock +30 min</button><button id="dclose">Close held positions</button></div></div>` +
       `<div class="grp"><span class="gl">Prices</span>${seg('pricing', st.pricing, [['live', 'Live'], ['delayed', 'Delayed'], ['unavailable', 'Unavailable']])}${seg('ticks', st.ticks, [[true, 'Ticking'], [false, 'Frozen']])}</div>` +
       `<div class="grp"><span class="gl">Keyboard</span>${seg('platform', st.platform, [['mac', 'Mac · ⌥ Option'], ['win', 'Windows · Alt']])}</div>` +
       `<div class="grp"><span class="gl">Later release</span>${seg('later', st.later, [[true, 'Pins and orders on'], [false, 'MVP only']])}${seg('orderFail', st.orderFail, [[false, 'Orders succeed'], [true, 'Orders fail']])}</div>` +
       `<div class="grp"><span class="gl">Reset</span><div class="row"><button id="dtip">Show the tip again</button><button id="dreset">Reset prototype</button></div></div>` +
       `<div class="grp"><span class="gl">Analytics events</span><div class="log" id="dlog">${st.events.slice(0, 12).map(x => `<div>${esc(x)}</div>`).join('') || '<div>None yet</div>'}</div></div>` +
-      `<div class="note">Sample data for Tue 13 Oct 2026, not market data. Values come from a Black-Scholes model on trading time; IV is held at its current level and the range moves it −2.5 to +3 points.</div>` +
+      `<div class="note">Real 1-minute data from Zerodha Kite for NIFTY 50 and the 19 Oct 22500 Call and Put, ${E.DAYS[E.HIST_START].label} to ${E.clock(REAL_END_MOD)} on ${E.DAYS[E.TODAY].label}. Later times are simulated, and other contracts are modelled from the real index. Payoff values come from a Black-Scholes model on trading time, with IV taken from the real prices and held; the range moves IV −2.5 to +3 points.</div>` +
       `</div>`;
     if (focusKey) { const n = d.querySelector('#' + CSS.escape(focusKey.split(':')[0])) || [...d.querySelectorAll('[data-set]')].find(x => `${x.dataset.set}:${x.dataset.v}` === focusKey); if (n) n.focus(); }
     $('#dmin').addEventListener('click', () => { st.demoMin = !st.demoMin; LS.set('demoMin', st.demoMin); renderDemo(); fit(); $('#dmin').focus(); });

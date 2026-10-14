@@ -1,11 +1,15 @@
 /* =====================================================================
-   Engine: trading calendar, option model, sample market data, payoff maths.
-   All prices are generated sample data for Tue 13 Oct 2026. Nothing here
-   is market data. The model follows the research: Black-Scholes on a
-   trading-time clock (375 minutes a session, 252 sessions a year), priced
-   off the index with IV held at its current level (BR-08).
+   Engine: trading calendar, market data, option model, payoff maths.
+   Market data: real 1-minute candles from Zerodha Kite (src/data.js) for
+   NIFTY 50 and the NIFTY 19 Oct 22500 Call and Put, from Tue 29 Sep to
+   12:59 pm on Wed 14 Oct 2026. After 12:59 pm the index is simulated, and
+   every contract without real data is modelled from the real index.
+   The model follows the research: Black-Scholes on a trading-time clock
+   (375 minutes a session, 252 sessions a year), priced off the index with
+   IV held at its current level (BR-08). IV comes from the real prices.
    ===================================================================== */
 const Engine = (() => {
+  const RD = typeof RealData !== 'undefined' ? RealData : require('./data.js');
   const OPEN = 555, CLOSE = 930, SESSION = 375, YEAR = 252 * 375, SQOFF = 920;
   const LOT = 65, TICK = 0.05;
   const HOLIDAYS = { '2026-10-02': 'Gandhi Jayanti', '2026-10-20': 'Dussehra', '2026-11-24': 'Guru Nanak Jayanti' };
@@ -21,14 +25,14 @@ const Engine = (() => {
     return { key, y, m: m - 1, d, dow, label: `${DOW[dow]} ${d} ${MON[m - 1]}`, short: `${d} ${MON[m - 1]}`, upper: `${d} ${MON[m - 1].toUpperCase()}` };
   };
   const DAYS = [];
-  for (let t = Date.UTC(2026, 8, 28); t <= Date.UTC(2026, 11, 31); t += 864e5) {
+  for (let t = Date.UTC(2026, 8, 29); t <= Date.UTC(2026, 11, 31); t += 864e5) {
     const key = isoOf(t);
     const dow = new Date(t).getUTCDay();
     if (dow === 0 || dow === 6 || HOLIDAYS[key]) continue;
     DAYS.push(dateInfo(key));
   }
   const dayIdx = key => DAYS.findIndex(d => d.key === key);
-  const TODAY = dayIdx('2026-10-13');
+  const TODAY = dayIdx('2026-10-14');
   const tOf = (di, mod) => di * SESSION + (mod - OPEN);
   // A trading-time T on a session boundary is shown as the previous day's 3:30 pm close.
   const split = T => {
@@ -90,75 +94,97 @@ const Engine = (() => {
   }
   const roundTick = p => Math.round(p / TICK) * TICK;
 
-  /* ---------- sample index path (one value per trading minute) ---------- */
+  /* ---------- market data: one bar per trading minute ---------- */
   function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   const gauss = r => { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
-  const HIST_START = dayIdx('2026-10-08');
-  const PREV_CLOSE = 22363.35;
-  const ANCHORS = {
-    '2026-10-08': [[555, 22512], [610, 22548], [680, 22470], [760, 22430], [840, 22495], [930, 22468.4]],
-    '2026-10-09': [[555, 22455], [600, 22392], [700, 22340], [790, 22410], [860, 22372], [930, 22398.9]],
-    '2026-10-12': [[555, 22420], [640, 22465], [720, 22390], [800, 22330], [880, 22385], [930, 22363.35]],
-    '2026-10-13': [[555, 22402], [585, 22472], [615, 22540], [640, 22518], [660, 22650], [675, 22721.95], [720, 22690], [765, 22738], [810, 22762], [855, 22714], [900, 22748], [930, 22731.6]]
-  };
-  const PATH = [];
-  const DAY_CLOSE = {};
+  const HIST_START = dayIdx(RD.days[0]);
+  if (RD.days.some((k, i) => DAYS[HIST_START + i].key !== k)) throw new Error('Real data days do not match the trading calendar');
+  const BASE = HIST_START * SESSION;
+  const barOf = (s, i) => s.c[i] == null ? null : { o: s.o[i], h: s.h[i], l: s.l[i], c: s.c[i], v: s.v ? s.v[i] : 0, oi: s.oi ? s.oi[i] : null };
+  // The real index ends here (the close of the 12:58 pm candle); later minutes are simulated.
+  const REAL_END_I = RD.series.NIFTY.c.length;
+  const REAL_END_T = BASE + REAL_END_I;
+  const SIM_END_T = tOf(TODAY, CLOSE);
+  const IDX = [];
+  for (let i = 0; i < REAL_END_I; i++) IDX.push(barOf(RD.series.NIFTY, i));
   {
-    const r = rng(20261013);
-    Object.keys(ANCHORS).forEach(key => {
-      const a = ANCHORS[key];
-      const day = [a[0][1]];
-      for (let s = 0; s < a.length - 1; s++) {
-        const [m0, v0] = a[s], [m1, v1] = a[s + 1];
-        const n = m1 - m0;
-        const w = [0];
-        for (let i = 1; i <= n; i++) w.push(w[i - 1] + gauss(r) * 5.2);
-        for (let i = 1; i <= n; i++) day.push(v0 + (v1 - v0) * i / n + (w[i] - w[n] * i / n));
-      }
-      // day has 376 values: 9:15 .. 15:30 inclusive. Store 375 minute opens plus the close at the boundary.
-      day.forEach((v, i) => { if (i < SESSION) { const T = tOf(dayIdx(key), OPEN) + i; PATH[T - HIST_START * SESSION] = v; } });
-      DAY_CLOSE[dayIdx(key)] = day[SESSION];
-    });
-  }
-  // closing=true reads a session boundary as that day's close instead of the next day's open.
-  const pathAt = (T, closing = false) => {
-    if (closing && T % SESSION === 0 && DAY_CLOSE[T / SESSION - 1] !== undefined) return DAY_CLOSE[T / SESSION - 1];
-    if (!closing && T % SESSION !== 0 && DAY_CLOSE[Math.floor(T / SESSION)] !== undefined && T - Math.floor(T / SESSION) * SESSION > SESSION - 1) {
-      const di = Math.floor(T / SESSION), f = T - di * SESSION - (SESSION - 1);
-      return PATH[di * SESSION + SESSION - 1 - HIST_START * SESSION] * (1 - f) + DAY_CLOSE[di] * f;
+    // Simulated rest of today: a random walk from the real close, sized to the last three sessions' 1-minute moves.
+    const recent = IDX.slice(-3 * SESSION).filter(Boolean);
+    let sq = 0; for (let k = 1; k < recent.length; k++) sq += (recent[k].c - recent[k - 1].c) ** 2;
+    const sd = Math.sqrt(sq / Math.max(1, recent.length - 1));
+    const r = rng(20261014);
+    let last = IDX[REAL_END_I - 1].c;
+    for (let i = REAL_END_I; i < SIM_END_T - BASE; i++) {
+      const o = last, c = o + gauss(r) * sd;
+      IDX.push({ o, c, h: Math.max(o, c) + Math.abs(gauss(r)) * sd * 0.35, l: Math.min(o, c) - Math.abs(gauss(r)) * sd * 0.35, v: 0, oi: null, sim: true });
+      last = c;
     }
-    const i = T - HIST_START * SESSION;
-    const i0 = Math.max(0, Math.min(PATH.length - 1, Math.floor(i))), i1 = Math.min(PATH.length - 1, i0 + 1);
-    const f = i - Math.floor(i);
-    return PATH[i0] * (1 - f) + PATH[i1] * f;
+  }
+  const lastBarBefore = (bars, T) => { for (let i = Math.min(bars.length, Math.ceil(T) - BASE) - 1; i >= 0; i--) if (bars[i]) return bars[i]; return null; };
+  // Index level at trading time T. closing=true reads a session boundary as that day's close instead of the next day's open.
+  const pathAt = (T, closing = false) => {
+    const m = T - Math.floor(T / SESSION) * SESSION;
+    if (closing && m === 0) { const b = lastBarBefore(IDX, T); return b ? b.c : IDX[0].o; }
+    const i = Math.floor(T) - BASE;
+    if (i < 0) return IDX[0].o;
+    if (i >= IDX.length) return IDX[IDX.length - 1].c;
+    const b = IDX[i] || lastBarBefore(IDX, T);
+    return b.o + (b.c - b.o) * (T - Math.floor(T));
   };
+  const DEFAULT_NOW = REAL_END_T; // 12:59 pm, Wed 14 Oct: the latest real data
+  const S_DEFAULT = pathAt(DEFAULT_NOW);
+  const PREV_CLOSE = pathAt(tOf(TODAY, OPEN), true);
 
   /* ---------- contracts ---------- */
-  const DEFAULT_NOW = tOf(TODAY, 675); // 11:15 am, Tue 13 Oct
-  const S_DEFAULT = 22721.95;
-  const SHOT = { type: 'CE', strike: 22500, exp: '2026-10-27', ltp: 470.0, prevClose: 203.65 };
   const tauOf = (expT, T) => Math.max(0, (expT - T) / YEAR);
-  const termAdj = key => ({ '2026-10-13': 0.032, '2026-10-19': 0.006, '2026-10-27': 0, '2026-11-03': -0.002 }[key] ?? -0.004);
-  const smile = (K, key, base) => { const m = Math.log(K / S_DEFAULT); return base + termAdj(key) - 0.55 * m + 6 * m * m; };
+  const termAdj = key => ({ '2026-10-19': 0.006, '2026-10-27': 0, '2026-11-03': -0.002 }[key] ?? -0.004);
+  const smileShape = (K, key) => { const m = Math.log(K / S_DEFAULT); return termAdj(key) - 0.55 * m + 6 * m * m; };
+  const realSeries = (type, strike, expKey) => RD.series[`${type}-${strike}-${expKey}`] || null;
+  const realBars = {};
+  function realBarsOf(key) {
+    if (!realBars[key]) { const s = RD.series[key]; realBars[key] = []; for (let i = 0; i < Math.min(REAL_END_I, s.c.length); i++) realBars[key].push(barOf(s, i)); }
+    return realBars[key];
+  }
+  // IV that matches a real price at time T (the open of that minute, or the last close before it).
+  function realIvAt(type, strike, expKey, T) {
+    const bars = realBarsOf(`${type}-${strike}-${expKey}`);
+    const i = Math.floor(T) - BASE;
+    const b = i < bars.length && bars[i] ? { p: bars[i].o } : (lastBarBefore(bars, T) ? { p: lastBarBefore(bars, T).c } : null);
+    if (!b) return null;
+    return solveIv(type, pathAt(T), strike, tauOf(expiryByKey(expKey).T, T), b.p);
+  }
+  // Smile base from the real 19 Oct 22500 pair at the end of the real data; other contracts use it.
   let BASE_IV;
   {
-    const e = expiryByKey(SHOT.exp);
-    const ivShot = solveIv('CE', S_DEFAULT, SHOT.strike, tauOf(e.T, DEFAULT_NOW), SHOT.ltp);
-    BASE_IV = ivShot - (smile(SHOT.strike, SHOT.exp, 0));
+    const ivs = ['CE', 'PE'].map(t => realIvAt(t, 22500, '2026-10-19', REAL_END_T)).filter(v => v != null);
+    BASE_IV = ivs.reduce((a, v) => a + v, 0) / ivs.length - smileShape(22500, '2026-10-19');
   }
+  const smile = (K, key) => BASE_IV + smileShape(K, key);
   const CONTRACTS = {};
   function contract(type, strike, expKey) {
     const id = `NIFTY-${expKey}-${strike || ''}-${type}`;
     if (CONTRACTS[id]) return CONTRACTS[id];
     const e = expiryByKey(expKey);
+    const real = type === 'FUT' ? null : realSeries(type, strike, expKey);
     const c = {
       id, und: 'NIFTY', type, strike, expKey, exp: e, expT: e.T,
       label: type === 'FUT' ? `NIFTY ${e.info.short} FUT` : `NIFTY ${e.info.short} ${strike} ${type === 'CE' ? 'Call' : 'Put'}`,
       tag: type === 'FUT' ? 'FUT' : type,
-      iv: type === 'FUT' ? 0 : smile(strike, expKey, BASE_IV)
+      real: real ? `${type}-${strike}-${expKey}` : null,
+      iv: type === 'FUT' ? 0 : smile(strike, expKey)
     };
+    // A contract with real data prices from its own IV: at Now while the data lasts, and from the last real minute after that.
+    if (real) { c.ivEnd = realIvAt(type, strike, expKey, REAL_END_T); c.iv = c.ivEnd; }
     CONTRACTS[id] = c;
     return c;
+  }
+  const isReal = c => !!(c && c.real);
+  // Re-read the IV of each real contract at time T, so its model price at Now equals its real price.
+  function calibrate(T) {
+    Object.values(CONTRACTS).forEach(c => {
+      if (!c.real) return;
+      c.iv = T < REAL_END_T ? (realIvAt(c.type, c.strike, c.expKey, T) ?? c.ivEnd) : c.ivEnd;
+    });
   }
   // Model price of a contract at index level S and time T. ivShift moves IV in absolute points (BR-09 range).
   function price(c, S, T, ivShift = 0) {
@@ -167,41 +193,68 @@ const Engine = (() => {
   }
   const intrinsic = (c, S) => c.type === 'FUT' ? S : c.type === 'CE' ? Math.max(0, S - c.strike) : Math.max(0, c.strike - S);
 
-  // Option price history for the option chart: IV drifts from the level that gives the screenshot's previous close.
-  const optHistCache = {};
-  function optionPathAt(c, T, closing = false) {
-    if (c.type === 'FUT') return pathAt(T, closing);
-    let ivPrev = optHistCache[c.id];
-    if (ivPrev === undefined) {
-      const prevT = tOf(dayIdx('2026-10-12'), CLOSE);
-      const isShot = c.type === SHOT.type && c.strike === SHOT.strike && c.expKey === SHOT.exp;
-      ivPrev = isShot ? solveIv('CE', PREV_CLOSE, c.strike, tauOf(c.expT, prevT), SHOT.prevClose) : c.iv + 0.01;
-      optHistCache[c.id] = ivPrev;
-    }
-    const t0 = tOf(dayIdx('2026-10-12'), CLOSE), t1 = DEFAULT_NOW;
-    const f = Math.max(0, Math.min(1, (T - t0) / (t1 - t0)));
-    const iv = T < t0 ? ivPrev + 0.004 * Math.sin(T / 37) : ivPrev + (c.iv - ivPrev) * f;
-    return bs(c.type, pathAt(T, closing), c.strike, tauOf(c.expT, T), iv);
-  }
-  // floor: lowest value a series can take (0 for option prices).
-  function candles(tf, fromT, toT, valueAt, seed, floor = -Infinity) {
-    const r = rng(seed);
+  // One bar per minute for a contract: real where there is data, otherwise modelled from the index bar of that minute.
+  const optBarCache = {};
+  function optionBars(c) {
+    if (optBarCache[c.id]) return optBarCache[c.id];
+    const real = c.real ? realBarsOf(c.real) : [];
+    const r = rng(7 + (c.strike || 0) + (c.type === 'PE' ? 1 : 0));
+    const realV = real.filter(Boolean).map(b => b.v).sort((a, b) => a - b);
+    const medV = realV.length ? realV[Math.floor(realV.length / 2)] : 0;
+    let oi = real.length ? (lastBarBefore(real, REAL_END_T) || {}).oi : null;
     const out = [];
-    const s0 = Math.floor(fromT / tf), s1 = Math.ceil(toT / tf);
-    for (let s = s0; s < s1; s++) {
-      const a = s * tf, b = Math.min((s + 1) * tf, toT);
-      if (b <= a) continue;
-      let o = valueAt(a, false), c = valueAt(b, true), h = Math.max(o, c), l = Math.min(o, c);
-      for (let m = a + 1; m < b; m++) { const v = valueAt(m); if (v > h) h = v; if (v < l) l = v; }
-      // wick size scales with the price, so a ₹0.05 option doesn't get ₹0.60 wicks
-      const span = Math.max(Math.min(0.6, Math.abs(o) * 0.01), (h - l) * 0.18);
-      h += r() * span; l = Math.max(floor, l - r() * span);
-      const mod = (a % SESSION);
-      const u = 0.55 + 0.9 * Math.pow(Math.abs(mod - 187) / 187, 2);
-      out.push({ s, o, h, l, c, v: u * (0.4 + r()) });
+    for (let i = 0; i < IDX.length; i++) {
+      if (i < real.length && c.real) { out.push(real[i]); continue; }
+      const x = IDX[i], T = BASE + i;
+      if (!x) { out.push(null); continue; }
+      const iv = c.real ? c.ivEnd : c.iv;
+      const at = (S, t) => c.type === 'FUT' ? S : bs(c.type, S, c.strike, tauOf(c.expT, t), iv);
+      const vh = at(c.type === 'PE' ? x.l : x.h, T + 0.5), vl = at(c.type === 'PE' ? x.h : x.l, T + 0.5);
+      const o = at(x.o, T), cl = at(x.c, T + 1);
+      const mod = i % SESSION, u = 0.55 + 0.9 * Math.pow(Math.abs(mod - 187) / 187, 2);
+      const v = c.type === 'FUT' ? 0 : Math.round((medV || 40000) * u * (0.4 + r()));
+      if (c.real) oi = Math.max(0, Math.round(oi + (r() - 0.5) * 6000));
+      else oi = Math.round((22e5 + 9e5 * Math.sin(i / 900) + 3e5 * Math.sin(i / 97)) * (c.type === 'PE' ? 1.25 : 1));
+      out.push({ o, h: Math.max(o, cl, vh), l: Math.min(o, cl, vl), c: cl, v, oi, sim: true });
+    }
+    optBarCache[c.id] = out;
+    return out;
+  }
+  // Price of a contract at time T: the open of that minute's bar, or the last close before it.
+  function optionPriceAt(c, T) {
+    const bars = optionBars(c), i = Math.floor(T) - BASE;
+    if (i >= 0 && i < bars.length && bars[i]) return bars[i].o;
+    const b = lastBarBefore(bars, T);
+    return b ? b.c : price(c, pathAt(T), T);
+  }
+  // The close of the last bar that ended at or before T (e.g. the previous session's close).
+  function optionCloseBefore(c, T) { const b = lastBarBefore(optionBars(c), T); return b ? b.c : price(c, pathAt(T, true), T); }
+
+  // Candles of tf minutes from 1-minute bars. Each session starts its own candles at 9:15 am, so 2m, 10m,
+  // 30m and 1h candles never run across the night; the last one of a day can be shorter.
+  function aggregate(bars, tf, fromT, toT) {
+    const out = [];
+    for (let d = Math.max(HIST_START, Math.floor(fromT / SESSION)); d * SESSION < toT; d++) {
+      const d0 = d * SESSION;
+      for (let a = d0; a < d0 + SESSION && a < toT; a += tf) {
+        const end = Math.min(a + tf, d0 + SESSION), b = Math.min(end, toT);
+        if (b <= fromT) continue;
+        let o = null, h = -Infinity, l = Infinity, cl = null, v = 0, oi = null, sim = false;
+        for (let t = a; t < b; t++) {
+          const x = bars[t - BASE];
+          if (!x) continue;
+          if (o === null) o = x.o;
+          if (x.h > h) h = x.h; if (x.l < l) l = x.l;
+          cl = x.c; v += x.v || 0; if (x.oi != null) oi = x.oi; if (x.sim) sim = true;
+        }
+        if (o === null) continue;
+        out.push({ t0: a, t1: end, o, h, l, c: cl, v, oi, sim });
+      }
     }
     return out;
   }
+  const indexCandles = (tf, fromT, toT) => aggregate(IDX, tf, fromT, toT);
+  const optionCandles = (c, tf, fromT, toT) => aggregate(optionBars(c), tf, fromT, toT);
 
   /* ---------- formatting ---------- */
   const inr = (n, dec = 0) => {
@@ -221,9 +274,9 @@ const Engine = (() => {
   const settleS = c => pathAt(c.expT, true);
 
   return {
-    OPEN, CLOSE, SESSION, YEAR, SQOFF, LOT, TICK, HOLIDAYS, DAYS, TODAY, EXPIRIES, DEFAULT_NOW, S_DEFAULT, PREV_CLOSE, SHOT, BASE_IV, HIST_START,
-    tOf, split, fmtT, clock, dayOfT, dateInfo, expiryByKey, bs, solveIv, roundTick, pathAt, contract, price, intrinsic, optionPathAt, candles, tauOf,
-    inr, rupees, signed, level, px, prem, settleS, rng
+    OPEN, CLOSE, SESSION, YEAR, SQOFF, LOT, TICK, HOLIDAYS, DAYS, TODAY, EXPIRIES, DEFAULT_NOW, S_DEFAULT, PREV_CLOSE, HIST_START, REAL_END_T, SOURCE: RD.source,
+    baseIv: () => BASE_IV, tOf, split, fmtT, clock, dayOfT, dayIdx, dateInfo, expiryByKey, bs, solveIv, roundTick, pathAt, contract, isReal, calibrate, price, intrinsic,
+    optionPriceAt, optionCloseBefore, indexCandles, optionCandles, tauOf, inr, rupees, signed, level, px, prem, settleS, rng
   };
 })();
 if (typeof module !== 'undefined') module.exports = Engine;

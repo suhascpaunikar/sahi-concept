@@ -119,7 +119,14 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .tb { height: 36px; flex: none; display: flex; align-items: center; gap: 1px; padding: 0 8px; font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; }
 .tb .tf { padding: 4px 5px; border-radius: 5px; font-weight: 500; display: inline-flex; align-items: center; gap: 2px; }
 .tb .tf.on { color: var(--text); font-weight: 700; }
-.tb .tfs { display: contents; }
+.tb .tfs, .tb .rgs { display: contents; }
+.tfmenu { position: fixed; z-index: 60; min-width: 160px; padding: 4px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line-2); box-shadow: 0 12px 30px -10px rgba(0, 0, 0, .7); display: grid; }
+.tfmenu button { display: flex; justify-content: space-between; gap: 18px; padding: 7px 10px; border-radius: 6px; font-size: 12.5px; color: var(--text-2); text-align: left; }
+.tfmenu button:hover, .tfmenu button:focus-visible { background: var(--panel-3); color: var(--text); }
+.tfmenu button[aria-checked="true"] { color: var(--text); font-weight: 600; }
+.tfmenu .k { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.src-pill { position: absolute; left: 52px; top: 14px; z-index: 2; height: 24px; display: inline-flex; align-items: center; padding: 0 8px; border-radius: 5px; font-size: 11px; font-weight: 600; color: #c4b5fd; background: rgba(30, 24, 52, .92); border: 1px solid rgba(167, 139, 250, .45); pointer-events: none; }
+.src-pill:empty { display: none; }
 .tb .tf:hover { color: var(--text); }
 .tb .vsep { width: 1px; height: 16px; background: var(--line-2); margin: 0 6px; flex: none; }
 .tb .right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-left: 6px; }
@@ -441,9 +448,9 @@ button.ochip:focus-visible { outline: 2px solid var(--blue); }
           <div class="tools"><button class="ib" aria-label="Alerts"><svg class="i"><use href="#i-alarm"/></svg></button><button class="ib" aria-label="Save"><svg class="i"><use href="#i-bookmark"/></svg></button><button class="ib" aria-label="Expand"><svg class="i"><use href="#i-expand"/></svg></button></div>
         </div>
         <div class="tb">
-          <button class="tf">1D</button><button class="tf">5D</button><button class="tf">1M <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button>
+          <span class="rgs" role="group" aria-label="Nifty chart range" data-chart="idx"><button class="tf" data-range="1" title="Last session">1D</button><button class="tf" data-range="5" title="Last 5 sessions">5D</button><button class="tf" data-range="all" title="All the data, about a month">1M <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button></span>
           <span class="vsep"></span>
-          <span class="tfs" role="group" aria-label="Nifty chart timeframe" data-chart="idx"><button class="tf" data-tf="1">1m</button><button class="tf x1" data-tf="2">2m</button><button class="tf on" data-tf="3">3m</button><button class="tf" data-tf="5">5m</button><button class="tf x1" data-tf="10">10m</button><button class="tf" data-tf="15">15m <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button></span>
+          <span class="tfs" role="group" aria-label="Nifty chart timeframe" data-chart="idx"><button class="tf" data-tf="1">1m</button><button class="tf x1" data-tf="2">2m</button><button class="tf on" data-tf="3">3m</button><button class="tf" data-tf="5">5m</button><button class="tf x1" data-tf="10">10m</button><button class="tf" data-more="1" aria-haspopup="menu" aria-expanded="false"><span class="lbl">15m</span> <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button></span>
           <div class="right">
             <button class="tool" aria-label="Crosshair"><svg class="i"><use href="#i-cross"/></svg><svg class="i cv"><use href="#i-chev"/></svg></button>
             <button class="tool x2" aria-label="Indicators"><svg class="i"><use href="#i-fx"/></svg></button>
@@ -471,9 +478,9 @@ button.ochip:focus-visible { outline: 2px solid var(--blue); }
           <div class="tools"><button class="ib" aria-label="Alerts"><svg class="i"><use href="#i-alarm"/></svg></button><button class="ib" aria-label="Save"><svg class="i"><use href="#i-bookmark"/></svg></button><button class="ib" aria-label="Expand"><svg class="i"><use href="#i-expand"/></svg></button></div>
         </div>
         <div class="tb">
-          <button class="tf on">1D</button><button class="tf">5D</button><button class="tf">1M <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button>
+          <span class="rgs" role="group" aria-label="Option chart range" data-chart="opt"><button class="tf" data-range="1" title="Last session">1D</button><button class="tf" data-range="5" title="Last 5 sessions">5D</button><button class="tf" data-range="all" title="All the data, about a month">1M <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button></span>
           <span class="vsep"></span>
-          <span class="tfs" role="group" aria-label="Option chart timeframe" data-chart="opt"><button class="tf" data-tf="1">1m</button><button class="tf x1" data-tf="2">2m</button><button class="tf" data-tf="3">3m</button><button class="tf on" data-tf="5">5m</button><button class="tf x1" data-tf="10">10m</button><button class="tf" data-tf="15">15m <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button></span>
+          <span class="tfs" role="group" aria-label="Option chart timeframe" data-chart="opt"><button class="tf" data-tf="1">1m</button><button class="tf x1" data-tf="2">2m</button><button class="tf" data-tf="3">3m</button><button class="tf on" data-tf="5">5m</button><button class="tf x1" data-tf="10">10m</button><button class="tf" data-more="1" aria-haspopup="menu" aria-expanded="false"><span class="lbl">15m</span> <svg class="i" style="width:10px;height:10px;stroke-width:2.4"><use href="#i-chev"/></svg></button></span>
           <div class="right">
             <button class="tool" aria-label="Crosshair"><svg class="i"><use href="#i-cross"/></svg><svg class="i cv"><use href="#i-chev"/></svg></button>
             <button class="tool x2" aria-label="Indicators"><svg class="i"><use href="#i-fx"/></svg></button>
@@ -486,6 +493,7 @@ button.ochip:focus-visible { outline: 2px solid var(--blue); }
         <div class="cw" id="optWrap">
           <canvas id="optCanvas" aria-label="Option chart"></canvas>
           <span class="badge-n">1 <svg viewBox="0 0 10 10"><path d="M1 3h8L5 8z"/></svg></span>
+          <span class="src-pill" id="optSrc"></span>
           <span class="oi-label" id="oiLabel">OI: <b>35L</b></span>
           <span class="wm"><svg viewBox="0 0 24 24" style="color:#fff"><use href="#i-sahi"/></svg>SAHI Charts</span>
         </div>

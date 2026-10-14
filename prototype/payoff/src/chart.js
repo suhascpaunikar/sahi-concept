@@ -50,9 +50,10 @@ class SahiChart {
   xToT(x) { return this.view.t0 + x / this.plotW * (this.view.t1 - this.view.t0); }
   pToY(p) { return this.o.padTop + (this.yr.hi - p) / (this.yr.hi - this.yr.lo) * (this.mainH * (1 - this.o.volFrac) - this.o.padTop - 8); }
   yToP(y) { return this.yr.hi - (y - this.o.padTop) / (this.mainH * (1 - this.o.volFrac) - this.o.padTop - 8) * (this.yr.hi - this.yr.lo); }
+  // Candles carry their own start and end (t0, t1): each session starts fresh, so the last one of a day can be short.
   visible() {
-    const tf = this.o.tf, { t0, t1 } = this.view;
-    return this.candles.filter(c => (c.s + 1) * tf >= t0 && c.s * tf <= t1);
+    const { t0, t1 } = this.view;
+    return this.candles.filter(c => c.t1 >= t0 && c.t0 <= t1);
   }
   computeY() {
     let lo = Infinity, hi = -Infinity;
@@ -132,11 +133,11 @@ class SahiChart {
     ctx.stroke();
   }
   _candles() {
-    const { ctx } = this, tf = this.o.tf;
-    const w = tf * this.plotW / (this.view.t1 - this.view.t0);
-    const bw = Math.max(1, Math.min(w * 0.72, 14));
+    const { ctx } = this;
+    const k = this.plotW / (this.view.t1 - this.view.t0);
     for (const c of this.visible()) {
-      const x = this.tToX(c.s * tf + tf / 2);
+      const bw = Math.max(1, Math.min((c.t1 - c.t0) * k * 0.72, 28));
+      const x = this.tToX((c.t0 + c.t1) / 2);
       const up = c.c >= c.o;
       ctx.fillStyle = ctx.strokeStyle = up ? this.col.up : this.col.down;
       const yH = this.pToY(c.h), yL = this.pToY(c.l), yO = this.pToY(c.o), yC = this.pToY(c.c);
@@ -145,16 +146,17 @@ class SahiChart {
     }
   }
   _volume() {
-    const { ctx } = this, tf = this.o.tf;
+    const { ctx } = this;
     const vis = this.visible();
     if (!vis.length || !this.o.volFrac) return;
-    const maxV = Math.max(...vis.map(c => c.v));
+    const maxV = Math.max(...vis.map(c => c.v || 0));
+    if (!(maxV > 0)) return; // an index has no volume
     const base = this.mainH, hh = this.mainH * this.o.volFrac;
-    const w = tf * this.plotW / (this.view.t1 - this.view.t0);
-    const bw = Math.max(1, Math.min(w * 0.72, 14));
+    const k = this.plotW / (this.view.t1 - this.view.t0);
     ctx.globalAlpha = 0.32;
     for (const c of vis) {
-      const x = this.tToX(c.s * tf + tf / 2), h = c.v / maxV * hh;
+      const bw = Math.max(1, Math.min((c.t1 - c.t0) * k * 0.72, 28));
+      const x = this.tToX((c.t0 + c.t1) / 2), h = (c.v || 0) / maxV * hh;
       ctx.fillStyle = c.c >= c.o ? this.col.up : this.col.down;
       ctx.fillRect(Math.round(x - bw / 2), base - h, Math.max(1, Math.round(bw)), h);
     }
@@ -165,8 +167,13 @@ class SahiChart {
     const top = this.subTop, h = this.subH;
     ctx.strokeStyle = this.col.line; ctx.beginPath(); ctx.moveTo(0, top + 0.5); ctx.lineTo(this.w, top + 0.5); ctx.stroke();
     const pts = sub.series.filter(p => p.T >= this.view.t0 - 30 && p.T <= this.view.t1 + 30 && p.T <= this.nowT);
-    if (!pts.length) return;
-    const lo = sub.lo, hi = sub.hi;
+    if (!pts.length) { this._subY = null; return; }
+    // scale to what is in view, with round ticks
+    let lo = Math.min(...pts.map(p => p.v)), hi = Math.max(...pts.map(p => p.v));
+    if (hi - lo < hi * 0.02) { lo -= hi * 0.01 + 1; hi += hi * 0.01 + 1; }
+    const step = this.niceStep(hi - lo, 3);
+    lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+    this._subTicks = []; for (let v = lo + step; v < hi; v += step) this._subTicks.push(v);
     const y = v => top + 10 + (hi - v) / (hi - lo) * (h - 20);
     ctx.strokeStyle = sub.color; ctx.lineWidth = 1.4; ctx.beginPath();
     pts.forEach((p, i) => { const x = this.tToX(p.T); i ? ctx.lineTo(x, y(p.v)) : ctx.moveTo(x, y(p.v)); });
@@ -192,8 +199,9 @@ class SahiChart {
     }
     if (this.o.sub && this._subY && !empty) {
       const sub = this.o.sub;
-      for (const v of sub.ticks) { const y = this._subY(v); ctx.fillText(sub.fmt(v), x0 + 8, y); }
       const lastV = sub.series.filter(q => q.T <= this.nowT).pop();
+      // tick labels give way to the last-value tag
+      for (const v of this._subTicks || []) { const y = this._subY(v); if (lastV && Math.abs(y - this._subY(lastV.v)) < 16) continue; ctx.fillText(sub.fmt(v), x0 + 8, y); }
       if (lastV) this.tag(x0, this._subY(lastV.v), sub.fmt(lastV.v), sub.color, '#fff');
     }
     ctx.textAlign = 'center';
@@ -251,7 +259,7 @@ class SahiChart {
   // Keep the view between the first candle and the right limit: the axis end, or panT when that is later.
   clampView(t0, t1) {
     let span = Math.max(this.o.minSpan, Math.min(this.o.maxSpan, t1 - t0));
-    const first = this.candles.length ? this.candles[0].s * this.o.tf : t0;
+    const first = this.candles.length ? this.candles[0].t0 : t0;
     const right = Math.max(this.limitT != null ? this.limitT : this.nowT, this.panT != null ? this.panT : -Infinity);
     span = Math.min(span, (right - first) / 0.89);
     const maxRight = right + span * 0.06;
