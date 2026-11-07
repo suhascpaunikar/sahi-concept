@@ -1,6 +1,6 @@
 # Sahi concepts
 
-Two feature concepts for Sahi, each with a PRD and a clickable prototype: **Mirror** (mobile) and **Payoff** (desktop Scalper).
+Three feature concepts for Sahi, each with a PRD and a clickable prototype: **Mirror** (mobile), **Payoff** (desktop Scalper) and the **Quick Action Wheel** (mobile Option Scalper).
 
 ## What's here
 
@@ -9,6 +9,8 @@ Two feature concepts for Sahi, each with a PRD and a clickable prototype: **Mirr
 | `docs/sahi-mirror-mobile-prd.md` | Full PRD v2.0, rewritten from the web desktop PRD v1.1 for the Sahi iOS and Android app |
 | `docs/sahi-payoff-desktop-prd.md` | Payoff (desktop) PRD v1.7: the Payoff mode on the Scalper split view, for Sahi web and the Sahi Desktop app |
 | `docs/sahi-payoff-desktop-prd.html` | The same Payoff PRD as a styled page with contents, linked IDs and an open-items filter. Open it in a browser |
+| `docs/sahi-quick-action-wheel-prd.html` | Quick Action Wheel PRD v1.2: hold the timeframe button on the mobile Option Scalper to open a radial menu |
+| `prototype/quick-wheel/index.html` | Clickable phone prototype of the Quick Action Wheel PRD, with haptics. One self-contained file, no build step |
 | `prototype/index.html` | Clickable phone prototype of the Mirror PRD. One self-contained file, no build step |
 | `prototype/payoff/index.html` | Clickable desktop prototype of the Payoff PRD on the Scalper split view. One self-contained file, no build step |
 | `prototype/payoff/src/` | Sources for the Payoff prototype; `sh prototype/payoff/src/build.sh` rebuilds `index.html` |
@@ -62,3 +64,23 @@ NIFTY 50 and the NIFTY 19 Oct 22500 Call and Put run on real 1-minute data from 
 ### Payoff surfaces covered
 
 S1 Scalper split view (Payoff button, hold-to-peek) · N1 Payoff introduction tip · S2 Payoff mode: one position · S3 Payoff mode: several positions · N2 Pricing status banner · D1 Pinned point card · M1 Confirm order from pin · N3 Order result toast · scheduled exit markers.
+
+## Sahi Quick Action Wheel: mobile concept
+
+On the mobile Option Scalper, holding a chart's timeframe button ("5m") opens a quarter-circle wheel of 7 slots: 2 timeframes, Trend Line, Fibonacci Retracement, VWAP, EMA and Clean view. Slide onto a slot and release to apply it to that chart in one touch. A tap still opens the chart menu.
+
+### Run the Quick Wheel prototype
+
+Open `prototype/quick-wheel/index.html` in a browser. On a desktop you get a phone frame and a dev panel; on a phone the app fills the screen.
+
+- **Hold** either timeframe button for 300 ms, **slide** to a slot, **release**. Release on the button, outside the fan, on the current timeframe or on a greyed slot to cancel.
+- **Tap** the button for the chart menu (B1), with the tip row and a Quick wheel row in Settings.
+- **Haptics:** light impact on open, a selection tick each time the hovered slot changes, success on apply, warning on failure. They use `navigator.vibrate` on Android Chrome. On iPhone (iOS 18+) the prototype tries Safari's switch-toggle tick, which is best effort. On desktop, haptics show as on-screen pulses, with optional tick sounds. Android only vibrates after the page has had one tap, for example "Got it" on the coachmark.
+- Keyboard: focus a timeframe button and press **W**, then use the arrow keys and Enter.
+- The dev panel has hit zones, the hold threshold (200 to 500 ms), linked charts, offline, failed timeframe load, failed save, slot settings loading or failed, reduce motion, the analytics event log and a reset.
+
+Candles are generated sample data that ticks every second, and the charts keep updating while the wheel is open. Slot choices, the coachmark and the tip row are saved in local storage.
+
+### Quick Wheel surfaces covered
+
+S1 Option Scalper (hold and tap on both timeframe buttons, chart outline, Clean view chip, position, SL and TP lines) · N1 Hold coachmark · M1 Quick Action Wheel · N2 Result toast · N3 Drawing mode banner (Trend Line, Horizontal Line, Horizontal Ray, Rectangle, Fibonacci) · B1 Chart Menu with Indicator and Drawing sheets · S2 Customise Quick Wheel · B2 Slot Picker (Timeframe, Drawing tool, Indicator) · M2 Reset Quick Wheel.

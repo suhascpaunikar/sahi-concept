@@ -1,0 +1,1592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>Sahi Quick Wheel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Sahi Option Scalper, dark theme, read from the Nov 2026 screenshots (PRD R1 to R3).
+   Layout: a 390x844 phone with a dev panel on desktop; on a phone the app fills the screen. */
+:root {
+  --stage: #070708;
+  --bg: #000000;
+  --panel: #121213;
+  --surface: #1c1c1e;
+  --surface-2: #26262a;
+  --surface-3: #313136;
+  --line: #2a2a2e;
+  --ink: #f4f4f5;
+  --ink-2: #b4b4ba;
+  --ink-3: #7c7c84;
+  --up: #2ebd85;
+  --down: #f0525a;
+  --candle-up: #26a17b;
+  --candle-down: #ef4f5c;
+  --tag-up: #1f9c74;
+  --tag-down: #e2434b;
+  --buy: #1e9c55;
+  --sell: #e3443c;
+  --ai: #e05ad6;
+  --pos: #3d8bff;
+  --wheel: rgba(26, 26, 29, .88);
+  --wheel-line: rgba(255, 255, 255, .07);
+  --on: #2ebd85;
+  --font: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--stage); color: var(--ink); font: 14px/1.4 var(--font); -webkit-font-smoothing: antialiased; overflow: hidden; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; }
+button:disabled { cursor: not-allowed; }
+:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+svg.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- stage ---------- */
+.stage { height: 100%; display: flex; align-items: center; justify-content: center; gap: 40px; padding: 20px 24px; }
+.dev { width: 300px; flex: none; align-self: stretch; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-right: 6px; color: var(--ink-2); font-size: 13px; scrollbar-width: thin; }
+.dev h1 { margin: 0; color: var(--ink); font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.dev .lede { margin: 4px 0 0; font-size: 12.5px; color: var(--ink-3); }
+.dev .how { margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #0f0f11; font-size: 12.5px; }
+.dev .how b { color: var(--ink); font-weight: 600; }
+.dev .how p { margin: 0 0 6px; } .dev .how p:last-child { margin: 0; }
+.dg { display: flex; flex-direction: column; gap: 6px; }
+.dl { font-size: 10.5px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); }
+.dt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 0; cursor: pointer; }
+.dt input { appearance: none; width: 32px; height: 18px; border-radius: 9px; background: var(--surface-3); position: relative; flex: none; cursor: pointer; transition: background .15s; }
+.dt input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.dt input:checked { background: var(--up); }
+.dt input:checked::after { transform: translateX(14px); }
+.dseg { display: flex; gap: 4px; background: #0f0f11; border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+.dseg button { flex: 1; padding: 5px 4px; border-radius: 6px; font-size: 12px; text-align: center; color: var(--ink-2); }
+.dseg button[aria-pressed="true"] { background: var(--surface-3); color: var(--ink); }
+.drange { display: flex; align-items: center; gap: 10px; }
+.drange input { flex: 1; accent-color: #fff; }
+.drange output { width: 52px; text-align: right; color: var(--ink); }
+.dbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.dbtns button { padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line); background: #0f0f11; font-size: 12px; color: var(--ink-2); }
+.dbtns button:hover { color: var(--ink); border-color: var(--surface-3); }
+.dbtns button.wide { grid-column: span 2; }
+.hmeter { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: #0f0f11; }
+.hmeter .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--surface-3); flex: none; transition: background .3s, box-shadow .3s; }
+.hmeter .dot.fire { background: #fff; box-shadow: 0 0 0 6px rgba(255,255,255,.12); transition: none; }
+.hmeter .txt { font-size: 12px; color: var(--ink-2); }
+.hmeter .txt b { color: var(--ink); font-weight: 600; }
+.hnote { font-size: 11.5px; color: var(--ink-3); }
+.log { margin: 0; padding: 0; list-style: none; font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; display: flex; flex-direction: column; gap: 3px; }
+.log li { padding: 5px 7px; border-radius: 6px; background: #0f0f11; border: 1px solid var(--line); color: var(--ink-2); word-break: break-word; }
+.log li b { color: var(--ink); font-weight: 600; }
+.log li .t { color: var(--ink-3); float: right; }
+.log li.sel b { color: var(--up); } .log li.can b { color: #f5b14c; }
+.log .empty { color: var(--ink-3); background: none; border: 0; padding: 0; font-family: var(--font); font-size: 12px; }
+
+/* ---------- device ---------- */
+.device-wrap { flex: none; position: relative; }
+.device { width: 414px; height: 868px; padding: 12px; border-radius: 58px; background: #1a1a1c; box-shadow: 0 0 0 1px #2c2c30, 0 30px 80px rgba(0,0,0,.6); transform-origin: top left; }
+.app { position: relative; width: 390px; height: 844px; border-radius: 46px; overflow: hidden; background: var(--bg); display: flex; flex-direction: column; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+
+@media (max-width: 560px) {
+  body { overflow: hidden; }
+  .stage { padding: 0; display: block; }
+  .dev { display: none; }
+  .device-wrap { width: 100%; height: 100dvh; }
+  .device { width: 100%; height: 100%; padding: 0; border-radius: 0; box-shadow: none; background: var(--bg); transform: none !important; }
+  .app { width: 100%; height: 100%; border-radius: 0; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* ---------- top bar ---------- */
+.top { flex: none; display: flex; align-items: center; gap: 7px; padding: 14px 10px 8px; overflow: hidden; }
+.cbtn { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; flex: none; }
+.cbtn .i { width: 19px; height: 19px; }
+.pill { height: 36px; padding: 0 12px; border-radius: 18px; background: var(--surface); display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 500; flex: none; white-space: nowrap; }
+.pill .up { color: var(--up); } .pill .down { color: var(--down); }
+.pill.offline { color: #f5b14c; }
+.top .spacer { flex: 1; }
+
+/* ---------- chart panels ---------- */
+.charts { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 8px; }
+.panel { position: relative; background: var(--panel); border-radius: 14px; min-height: 120px; display: flex; flex-direction: column; overflow: hidden; transition: box-shadow .12s; }
+.panel.held { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.62); }
+.ph { flex: none; display: flex; align-items: flex-start; justify-content: space-between; padding: 10px 8px 0 12px; gap: 8px; height: 50px; position: relative; z-index: 2; }
+.ph-l { min-width: 0; }
+.sym { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; white-space: nowrap; }
+.sym u { text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.sym .muted { color: var(--ink-2); }
+.sym .i { width: 13px; height: 13px; color: var(--ink-2); }
+.px { font-size: 13px; margin-top: 2px; white-space: nowrap; }
+.px .chg { font-size: 11.5px; margin-left: 3px; }
+.up { color: var(--up); } .down { color: var(--down); }
+.ph-r { display: flex; align-items: center; gap: 6px; flex: none; }
+.icon-btn { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--ink-2); }
+.icon-btn .i { width: 16px; height: 16px; }
+.icon-btn[aria-pressed="true"] { background: #fff; color: #000; }
+.tf-btn { height: 30px; min-width: 62px; padding: 0 8px 0 10px; border-radius: 8px; background: var(--surface-2); display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13.5px; font-weight: 500; touch-action: none; transition: transform .1s ease-out, box-shadow .12s, background .12s; position: relative; }
+.tf-btn .i { width: 16px; height: 16px; color: var(--ink-2); }
+.tf-btn.pressed { transform: scale(.94); background: var(--surface-3); }
+.tf-btn.open { box-shadow: 0 0 0 1.5px #fff; background: var(--surface-3); transform: none; }
+.tf-btn.preview .tf-l { color: #fff; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
+.tf-btn .tf-l { min-width: 22px; }
+.cv-chip { height: 26px; padding: 0 6px 0 9px; border-radius: 13px; background: var(--surface); display: flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 500; color: var(--ink); white-space: nowrap; }
+.cv-chip .i { width: 13px; height: 13px; color: var(--ink-2); }
+.cv-chip[hidden] { display: none; }
+.plot { position: relative; flex: 1; min-height: 0; }
+.plot canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.plot.arming { cursor: crosshair; }
+.divider { flex: none; height: 16px; display: grid; place-items: center; touch-action: none; cursor: row-resize; }
+.divider span { width: 36px; height: 4px; border-radius: 2px; background: #d0d0d5; }
+
+/* N3 drawing banner */
+.n3 { position: absolute; left: 8px; right: 8px; top: 2px; z-index: 3; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 12px; background: rgba(38, 38, 42, .96); box-shadow: 0 6px 20px rgba(0,0,0,.4); font-size: 12.5px; animation: drop .16s ease-out; }
+.n3[hidden] { display: none; }
+.n3 .i { width: 18px; height: 18px; color: var(--pos); }
+.n3 .msg { flex: 1; }
+.n3 button { padding: 6px 10px; border-radius: 8px; background: var(--surface-3); font-weight: 500; font-size: 12.5px; }
+@keyframes drop { from { opacity: 0; transform: translateY(-6px); } }
+
+/* ---------- order panel ---------- */
+.order { flex: none; margin-top: 8px; background: var(--panel); border-radius: 18px 18px 0 0; padding: 10px 12px 14px; }
+.order .row1 { display: flex; align-items: center; justify-content: center; position: relative; }
+.seg { display: flex; background: var(--surface); border-radius: 18px; padding: 3px; }
+.seg button { height: 30px; padding: 0 16px; border-radius: 15px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.seg button[aria-pressed="true"] { background: #fff; color: #000; }
+.order .pin { position: absolute; right: 0; }
+.order .row2 { display: grid; grid-template-columns: 1fr 100px 1fr; gap: 8px; margin-top: 10px; align-items: start; }
+.bs { width: 100%; height: 50px; border-radius: 25px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; font-size: 11.5px; color: #fff; }
+.bs b { font-size: 14.5px; font-weight: 600; }
+.bs.buy { background: var(--buy); } .bs.sell { background: var(--sell); }
+.margin { font-size: 10.5px; color: var(--ink-2); text-align: center; margin-top: 3px; }
+.qty { height: 50px; border-radius: 12px; background: var(--surface); display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+.qty button { width: 26px; height: 40px; display: grid; place-items: center; color: var(--ink-2); }
+.qty .i { width: 16px; height: 16px; }
+.qty .v { text-align: center; line-height: 1.1; font-size: 15px; font-weight: 600; }
+.qty .v small { display: block; font-size: 10px; color: var(--ink-3); font-weight: 400; }
+
+/* ---------- wheel layer ---------- */
+.wheel-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; overflow: visible; }
+.wheel-g { opacity: 0; transform: scale(.9); transition: opacity 120ms ease-out, transform 120ms ease-out; }
+.wheel-g.in { opacity: 1; transform: scale(1); }
+.wheel-g.out { opacity: 0; transform: scale(1); transition: opacity 80ms ease-in; }
+.rm .wheel-g { transform: none !important; }
+.wheel-svg text { font-family: var(--font); }
+.skel { animation: skel 1s ease-in-out infinite alternate; }
+@keyframes skel { from { opacity: .35; } to { opacity: .8; } }
+.hover-pill { position: absolute; z-index: 22; transform: translate(-50%, -50%); padding: 6px 12px; border-radius: 16px; background: #fff; color: #000; font-size: 13px; font-weight: 600; white-space: nowrap; pointer-events: none; box-shadow: 0 6px 18px rgba(0,0,0,.45); max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
+.hover-pill.muted { background: var(--surface-3); color: var(--ink); }
+.hover-pill .sub { font-weight: 500; color: #55555c; }
+.hover-pill.muted .sub { color: var(--ink-2); }
+.hover-pill[hidden] { display: none; }
+.touch-dot { position: absolute; z-index: 23; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(255,255,255,.16); border: 1.5px solid rgba(255,255,255,.45); pointer-events: none; }
+.touch-dot[hidden] { display: none; }
+.hpulse { position: absolute; z-index: 24; border-radius: 50%; pointer-events: none; border: 2px solid rgba(255,255,255,.9); animation: hp .38s ease-out forwards; }
+.hpulse.success { border-color: var(--up); animation-duration: .5s; }
+.hpulse.error { border-color: #f5b14c; }
+@keyframes hp { from { opacity: .9; transform: scale(.4); } to { opacity: 0; transform: scale(1.25); } }
+
+/* ---------- toast N2 ---------- */
+.toast { position: absolute; left: 50%; z-index: 40; transform: translate(-50%, 8px); opacity: 0; padding: 10px 16px; border-radius: 22px; background: #f4f4f5; color: #000; font-size: 13px; font-weight: 500; white-space: nowrap; box-shadow: 0 8px 24px rgba(0,0,0,.5); pointer-events: none; transition: opacity .16s, transform .16s; display: flex; align-items: center; gap: 8px; }
+.toast.in { opacity: 1; transform: translate(-50%, 0); }
+.toast.err { background: #3a2a10; color: #ffd28a; }
+.toast .i { width: 16px; height: 16px; }
+
+/* ---------- N1 coachmark ---------- */
+.coach { position: absolute; z-index: 30; width: 236px; padding: 12px 14px; border-radius: 14px; background: #fff; color: #000; box-shadow: 0 12px 30px rgba(0,0,0,.55); animation: drop .2s ease-out; }
+.coach::before { content: ''; position: absolute; top: -6px; right: var(--arrow, 30px); width: 12px; height: 12px; background: #fff; transform: rotate(45deg); border-radius: 2px; }
+.coach .new { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: #000; color: #fff; }
+.coach p { margin: 6px 0 10px; font-size: 14px; font-weight: 600; line-height: 1.3; }
+.coach small { display: block; font-size: 12px; color: #55555c; font-weight: 400; margin-top: 3px; }
+.coach .row { display: flex; justify-content: flex-end; }
+.coach button { padding: 7px 14px; border-radius: 16px; background: #000; color: #fff; font-size: 13px; font-weight: 600; }
+.coach-ring { position: absolute; z-index: 29; border-radius: 10px; pointer-events: none; box-shadow: 0 0 0 2px #fff; animation: ring 1.6s ease-out infinite; }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,.8); } 70%,100% { box-shadow: 0 0 0 12px rgba(255,255,255,0); } }
+
+/* ---------- sheets, screens, modal ---------- */
+.layers { position: absolute; inset: 0; z-index: 50; pointer-events: none; }
+.layers > * { pointer-events: auto; }
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.55); opacity: 0; transition: opacity .2s; }
+.scrim.in { opacity: 1; }
+.sheet { position: absolute; left: 8px; right: 8px; bottom: 8px; max-height: 78%; display: flex; flex-direction: column; border-radius: 20px; background: var(--surface); transform: translateY(105%); transition: transform .24s cubic-bezier(.2,.8,.2,1); box-shadow: 0 -10px 40px rgba(0,0,0,.5); }
+.sheet.in { transform: none; }
+.sheet .grab { flex: none; height: 18px; display: grid; place-items: center; touch-action: none; cursor: grab; }
+.sheet .grab span { width: 36px; height: 4px; border-radius: 2px; background: var(--surface-3); }
+.sheet .sh-head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 2px 14px 10px 18px; touch-action: none; }
+.sheet .sh-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.sheet .body { overflow-y: auto; padding: 0 18px 18px; overscroll-behavior: contain; }
+.x-btn { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); }
+.x-btn .i { width: 18px; height: 18px; }
+
+.tip { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 10px 6px 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 12.5px; }
+.tip .i { width: 18px; height: 18px; color: #fff; }
+.tip .t { flex: 1; color: var(--ink-2); } .tip .t b { color: var(--ink); font-weight: 600; }
+.tip .lnk { font-weight: 600; color: #fff; text-decoration: underline; text-underline-offset: 3px; padding: 4px 2px; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.tiles button { height: 54px; border-radius: 12px; background: var(--surface-2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; }
+.tiles button .i { width: 18px; height: 18px; }
+.tiles button[aria-pressed="true"] { background: #fff; color: #000; }
+.sec-h { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 10px; font-size: 14px; font-weight: 600; }
+.sec-h .add { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.sec-h .add .i { width: 15px; height: 15px; }
+.chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.chip { height: 34px; border-radius: 17px; border: 1px solid #3a3a40; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13.5px; color: var(--ink-2); position: relative; }
+.chip .i { width: 14px; height: 14px; }
+.chip.cur { border-color: #fff; color: #fff; font-weight: 600; }
+.chip:disabled { opacity: .38; }
+.chip .note { position: absolute; bottom: -15px; left: 0; right: 0; text-align: center; font-size: 9.5px; color: var(--ink-3); white-space: nowrap; }
+.chips.noted { row-gap: 22px; padding-bottom: 8px; }
+.list { display: flex; flex-direction: column; }
+.li { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 6px 0; font-size: 14px; text-align: left; width: 100%; border-bottom: 1px solid var(--line); }
+.li:last-child { border-bottom: 0; }
+.li .i { width: 20px; height: 20px; color: var(--ink-2); }
+.li .main { flex: 1; min-width: 0; }
+.li .main small { display: block; font-size: 11.5px; color: var(--ink-3); }
+.li .end { font-size: 12px; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
+.li:disabled { opacity: .4; }
+.li.cur .main { font-weight: 600; }
+.li .badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: var(--surface-3); color: var(--ink-2); margin-left: 6px; }
+.li .plus { width: 18px; height: 18px; border-radius: 50%; background: var(--up); color: #000; display: grid; place-items: center; flex: none; }
+.li .plus.on { background: #fff; }
+.li .plus .i { width: 12px; height: 12px; color: #000; stroke-width: 2.6; }
+.tog { width: 34px; height: 20px; border-radius: 10px; background: var(--surface-3); position: relative; flex: none; }
+.tog::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #8a8a90; }
+.sub-h { font-size: 12.5px; color: var(--ink-3); margin: 14px 0 4px; }
+.ph-note { font-size: 12.5px; color: var(--ink-3); padding: 14px 0 4px; }
+.search { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid #3a3a40; margin-bottom: 10px; }
+.search .i { width: 16px; height: 16px; color: var(--ink-3); }
+.search input { flex: 1; background: none; border: 0; color: var(--ink); font: inherit; font-size: 14px; outline: none; min-width: 0; -webkit-user-select: text; user-select: text; }
+.tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.tabs button { padding: 8px 0; font-size: 13.5px; color: var(--ink-3); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-color: #fff; font-weight: 600; }
+.empty-st { padding: 22px 0; text-align: center; color: var(--ink-3); font-size: 13px; }
+.empty-st button { color: #fff; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+
+.screen { position: absolute; inset: 0; background: var(--bg); transform: translateX(100%); transition: transform .26s cubic-bezier(.2,.8,.2,1); display: flex; flex-direction: column; }
+.screen.in { transform: none; }
+.nav { flex: none; display: flex; align-items: center; gap: 6px; padding: 16px 10px 10px; padding-top: max(16px, env(safe-area-inset-top)); }
+.nav h2 { margin: 0; font-size: 17px; font-weight: 600; }
+.screen .scroll { flex: 1; overflow-y: auto; padding: 0 16px 28px; overscroll-behavior: contain; }
+.preview { position: relative; border-radius: 16px; background: var(--panel); overflow: hidden; }
+.preview svg { display: block; width: 100%; height: auto; }
+.helper { font-size: 12.5px; color: var(--ink-3); margin: 10px 2px 4px; }
+.grp { margin-top: 18px; }
+.grp h3 { margin: 0 0 6px 2px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.card { border-radius: 14px; background: var(--surface); padding: 0 14px; }
+.card .li { border-bottom-color: var(--line); }
+.li.flash { animation: flash 1.4s ease-out; }
+@keyframes flash { 0%, 40% { background: rgba(255,255,255,.12); } 100% { background: transparent; } }
+.slotno { width: 26px; height: 26px; border-radius: 8px; background: var(--surface-2); display: grid; place-items: center; font-size: 12px; color: var(--ink-2); flex: none; }
+.skrow { height: 46px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); }
+.skrow i { display: block; height: 12px; border-radius: 6px; background: var(--surface-3); }
+.errbox { padding: 14px 0; font-size: 13px; color: var(--ink-2); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.errbox button { padding: 6px 12px; border-radius: 14px; background: var(--surface-3); font-weight: 600; font-size: 12.5px; }
+.reset { display: block; margin: 22px auto 0; padding: 10px 14px; font-weight: 600; font-size: 14px; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+
+.modal { position: absolute; left: 28px; right: 28px; top: 50%; transform: translateY(-50%) scale(.96); opacity: 0; transition: opacity .16s, transform .16s; border-radius: 20px; background: var(--surface); padding: 20px; }
+.modal.in { opacity: 1; transform: translateY(-50%); }
+.modal h2 { margin: 0 0 8px; font-size: 17px; font-weight: 600; }
+.modal p { margin: 0 0 18px; font-size: 14px; color: var(--ink-2); }
+.modal .acts { display: flex; gap: 8px; }
+.modal .acts button { flex: 1; height: 42px; border-radius: 21px; font-weight: 600; font-size: 14px; text-align: center; }
+.btn-p { background: #fff; color: #000; }
+.btn-s { background: var(--surface-3); color: var(--ink); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><rect x="8" y="3.5" width="8" height="14" rx="1.8" transform="rotate(35 12 10.5)"/><path d="M3.5 13.5a8.5 8.5 0 0 0 7 7.2M20.5 10.5a8.5 8.5 0 0 0-7-7.2"/><path d="M10.5 20.7l-1.6-1.9M13.5 3.3l1.6 1.9"/></symbol>
+    <symbol id="i-ai" viewBox="0 0 24 24"><path d="M12 3c.6 4.6 3.4 7.4 9 9-5.6 1.6-8.4 4.4-9 9-.6-4.6-3.4-7.4-9-9 5.6-1.6 8.4-4.4 9-9Z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="18.5" r="1.6" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13.5a4.5 4.5 0 0 0 6.6.4l2.8-2.8a4.6 4.6 0 0 0-6.5-6.5l-1.4 1.4"/><path d="M14 10.5a4.5 4.5 0 0 0-6.6-.4l-2.8 2.8a4.6 4.6 0 0 0 6.5 6.5l1.4-1.4"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="17" cy="17" r="0.01"/></symbol>
+    <symbol id="i-updown" viewBox="0 0 24 24"><path d="M7 9.5l5-5 5 5M7 14.5l5 5 5-5"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M14.5 3.5l6 6-2.5 1-3.5 3.5.5 4-1.5 1.5-4-4-4.5 4.5M7.5 10.5l-1.5 1.5 4 4"/><path d="M14.5 3.5l-1 2.5-3.5 3.5-2.5 1"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8Z"/></symbol>
+    <symbol id="i-starf" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8Z" fill="currentColor"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></symbol>
+    <symbol id="i-range" viewBox="0 0 24 24"><path d="M4 12h16M7.5 8.5 4 12l3.5 3.5M16.5 8.5 20 12l-3.5 3.5"/></symbol>
+    <symbol id="i-fx" viewBox="0 0 24 24"><path d="M12.5 4.5c-2.2-.6-3.4.4-3.8 2.6L7 18.5c-.4 2-1.4 2.6-3 2.2"/><path d="M5.5 9.5h6"/><path d="M14 12l5 6M19 12l-5 6"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20l1-4.5L16 4.5a2.1 2.1 0 0 1 3 3L8 18.5Z"/><path d="M14 6.5l3.5 3.5"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8l1.6 2.3 2.7-.7.5 2.7 2.6 1-1 2.6 1.8 2.1-2.3 1.6.6 2.7-2.7.4-1 2.6-2.6-1-2.2 1.8-1.5-2.3-2.8.6-.4-2.7-2.6-1 1-2.6-1.8-2.1 2.3-1.6-.6-2.7 2.7-.5 1-2.6 2.6 1Z"/></symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24"><path d="M6 18L18 6"/><circle cx="5" cy="19" r="1.8"/><circle cx="19" cy="5" r="1.8"/></symbol>
+    <symbol id="i-hline" viewBox="0 0 24 24"><path d="M3 12h7M14 12h7"/><circle cx="12" cy="12" r="1.8"/></symbol>
+    <symbol id="i-hray" viewBox="0 0 24 24"><path d="M8 12h13"/><circle cx="5.5" cy="12" r="1.8"/></symbol>
+    <symbol id="i-rect" viewBox="0 0 24 24"><rect x="5" y="6.5" width="14" height="11" rx="1"/><circle cx="5" cy="6.5" r="1.6"/><circle cx="19" cy="17.5" r="1.6"/></symbol>
+    <symbol id="i-fib" viewBox="0 0 24 24"><path d="M7 5h14M7 9.5h14M7 13.5h14M7 19h14"/><circle cx="4" cy="5" r="1.5"/><circle cx="4" cy="19" r="1.5"/></symbol>
+    <symbol id="i-chan" viewBox="0 0 24 24"><path d="M4 15L16 6M8 19l12-9"/><circle cx="4" cy="15" r="1.5"/><circle cx="20" cy="10" r="1.5"/></symbol>
+    <symbol id="i-long" viewBox="0 0 24 24"><path d="M4 6h16M4 11h16M4 17h16"/><path d="M7 3v17"/></symbol>
+    <symbol id="i-short" viewBox="0 0 24 24"><path d="M4 7h16M4 13h16M4 18h16"/><path d="M17 4v17"/></symbol>
+    <symbol id="i-clean" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6 0 9.5 7 9.5 7a17 17 0 0 1-2.6 3.4M6.6 6.6C3.9 8.4 2.5 12 2.5 12s3.5 7 9.5 7c1.8 0 3.4-.5 4.7-1.3"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-magnet" viewBox="0 0 24 24"><path d="M6 4v8a6 6 0 0 0 12 0V4h-4v8a2 2 0 0 1-4 0V4Z"/><path d="M6 8h4M14 8h4"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-toolbar" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 4v16"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5a1.5 1.5 0 0 1 3 0V11m0-.5a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1-6 6h-1a6 6 0 0 1-4.6-2.2L4.5 15.5a1.5 1.5 0 0 1 2.3-1.9L9 16"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M3 3l18 18M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 5-2.7M19 13a10 10 0 0 0-2.3-1.7M2 9.5a15 15 0 0 1 4.5-2.8M22 9.5A15 15 0 0 0 11 5.6"/><circle cx="12" cy="19.5" r=".8" fill="currentColor"/></symbol>
+    <symbol id="i-wheel" viewBox="0 0 24 24"><path d="M20 4v4M20 4h-4"/><path d="M20 20a16 16 0 0 1-16-16"/><path d="M20 13a9 9 0 0 1-9-9"/><path d="M14.5 15.5l-2-2M9 10.5l-2 1.5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></symbol>
+  </defs>
+</svg>
+
+<div class="stage">
+  <aside class="dev" id="dev" aria-label="Prototype controls">
+    <div>
+      <h1>Quick Action Wheel</h1>
+      <p class="lede">Sahi Option Scalper · mobile concept · PRD v1.2 prototype</p>
+    </div>
+    <div class="how">
+      <p><b>Hold</b> either <b>5m</b> button, <b>slide</b> onto a slot, <b>release</b> to apply.</p>
+      <p><b>Tap</b> it for the chart menu, as today. Release on the button, outside the fan, or on a greyed slot to cancel.</p>
+      <p>Keyboard: focus a timeframe button and press <b>W</b>, then arrows and Enter.</p>
+    </div>
+
+    <div class="dg">
+      <div class="dl">Haptics</div>
+      <div class="hmeter" aria-live="polite"><span class="dot" id="hDot"></span><span class="txt" id="hTxt">No haptic yet. Hold a timeframe button.</span></div>
+      <label class="dt">Haptic feedback <input type="checkbox" id="optHaptics" checked></label>
+      <label class="dt">Show haptic pulses on screen <input type="checkbox" id="optPulse" checked></label>
+      <label class="dt">Tick sounds (desktop stand-in) <input type="checkbox" id="optSound"></label>
+      <div class="hnote" id="hSupport"></div>
+    </div>
+
+    <div class="dg">
+      <div class="dl">Gesture</div>
+      <div class="drange"><span>Hold</span><input type="range" id="optHold" min="200" max="500" step="10" value="300"><output id="optHoldV">300 ms</output></div>
+      <label class="dt">Show hit zones <input type="checkbox" id="optZones"></label>
+      <label class="dt">Show touch point <input type="checkbox" id="optTouch" checked></label>
+      <label class="dt">Reduce motion <input type="checkbox" id="optRm"></label>
+    </div>
+
+    <div class="dg">
+      <div class="dl">States</div>
+      <label class="dt">Linked charts <input type="checkbox" id="optLinked"></label>
+      <label class="dt">Offline <input type="checkbox" id="optOffline"></label>
+      <label class="dt">Next timeframe load fails <input type="checkbox" id="optFailTf"></label>
+      <label class="dt">Next slot save fails <input type="checkbox" id="optFailSave"></label>
+      <div class="dl" style="margin-top:4px">Saved slot settings</div>
+      <div class="dseg" id="optLoad"><button data-v="loaded" aria-pressed="true">Loaded</button><button data-v="loading" aria-pressed="false">Loading</button><button data-v="failed" aria-pressed="false">Failed</button></div>
+    </div>
+
+    <div class="dg">
+      <div class="dl">Jump to</div>
+      <div class="dbtns">
+        <button data-jump="b1">B1 Chart menu</button>
+        <button data-jump="s2">S2 Customise</button>
+        <button data-jump="n1">N1 Coachmark</button>
+        <button data-jump="kb">M1 via keyboard</button>
+        <button data-jump="reset" class="wide">Reset demo</button>
+      </div>
+    </div>
+
+    <div class="dg">
+      <div class="dl">Analytics events (last 20)</div>
+      <ul class="log" id="log"><li class="empty">Events appear here as they fire.</li></ul>
+    </div>
+  </aside>
+
+  <div class="device-wrap" id="deviceWrap">
+    <div class="device" id="device">
+      <div class="app" id="app">
+        <div class="top">
+          <button class="cbtn" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button>
+          <button class="cbtn" aria-label="Rotate"><svg class="i"><use href="#i-rotate"/></svg></button>
+          <button class="cbtn" aria-label="Sahi AI" style="color:var(--ai)"><svg class="i"><use href="#i-ai"/></svg></button>
+          <div class="pill num" id="clock">14:15:00</div>
+          <div class="pill num">P&amp;L <span id="pnl" class="up">₹0</span></div>
+          <div class="pill">Positions</div>
+          <span class="spacer"></span>
+          <button class="cbtn" aria-label="More"><svg class="i"><use href="#i-more"/></svg></button>
+        </div>
+
+        <div class="charts" id="charts">
+          <section class="panel" id="panel-idx" data-chart="idx" style="flex:1 1 0">
+            <header class="ph">
+              <div class="ph-l">
+                <div class="sym"><u>NIFTY50</u> <span class="muted">Spot</span><svg class="i"><use href="#i-updown"/></svg></div>
+                <div class="px num"><span id="idx-ltp">25030.35</span><span class="chg up" id="idx-chg">+493.75 (2.01%)</span></div>
+              </div>
+              <div class="ph-r">
+                <button class="cv-chip" data-cv="idx" hidden>Clean view <svg class="i"><use href="#i-x"/></svg></button>
+                <button class="icon-btn" id="linkBtn" aria-pressed="false" aria-label="Link timeframes"><svg class="i"><use href="#i-link"/></svg></button>
+                <button class="tf-btn" data-chart="idx" aria-haspopup="menu"><span class="tf-l">5m</span><svg class="i"><use href="#i-menu"/></svg></button>
+              </div>
+            </header>
+            <div class="plot" data-chart="idx"><canvas></canvas><div class="n3" hidden></div></div>
+          </section>
+          <div class="divider" id="divider" aria-hidden="true"><span></span></div>
+          <section class="panel" id="panel-opt" data-chart="opt" style="flex:1 1 0">
+            <header class="ph">
+              <div class="ph-l">
+                <div class="sym"><u>09 Nov 25000</u> <span class="muted">Call</span><svg class="i"><use href="#i-updown"/></svg></div>
+                <div class="px num"><span id="opt-ltp">159.20</span><span class="chg up" id="opt-chg">+123.30 (343.45%)</span></div>
+              </div>
+              <div class="ph-r">
+                <button class="cv-chip" data-cv="opt" hidden>Clean view <svg class="i"><use href="#i-x"/></svg></button>
+                <button class="tf-btn" data-chart="opt" aria-haspopup="menu"><span class="tf-l">5m</span><svg class="i"><use href="#i-menu"/></svg></button>
+              </div>
+            </header>
+            <div class="plot" data-chart="opt"><canvas></canvas><div class="n3" hidden></div></div>
+          </section>
+        </div>
+
+        <div class="order" id="order">
+          <div class="row1">
+            <div class="seg"><button aria-pressed="true">1-Tap Market</button><button aria-pressed="false">Limit/Trigger</button></div>
+            <button class="cbtn pin" aria-label="Pin order panel"><svg class="i" style="width:16px;height:16px"><use href="#i-pin"/></svg></button>
+          </div>
+          <div class="row2">
+            <div><button class="bs buy" data-order="buy">Buy at<b>Mkt</b></button><div class="margin num">Margin: ₹10,353</div></div>
+            <div class="qty"><button id="qMinus" aria-label="Fewer lots"><svg class="i"><use href="#i-minus"/></svg></button><div class="v num"><span id="qV">65</span><small id="qL">1 lot</small></div><button id="qPlus" aria-label="More lots"><svg class="i"><use href="#i-plus"/></svg></button></div>
+            <div><button class="bs sell" data-order="sell">Sell at<b>Mkt</b></button><div class="margin num">Margin: ₹1,51,527</div></div>
+          </div>
+        </div>
+
+        <svg class="wheel-svg" id="wheelSvg" aria-hidden="true"><g id="zonesG"></g><g id="wheelG" class="wheel-g"></g></svg>
+        <div class="hover-pill" id="hoverPill" hidden></div>
+        <div class="touch-dot" id="touchDot" hidden></div>
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+        <div class="layers" id="layers"></div>
+        <div class="sr" id="srLive" aria-live="assertive"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =========================================================================
+   Helpers
+   ========================================================================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const app = $('#app');
+const icon = (id, cls = 'i') => `<svg class="${cls}"><use href="#i-${id}"/></svg>`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmt = (v, d = 2) => v.toFixed(d);
+const fmtIN = v => v.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('sahi.qw.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('sahi.qw.' + k, JSON.stringify(v)); } catch {} },
+  clear() { try { Object.keys(localStorage).filter(k => k.startsWith('sahi.qw.')).forEach(k => localStorage.removeItem(k)); } catch {} },
+};
+function appScale() { const r = app.getBoundingClientRect(); return r.width / app.offsetWidth || 1; }
+function appPoint(e) { const r = app.getBoundingClientRect(), s = r.width / app.offsetWidth || 1; return { x: (e.clientX - r.left) / s, y: (e.clientY - r.top) / s }; }
+function appRect(el) { const a = app.getBoundingClientRect(), b = el.getBoundingClientRect(), s = a.width / app.offsetWidth || 1; return { x: (b.left - a.left) / s, y: (b.top - a.top) / s, w: b.width / s, h: b.height / s }; }
+const isDesktop = () => window.matchMedia('(min-width: 561px)').matches;
+
+/* =========================================================================
+   Catalogues
+   ========================================================================= */
+const TF_SECOND = ['5s', '15s', '30s'];
+const TF_MINUTE = ['1m', '2m', '3m', '5m', '10m', '15m', '25m', '30m', '75m', '125m'];
+const TF_HOUR = ['1h', '2h', '4h'];
+const tfMin = tf => tf.endsWith('s') ? parseInt(tf) / 60 : tf.endsWith('h') ? parseInt(tf) * 60 : parseInt(tf);
+const tfSupported = tf => TF_MINUTE.includes(tf);
+
+const TOOLS = {
+  trend: { name: 'Trend Line', short: 'Trend', icon: 'trend', taps: 2 },
+  hline: { name: 'Horizontal Line', short: 'H-Line', icon: 'hline', taps: 1 },
+  hray: { name: 'Horizontal Ray', short: 'H-Ray', icon: 'hray', taps: 1 },
+  rect: { name: 'Rectangle', short: 'Rect', icon: 'rect', taps: 2 },
+  fib: { name: 'Fibonacci Retracement', short: 'Fib', icon: 'fib', taps: 2 },
+  chan: { name: 'Parallel Channel', short: 'Channel', icon: 'chan', na: true },
+  long: { name: 'Long Position', short: 'Long', icon: 'long', na: true },
+  short: { name: 'Short Position', short: 'Short', icon: 'short', na: true },
+};
+const INDS = {
+  vwap: { name: 'VWAP', short: 'VWAP', color: '#f5a524', starred: true, by: 'Volume Weighted Average Price' },
+  ema20: { name: 'EMA 20', short: 'EMA 20', color: '#4d8dff', starred: true, by: 'Exponential Moving Average, saved period 20' },
+  keylv: { name: 'Key Levels', short: 'Levels', color: '#c9a7ff', starred: true, badge: 'Only on SAHI', only: 'idx', by: 'Previous close, day high, day low' },
+  st: { name: 'Supertrend (10, 3)', short: 'ST', color: '#2ebd85', starred: true, by: 'Pushkar Raj Thakur' },
+  ema50: { name: 'EMA 50', short: 'EMA 50', color: '#b07cff', by: 'Exponential Moving Average, period 50' },
+  sma20: { name: 'SMA 20', short: 'SMA 20', color: '#35c6c6', by: 'Simple Moving Average, period 20' },
+  bb: { name: 'Bollinger Bands (20, 2)', short: 'BB', color: '#9a9aa2', by: 'John Bollinger' },
+};
+const TEMPLATES = ['Scalp: VWAP + EMA 20', 'Trend: Supertrend + EMA 50'];
+const DEFAULT_SLOTS = { tf: ['1m', '5m'], tools: ['trend', 'fib'], inds: ['vwap', 'ema20'] };
+
+/* =========================================================================
+   State
+   ========================================================================= */
+const S = {
+  slots: sanitizeSlots(store.get('slots', null)),
+  n1Done: store.get('n1Done', false),
+  tipHidden: store.get('tipHidden', false),
+  applied: store.get('applied', 0),
+  linked: false, offline: false, failTf: false, failSave: false, slotLoad: 'loaded',
+  holdMs: 300, zones: false, touchDot: true, haptics: true, pulses: true, sound: false,
+  reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+};
+function sanitizeSlots(s) {
+  const d = JSON.parse(JSON.stringify(DEFAULT_SLOTS));
+  if (!s || typeof s !== 'object') return d;
+  const tf = Array.isArray(s.tf) && s.tf.length === 2 && s.tf.every(tfSupported) && s.tf[0] !== s.tf[1] ? s.tf.slice() : d.tf;
+  const tools = Array.isArray(s.tools) && s.tools.length === 2 && s.tools.every(t => t === null || (TOOLS[t] && !TOOLS[t].na)) ? s.tools.slice() : d.tools;
+  const inds = Array.isArray(s.inds) && s.inds.length === 2 && s.inds.every(t => t === null || INDS[t]) ? s.inds.slice() : d.inds;
+  tf.sort((a, b) => tfMin(a) - tfMin(b));
+  return { tf, tools, inds };
+}
+const slotsEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+/* =========================================================================
+   Mock market data: one session of 1-minute candles, live ticks every second
+   ========================================================================= */
+function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const rnd = mulberry(20261106);
+const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+const SESSION_START = 9 * 60 + 15, SESSION_BARS = 375, HIST = 300;
+const IDX_PREV = 24536.60, OPT_PREV = 35.90;
+const IDX_NOW = 25030.35, OPT_NOW = 159.20;
+
+function genData() {
+  const n = HIST;
+  const walk = [0];
+  for (let i = 1; i < n; i++) walk.push(walk[i - 1] + gauss() * 6.5 + (i > 230 ? 1.6 : 0));
+  const start = 24560, end = IDX_NOW;
+  const closes = walk.map((w, i) => w - walk[n - 1] * (i / (n - 1)) + start + (end - start) * (i / (n - 1)));
+  const optNoise = [0];
+  for (let i = 1; i < n; i++) optNoise.push(optNoise[i - 1] + gauss() * .7);
+  const on = optNoise.map((w, i) => w - optNoise[n - 1] * (i / (n - 1)));
+  const idx = [], opt = [];
+  const f = (p, i) => Math.max(2, OPT_NOW + 0.29 * (p - IDX_NOW) + on[i]);
+  for (let i = 0; i < n; i++) {
+    const o = i ? closes[i - 1] : start - 8, c = closes[i];
+    const h = Math.max(o, c) + Math.abs(gauss()) * 4, l = Math.min(o, c) - Math.abs(gauss()) * 4;
+    const v = 8000 + rnd() * 9000 + Math.abs(c - o) * 600;
+    idx.push({ o, h, l, c, v });
+    const oo = i ? opt[i - 1].c : f(o, i), oc = f(c, i);
+    opt.push({ o: oo, h: Math.max(oo, oc, f(h, i)), l: Math.min(oo, oc, f(l, i)), c: oc, v: 50000 + rnd() * 120000 });
+  }
+  return { idx, opt };
+}
+const DATA = genData();
+let tickInBar = 0;
+function tick() {
+  const bi = DATA.idx[DATA.idx.length - 1], bo = DATA.opt[DATA.opt.length - 1];
+  const prev = bi.c;
+  const dI = gauss() * 2.6 + (IDX_NOW - bi.c) * 0.004;
+  bi.c = prev + dI; bi.h = Math.max(bi.h, bi.c); bi.l = Math.min(bi.l, bi.c); bi.v += 120 + rnd() * 300;
+  bo.c = Math.max(2, bo.c + dI * 0.29 + gauss() * 0.12); bo.h = Math.max(bo.h, bo.c); bo.l = Math.min(bo.l, bo.c); bo.v += 800 + rnd() * 2000;
+  tickInBar++;
+  if (tickInBar >= 60 && DATA.idx.length < SESSION_BARS) {
+    tickInBar = 0;
+    DATA.idx.push({ o: bi.c, h: bi.c, l: bi.c, c: bi.c, v: 100 });
+    DATA.opt.push({ o: bo.c, h: bo.c, l: bo.c, c: bo.c, v: 500 });
+  }
+  updateHeaderPrices();
+  dirty.idx = dirty.opt = true;
+}
+function nowMinute() { return SESSION_START + DATA.idx.length - 1; }
+function updateHeaderPrices() {
+  const li = DATA.idx[DATA.idx.length - 1].c, lo = DATA.opt[DATA.opt.length - 1].c;
+  const ci = li - IDX_PREV, co = lo - OPT_PREV;
+  $('#idx-ltp').textContent = fmt(li);
+  const ic = $('#idx-chg'); ic.textContent = `${ci >= 0 ? '+' : ''}${fmt(ci)} (${fmt(ci / IDX_PREV * 100)}%)`; ic.className = 'chg ' + (ci >= 0 ? 'up' : 'down');
+  $('#opt-ltp').textContent = fmt(lo);
+  const oc = $('#opt-chg'); oc.textContent = `${co >= 0 ? '+' : ''}${fmt(co)} (${fmt(co / OPT_PREV * 100)}%)`; oc.className = 'chg ' + (co >= 0 ? 'up' : 'down');
+  const pnl = (lo - POSITION.price) * POSITION.qty;
+  const pe = $('#pnl'); pe.textContent = `${pnl >= 0 ? '+' : '−'}₹${fmtIN(Math.abs(pnl))}`; pe.className = pnl >= 0 ? 'up' : 'down';
+  const m = nowMinute(), sec = String(tickInBar % 60).padStart(2, '0');
+  $('#clock').textContent = S.offline ? 'Offline' : `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:${sec}`;
+  $('#clock').classList.toggle('offline', S.offline);
+}
+const POSITION = { qty: 65, price: 140, sl: 120, tp: 180 };
+
+/* =========================================================================
+   Charts
+   ========================================================================= */
+const charts = {
+  idx: { id: 'idx', name: 'index chart', tf: '5m', inds: new Set(), clean: false, drawings: [], armed: null, dec: 2 },
+  opt: { id: 'opt', name: 'option chart', tf: '5m', inds: new Set(['vwap']), clean: false, drawings: [], armed: null, dec: 2 },
+};
+charts.idx.inds.add('ema20');
+const dirty = { idx: true, opt: true };
+const view = {}; // last layout per chart, used for hit-testing taps
+
+function aggregate(bars, n) {
+  const out = [];
+  for (let i = 0; i < bars.length; i += n) {
+    const sl = bars.slice(i, i + n);
+    out.push({ t: i, o: sl[0].o, c: sl[sl.length - 1].c, h: Math.max(...sl.map(b => b.h)), l: Math.min(...sl.map(b => b.l)), v: sl.reduce((a, b) => a + b.v, 0) });
+  }
+  return out;
+}
+function ema(vals, p) { const k = 2 / (p + 1); let e = null; return vals.map(v => (e = e == null ? v : v * k + e * (1 - k))); }
+function sma(vals, p) { return vals.map((v, i) => i < p - 1 ? null : vals.slice(i - p + 1, i + 1).reduce((a, b) => a + b, 0) / p); }
+function computeInd(id, agg) {
+  const cl = agg.map(b => b.c);
+  if (id === 'vwap') { let pv = 0, vv = 0; return [{ vals: agg.map(b => (pv += (b.h + b.l + b.c) / 3 * b.v, vv += b.v, pv / vv)) }]; }
+  if (id === 'ema20') return [{ vals: ema(cl, 20) }];
+  if (id === 'ema50') return [{ vals: ema(cl, 50) }];
+  if (id === 'sma20') return [{ vals: sma(cl, 20) }];
+  if (id === 'bb') {
+    const m = sma(cl, 20);
+    const sd = cl.map((v, i) => i < 19 ? null : Math.sqrt(cl.slice(i - 19, i + 1).reduce((a, b) => a + (b - m[i]) ** 2, 0) / 20));
+    return [{ vals: m, dash: [3, 3] }, { vals: m.map((v, i) => v == null ? null : v + 2 * sd[i]) }, { vals: m.map((v, i) => v == null ? null : v - 2 * sd[i]) }];
+  }
+  if (id === 'st') {
+    const p = 10, mult = 3; let atr = null, up = null, dn = null, trend = 1; const vals = [], dirs = [];
+    agg.forEach((b, i) => {
+      const tr = i ? Math.max(b.h - b.l, Math.abs(b.h - agg[i - 1].c), Math.abs(b.l - agg[i - 1].c)) : b.h - b.l;
+      atr = atr == null ? tr : (atr * (p - 1) + tr) / p;
+      const hl2 = (b.h + b.l) / 2; let bu = hl2 + mult * atr, bd = hl2 - mult * atr;
+      if (i && up != null) { bu = (bu < up || agg[i - 1].c > up) ? bu : up; bd = (bd > dn || agg[i - 1].c < dn) ? bd : dn; }
+      if (i) { if (trend === 1 && b.c < dn) trend = -1; else if (trend === -1 && b.c > up) trend = 1; }
+      up = bu; dn = bd; vals.push(trend === 1 ? bd : bu); dirs.push(trend);
+    });
+    return [{ vals, dirs }];
+  }
+  return [];
+}
+function niceStep(range, target) { const raw = range / target, p = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / p; return (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * p; }
+
+function sizeCanvas(cv) {
+  const r = cv.getBoundingClientRect(), s = appScale(), dpr = window.devicePixelRatio || 1;
+  const w = Math.round(r.width / s), h = Math.round(r.height / s);
+  if (cv._w !== w || cv._h !== h || cv._dpr !== dpr * s) { cv._w = w; cv._h = h; cv._dpr = dpr * s; cv.width = Math.max(1, Math.round(w * dpr * s)); cv.height = Math.max(1, Math.round(h * dpr * s)); }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr * s, 0, 0, dpr * s, 0, 0); return { ctx, w, h };
+}
+
+function drawChart(id) {
+  const ch = charts[id], plot = $(`.plot[data-chart="${id}"]`), cv = $('canvas', plot);
+  const { ctx, w: W, h: H } = sizeCanvas(cv);
+  ctx.clearRect(0, 0, W, H);
+  const bars = DATA[id], n = tfMin(ch.tf), agg = aggregate(bars, n);
+  const AX = 56, TB = 22, TOP = 18;
+  const pw = W - AX, ph = H - TB - TOP;
+  let step = clamp(n === 1 ? 6 : 9, 4, 30);
+  let visible = Math.floor((pw - 30) / step);
+  if (agg.length < visible) { step = clamp((pw - 30) / (agg.length + 1), 4, 26); visible = agg.length; }
+  const first = Math.max(0, agg.length - visible);
+  const X = i => (i - first) * step + step / 2 + 4;
+  const shown = agg.slice(first);
+  const showOverlays = !ch.clean;
+  const indSeries = [];
+  if (showOverlays) for (const k of ch.inds) { if (INDS[k].only && INDS[k].only !== id) continue; indSeries.push({ k, lines: computeInd(k, agg) }); }
+  let lo = Math.min(...shown.map(b => b.l)), hi = Math.max(...shown.map(b => b.h));
+  if (id === 'opt') { lo = Math.min(lo, POSITION.sl); hi = Math.max(hi, POSITION.tp); }
+  const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+  const Y = p => TOP + (hi - p) / (hi - lo) * ph;
+  const P = y => hi - (y - TOP) / ph * (hi - lo);
+  view[id] = { X, Y, P, first, step, n, W, H, pw, AX, aggLen: agg.length, tOfX: x => ((x - 4 - step / 2) / step + first) * n, xOfT: t => X(t / n) };
+
+  // price axis
+  ctx.font = '500 10.5px Inter, system-ui, sans-serif'; ctx.textBaseline = 'middle';
+  const st = niceStep(hi - lo, 6);
+  ctx.fillStyle = '#7c7c84'; ctx.textAlign = 'left';
+  for (let p = Math.ceil(lo / st) * st; p <= hi; p += st) { const y = Y(p); if (y < TOP - 2 || y > TOP + ph + 2) continue; ctx.fillText(st >= 1 ? fmt(p, 0) : fmt(p, 1), pw + 8, y); }
+  // time axis
+  const cands = [5, 10, 15, 30, 60, 120, 240];
+  const every = cands.find(m => m / n * step >= 64) || 240;
+  ctx.textAlign = 'center'; ctx.fillStyle = '#7c7c84';
+  shown.forEach((b, j) => { const m = SESSION_START + b.t; if (m % every === 0) { const x = X(first + j); if (x > 20 && x < pw - 16) ctx.fillText(`${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`, x, H - TB / 2 - 1); } });
+
+  // candles
+  const bw = Math.max(1, Math.round(step * 0.62));
+  for (let j = 0; j < shown.length; j++) {
+    const b = shown[j], x = Math.round(X(first + j)) + .5, upc = b.c >= b.o;
+    ctx.strokeStyle = ctx.fillStyle = upc ? '#26a17b' : '#ef4f5c';
+    ctx.beginPath(); ctx.moveTo(x, Y(b.h)); ctx.lineTo(x, Y(b.l)); ctx.lineWidth = 1; ctx.stroke();
+    const y1 = Y(Math.max(b.o, b.c)), y2 = Y(Math.min(b.o, b.c));
+    ctx.fillRect(Math.round(x - bw / 2), y1, bw, Math.max(1, y2 - y1));
+  }
+  // high / low markers
+  let hiJ = 0, loJ = 0; shown.forEach((b, j) => { if (b.h > shown[hiJ].h) hiJ = j; if (b.l < shown[loJ].l) loJ = j; });
+  ctx.font = '500 10px Inter, system-ui, sans-serif'; ctx.fillStyle = '#d6d6da';
+  const mark = (j, p, dy) => { const x = X(first + j); const left = x > pw * 0.55; ctx.textAlign = left ? 'right' : 'left'; ctx.fillText(left ? `${fmt(p)} •` : `• ${fmt(p)}`, x + (left ? -2 : 2), Y(p) + dy); };
+  mark(hiJ, shown[hiJ].h, -7); mark(loJ, shown[loJ].l, 8);
+
+  // indicators (clipped to the plot; they don't drive the price scale)
+  ctx.save(); ctx.beginPath(); ctx.rect(0, TOP - 6, pw, ph + 12); ctx.clip();
+  ctx.lineWidth = 1.5;
+  for (const s of indSeries) {
+    const meta = INDS[s.k];
+    if (s.k === 'keylv') {
+      const dayHi = Math.max(...bars.map(b => b.h)), dayLo = Math.min(...bars.map(b => b.l));
+      [['PDC', IDX_PREV], ['DH', dayHi], ['DL', dayLo]].forEach(([lab, p]) => {
+        const y = Y(p); if (y < TOP - 4 || y > TOP + ph + 4) return;
+        ctx.setLineDash([5, 4]); ctx.strokeStyle = meta.color; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(pw, y); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = meta.color; ctx.textAlign = 'left'; ctx.font = '600 9.5px Inter, system-ui'; ctx.fillText(lab, 6, y - 7);
+      });
+      continue;
+    }
+    for (const ln of s.lines) {
+      ctx.setLineDash(ln.dash || []); ctx.lineWidth = s.k === 'bb' ? 1 : 1.5;
+      let started = false, prevDir = null;
+      ctx.beginPath(); ctx.strokeStyle = meta.color;
+      for (let i = first; i < agg.length; i++) {
+        const v = ln.vals[i]; if (v == null || !isFinite(v)) { started = false; continue; }
+        const x = X(i), y = Y(v);
+        if (ln.dirs) { const d = ln.dirs[i]; if (d !== prevDir) { if (started) ctx.stroke(); ctx.beginPath(); ctx.strokeStyle = d === 1 ? '#2ebd85' : '#ef4f5c'; started = false; prevDir = d; } }
+        if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  ctx.restore();
+  // indicator legend
+  if (indSeries.length) {
+    ctx.font = '500 10px Inter, system-ui'; ctx.textAlign = 'left'; let lx = 8;
+    for (const s of indSeries) {
+      const last = s.lines[0].vals[agg.length - 1];
+      const txt = s.k === 'keylv' ? 'Key Levels' : `${INDS[s.k].short} ${last != null ? fmt(last) : ''}`;
+      ctx.fillStyle = INDS[s.k].color; ctx.fillText(txt, lx, 6); lx += ctx.measureText(txt).width + 10;
+    }
+  }
+
+  // drawings
+  if (showOverlays) for (const d of ch.drawings) drawShape(ctx, d, view[id], TOP, ph);
+  if (ch.armed && ch.armed.pts.length) {
+    const tmp = { tool: ch.armed.tool, pts: ch.armed.pts.concat(ch.armed.hover ? [ch.armed.hover] : []) };
+    if (tmp.pts.length >= 2 || TOOLS[tmp.tool].taps === 1) drawShape(ctx, tmp, view[id], TOP, ph, true);
+    ch.armed.pts.forEach(pt => { ctx.fillStyle = '#3d8bff'; ctx.beginPath(); ctx.arc(view[id].xOfT(pt.t), Y(pt.p), 4, 0, 7); ctx.fill(); });
+  }
+
+  // position line, SL and TP (never hidden by clean view, BR-07)
+  if (id === 'opt') {
+    const pl = (p, color, label, dash) => {
+      const y = Math.round(Y(p)) + .5;
+      ctx.setLineDash(dash); ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(pw, y); ctx.stroke(); ctx.setLineDash([]);
+      ctx.font = '600 10px Inter, system-ui'; const tw = ctx.measureText(label).width + 12;
+      ctx.fillStyle = color; roundRect(ctx, 6, y - 9, tw, 18, 9); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(label, 12, y);
+    };
+    pl(POSITION.price, '#3d8bff', `Long 65 @ ${fmt(POSITION.price)}`, [4, 3]);
+    pl(POSITION.sl, '#e2434b', `SL ${fmt(POSITION.sl)}`, [2, 3]);
+    pl(POSITION.tp, '#1f9c74', `TP ${fmt(POSITION.tp)}`, [2, 3]);
+  }
+
+  // last price tag
+  const last = agg[agg.length - 1], ly = Y(last.c), lup = last.c >= last.o;
+  ctx.fillStyle = lup ? '#1f9c74' : '#e2434b'; roundRect(ctx, pw + 2, ly - 9, AX - 4, 18, 4); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '600 10.5px Inter, system-ui'; ctx.fillText(fmt(last.c, last.c > 10000 ? 1 : 2), pw + AX / 2, ly);
+}
+function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function drawShape(ctx, d, v, TOP, ph, temp) {
+  const c = '#3d8bff';
+  const pts = d.pts.map(p => ({ x: v.xOfT(p.t), y: v.Y(p.p), p: p.p }));
+  ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.globalAlpha = temp ? .75 : 1;
+  if (d.tool === 'trend' && pts.length >= 2) { ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); ctx.lineTo(pts[1].x, pts[1].y); ctx.stroke(); pts.forEach(p => { ctx.fillStyle = '#121213'; ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, 7); ctx.fill(); ctx.stroke(); }); }
+  if (d.tool === 'hline' && pts.length) { ctx.beginPath(); ctx.moveTo(0, pts[0].y); ctx.lineTo(v.pw, pts[0].y); ctx.stroke(); tagRight(ctx, v, pts[0].y, pts[0].p, c); }
+  if (d.tool === 'hray' && pts.length) { ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); ctx.lineTo(v.pw, pts[0].y); ctx.stroke(); ctx.fillStyle = c; ctx.beginPath(); ctx.arc(pts[0].x, pts[0].y, 3.5, 0, 7); ctx.fill(); tagRight(ctx, v, pts[0].y, pts[0].p, c); }
+  if (d.tool === 'rect' && pts.length >= 2) { const x = Math.min(pts[0].x, pts[1].x), y = Math.min(pts[0].y, pts[1].y), w = Math.abs(pts[1].x - pts[0].x), h = Math.abs(pts[1].y - pts[0].y); ctx.fillStyle = 'rgba(61,139,255,.14)'; ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); }
+  if (d.tool === 'fib' && pts.length >= 2) {
+    const lv = [[0, '#9a9aa2'], [0.236, '#ef4f5c'], [0.382, '#f5a524'], [0.5, '#2ebd85'], [0.618, '#35c6c6'], [1, '#9a9aa2']];
+    const x1 = Math.min(pts[0].x, pts[1].x), x2 = Math.max(pts[0].x, pts[1].x, x1 + 40);
+    const p1 = d.pts[0].p, p2 = d.pts[1].p;
+    ctx.font = '500 9.5px Inter, system-ui'; ctx.textAlign = 'left';
+    lv.forEach(([r, col], k) => {
+      const p = p2 - (p2 - p1) * r, y = v.Y(p);
+      if (k) { const yp = v.Y(p2 - (p2 - p1) * lv[k - 1][0]); ctx.fillStyle = col + '1f'; ctx.fillRect(x1, Math.min(y, yp), x2 - x1, Math.abs(y - yp)); }
+      ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+      ctx.fillStyle = col; ctx.fillText(`${r} (${fmt(p)})`, x1 + 4, y - 6);
+    });
+    ctx.setLineDash([3, 3]); ctx.strokeStyle = '#9a9aa2'; ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); ctx.lineTo(pts[1].x, pts[1].y); ctx.stroke(); ctx.setLineDash([]);
+  }
+  ctx.globalAlpha = 1;
+}
+function tagRight(ctx, v, y, p, c) { ctx.fillStyle = c; roundRect(ctx, v.pw + 2, y - 9, v.AX - 4, 18, 4); ctx.fill(); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '600 10px Inter, system-ui'; ctx.fillText(fmt(p), v.pw + v.AX / 2, y); }
+
+function frame() {
+  for (const id of ['idx', 'opt']) if (dirty[id]) { dirty[id] = false; drawChart(id); }
+  requestAnimationFrame(frame);
+}
+
+/* =========================================================================
+   Haptics: navigator.vibrate on Android; iOS 18+ Safari switch-toggle tick as
+   a best-effort fallback; on-screen pulses and optional ticks on desktop.
+   ========================================================================= */
+const Haptic = (() => {
+  const P = { open: { vib: 10, label: 'Light impact', why: 'wheel opened' }, select: { vib: 5, label: 'Selection', why: 'hovered slot changed' }, success: { vib: [12, 45, 18], label: 'Success', why: 'item applied' }, error: { vib: [26, 60, 26], label: 'Warning', why: 'action failed' } };
+  const canVibrate = typeof navigator.vibrate === 'function';
+  let iosLabel = null, actx = null;
+  function iosTick() {
+    try {
+      if (!iosLabel) {
+        iosLabel = document.createElement('label'); iosLabel.setAttribute('aria-hidden', 'true');
+        iosLabel.style.cssText = 'position:fixed;left:-200px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+        const inp = document.createElement('input'); inp.type = 'checkbox'; inp.setAttribute('switch', ''); inp.tabIndex = -1;
+        iosLabel.appendChild(inp); document.body.appendChild(iosLabel);
+      }
+      iosLabel.click();
+    } catch {}
+  }
+  function sound(kind) {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const t = actx.currentTime, beeps = kind === 'success' ? [0, .06] : kind === 'error' ? [0, .09] : [0];
+      beeps.forEach((d, k) => {
+        const o = actx.createOscillator(), g = actx.createGain();
+        o.type = 'sine'; o.frequency.value = kind === 'select' ? 1800 : kind === 'open' ? 900 : kind === 'error' ? 300 : (k ? 1320 : 990);
+        g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(kind === 'select' ? .05 : .09, t + d + .004); g.gain.exponentialRampToValueAtTime(0.0001, t + d + (kind === 'select' ? .025 : .05));
+        o.connect(g).connect(actx.destination); o.start(t + d); o.stop(t + d + .07);
+      });
+    } catch {}
+  }
+  function pulse(kind, at) {
+    if (!S.pulses || !at) return;
+    const size = kind === 'open' ? 96 : kind === 'select' ? 52 : 120;
+    const el = document.createElement('div'); el.className = 'hpulse ' + kind;
+    el.style.cssText = `left:${at.x - size / 2}px;top:${at.y - size / 2}px;width:${size}px;height:${size}px`;
+    app.appendChild(el); setTimeout(() => el.remove(), 600);
+  }
+  let dotT;
+  function meter(kind) {
+    const dot = $('#hDot'), txt = $('#hTxt'); if (!dot) return;
+    dot.classList.remove('fire'); void dot.offsetWidth; dot.classList.add('fire'); clearTimeout(dotT); dotT = setTimeout(() => dot.classList.remove('fire'), 140);
+    const p = P[kind]; txt.innerHTML = `<b>${p.label}</b> · ${p.why} · ${Array.isArray(p.vib) ? p.vib.join('/') : p.vib} ms`;
+  }
+  function fire(kind, at) {
+    if (!S.haptics) return;
+    const p = P[kind];
+    if (canVibrate) { try { navigator.vibrate(p.vib); } catch {} }
+    else { iosTick(); if (kind === 'success' || kind === 'error') setTimeout(iosTick, 70); }
+    if (S.sound) sound(kind);
+    pulse(kind, at); meter(kind);
+  }
+  return { fire, canVibrate };
+})();
+
+/* =========================================================================
+   Event log (analytics, PRD M1 notes)
+   ========================================================================= */
+const events = [];
+function logEvent(name, props) {
+  events.unshift({ name, props, at: new Date() });
+  events.length = Math.min(events.length, 20);
+  const ul = $('#log'); if (!ul) return;
+  ul.innerHTML = events.map(e => `<li class="${e.name === 'wheel_select' ? 'sel' : e.name === 'wheel_cancel' ? 'can' : ''}"><span class="t">${e.at.toTimeString().slice(0, 8)}</span><b>${e.name}</b> ${esc(Object.entries(e.props).map(([k, v]) => `${k}: ${v}`).join(', '))}</li>`).join('');
+}
+
+/* =========================================================================
+   Toast N2, banner N3, screen-reader announcements
+   ========================================================================= */
+let toastT;
+function toast(msg, opts = {}) {
+  const t = $('#toast');
+  t.innerHTML = (opts.err ? icon('alert') : '') + esc(msg);
+  t.classList.toggle('err', !!opts.err);
+  const orderTop = appRect($('#order')).y;
+  const layerScreen = $('#layers .screen');
+  t.style.top = ''; t.style.bottom = '';
+  if (layerScreen) t.style.bottom = '28px'; else t.style.top = (orderTop - 52) + 'px';
+  t.classList.add('in'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('in'), 2000);
+  say(msg);
+}
+function say(msg) { const l = $('#srLive'); l.textContent = ''; setTimeout(() => l.textContent = msg, 30); }
+
+/* =========================================================================
+   Wheel model
+   ========================================================================= */
+const SLOT_DEG = 90 / 7;
+const DEAD_R = 40;
+function wheelItems() {
+  const s = S.slots;
+  return [
+    { kind: 'tf', val: s.tf[0], slot: 1 }, { kind: 'tf', val: s.tf[1], slot: 2 },
+    { kind: 'tool', val: s.tools[0], slot: 3 }, { kind: 'tool', val: s.tools[1], slot: 4 },
+    { kind: 'ind', val: s.inds[0], slot: 5 }, { kind: 'ind', val: s.inds[1], slot: 6 },
+    { kind: 'clean', slot: 7 },
+  ];
+}
+// status: default | active | on | unavailable | empty | loading
+function itemState(it, chartId) {
+  const ch = charts[chartId];
+  if (it.kind === 'tf') {
+    const name = `Timeframe ${it.val}` + (S.linked ? ' (both charts)' : '');
+    if (S.offline) return { status: 'unavailable', reason: 'Offline', name };
+    if (ch.tf === it.val) return { status: 'active', name, sub: 'Current' };
+    return { status: 'default', name };
+  }
+  if (it.kind === 'clean') return { status: ch.clean ? 'on' : 'default', name: 'Clean view', sub: ch.clean ? 'On · release to turn off' : null };
+  const isTool = it.kind === 'tool';
+  if (S.slotLoad === 'loading') return { status: 'loading', name: isTool ? 'Drawing tool' : 'Indicator', reason: 'Loading' };
+  if (S.slotLoad === 'failed') return { status: 'unavailable', name: isTool ? 'Drawing tool' : 'Indicator', reason: "Couldn't load" };
+  if (!it.val) return { status: 'empty', name: isTool ? 'Add a drawing tool' : 'Add an indicator' };
+  if (isTool) return { status: 'default', name: TOOLS[it.val].name };
+  const meta = INDS[it.val];
+  if (meta.only && meta.only !== chartId) return { status: 'unavailable', reason: 'Not on this chart', name: meta.name };
+  const on = ch.inds.has(it.val) && !ch.clean;
+  return { status: on ? 'on' : 'default', name: meta.name, sub: on ? 'On · release to turn off' : null };
+}
+const applicable = st => st.status === 'default' || st.status === 'on' || st.status === 'empty';
+
+/* Geometry (Appendix A.4) */
+function hitTest(x, y, a) {
+  const dx = x - a.cx, dy = y - a.cy, r = Math.hypot(dx, dy);
+  if (r < DEAD_R) return { zone: 'dead' };
+  let th = Math.atan2(dy, dx) * 180 / Math.PI; if (th < 0) th += 360;
+  if (th >= 80 && th < 90) th = 90;
+  if (th > 180 && th <= 190) th = 180;
+  if (th < 90 || th > 180) return { zone: 'outside' };
+  return { zone: 'slot', i: Math.min(6, Math.floor((180 - th) / SLOT_DEG)) };
+}
+const GAP_AFTER = [2, 6, 2, 6, 2, 6]; // px gap after slot k (k = 0..5); 6 px between groups
+function sectorPath(cx, cy, r0, R, k) {
+  const a1 = (180 - k * SLOT_DEG) * Math.PI / 180, a2 = (180 - (k + 1) * SLOT_DEG) * Math.PI / 180;
+  const g1 = k > 0 ? GAP_AFTER[k - 1] / 2 : 0, g2 = k < 6 ? GAP_AFTER[k] / 2 : 0;
+  const pt = (r, t) => `${(cx + r * Math.cos(t)).toFixed(2)} ${(cy + r * Math.sin(t)).toFixed(2)}`;
+  const o1 = a1 - g1 / R, o2 = a2 + g2 / R, i1 = a1 - g1 / r0, i2 = a2 + g2 / r0;
+  return `M${pt(R, o1)} A${R} ${R} 0 0 0 ${pt(R, o2)} L${pt(r0, i2)} A${r0} ${r0} 0 0 1 ${pt(r0, i1)} Z`;
+}
+function wheelMarkup(a, chartId, hovered, opts = {}) {
+  const { cx, cy, r0, R } = a; const items = wheelItems(); let out = '';
+  // dead zone
+  out += `<circle cx="${cx}" cy="${cy}" r="${DEAD_R}" fill="rgba(0,0,0,.25)" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 4" stroke-width="1.2"/>`;
+  items.forEach((it, k) => {
+    const st = itemState(it, chartId), hov = hovered === k;
+    const unavailable = st.status === 'unavailable' || st.status === 'loading';
+    const fill = hov ? (unavailable || st.status === 'active' ? 'rgba(70,70,76,.95)' : '#ffffff') : 'var(--wheel)';
+    const ink = hov && !(unavailable || st.status === 'active') ? '#000' : '#f4f4f5';
+    const mid = (180 - (k + .5) * SLOT_DEG) * Math.PI / 180;
+    const lr = 0.8 * R, lx = cx + lr * Math.cos(mid), ly = cy + lr * Math.sin(mid);
+    out += `<g opacity="${unavailable && !hov ? .4 : 1}">`;
+    out += `<path d="${sectorPath(cx, cy, r0, R, k)}" fill="${fill}" stroke="${st.status === 'active' ? '#fff' : 'var(--wheel-line)'}" stroke-width="${st.status === 'active' ? 1.6 : 1}"/>`;
+    const sc = hov ? 1.15 : 1;
+    out += `<g transform="translate(${lx.toFixed(1)} ${ly.toFixed(1)}) scale(${sc})">`;
+    if (st.status === 'loading') {
+      out += `<rect class="skel" x="-14" y="-6" width="28" height="12" rx="6" fill="#55555c"/>`;
+    } else if (st.status === 'empty') {
+      out += `<text text-anchor="middle" dominant-baseline="central" font-size="12.5" font-weight="600" fill="${ink}">+ Add</text>`;
+    } else if (it.kind === 'tf') {
+      out += `<text text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="600" fill="${ink}">${it.val}</text>`;
+    } else if (it.kind === 'ind') {
+      const lab = INDS[it.val].short; const fs = lab.length > 5 ? 11.5 : 13;
+      out += `<text text-anchor="middle" dominant-baseline="central" font-size="${fs}" font-weight="600" fill="${ink}">${esc(lab)}</text>`;
+    } else {
+      const ic = it.kind === 'clean' ? 'clean' : TOOLS[it.val].icon, lab = it.kind === 'clean' ? 'Clean' : TOOLS[it.val].short;
+      out += `<svg x="-10" y="-19" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${ink}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-${ic}"/></svg>`;
+      out += `<text y="11" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="600" fill="${ink}">${esc(lab)}</text>`;
+    }
+    out += `</g>`;
+    // status marks: On dot, link mark
+    const mr = R - 14, mx = cx + mr * Math.cos(mid), my = cy + mr * Math.sin(mid);
+    if (st.status === 'on') out += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="4" fill="${hov ? '#1f9c74' : 'var(--on)'}"/>`;
+    if (it.kind === 'tf' && S.linked) out += `<svg x="${(mx - 7).toFixed(1)}" y="${(my - 7).toFixed(1)}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${hov ? '#000' : '#cfcfd4'}" stroke-width="2.2" stroke-linecap="round"><use href="#i-link"/></svg>`;
+    out += `</g>`;
+  });
+  return out;
+}
+function zonesMarkup(a) {
+  const { cx, cy, r0, R } = a, far = 1400; let out = '';
+  const ray = (deg, col, w = 1, dash = '') => { const t = deg * Math.PI / 180; return `<line x1="${cx}" y1="${cy}" x2="${cx + far * Math.cos(t)}" y2="${cy + far * Math.sin(t)}" stroke="${col}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`; };
+  const wedge = (d1, d2, col) => { const t1 = d1 * Math.PI / 180, t2 = d2 * Math.PI / 180; return `<path d="M${cx} ${cy} L${cx + far * Math.cos(t1)} ${cy + far * Math.sin(t1)} L${cx + far * Math.cos(t2)} ${cy + far * Math.sin(t2)} Z" fill="${col}"/>`; };
+  out += wedge(80, 90, 'rgba(245,177,76,.12)') + wedge(180, 190, 'rgba(245,177,76,.12)');
+  for (let k = 0; k <= 7; k++) out += ray(180 - k * SLOT_DEG, 'rgba(245,177,76,.6)', 1, k === 0 || k === 7 ? '' : '4 4');
+  out += ray(80, 'rgba(245,177,76,.35)', 1, '2 4') + ray(190, 'rgba(245,177,76,.35)', 1, '2 4');
+  out += `<circle cx="${cx}" cy="${cy}" r="${DEAD_R}" fill="rgba(240,82,90,.22)" stroke="#f0525a"/>`;
+  out += `<circle cx="${cx}" cy="${cy}" r="${r0}" fill="none" stroke="rgba(245,177,76,.6)" stroke-dasharray="2 3"/><circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="rgba(245,177,76,.6)" stroke-dasharray="2 3"/>`;
+  out += `<circle cx="${cx}" cy="${cy}" r="${0.8 * R}" fill="none" stroke="rgba(245,177,76,.25)" stroke-dasharray="1 4"/>`;
+  return out;
+}
+
+/* =========================================================================
+   Wheel controller (Appendix A.3)
+   ========================================================================= */
+const W = { phase: 'idle', chart: null, btn: null, pid: null, start: null, last: null, timer: 0, openAt: 0, a: null, hovered: null, zone: null, kb: false, ignore: new Set() };
+const wheelSvg = $('#wheelSvg'), wheelG = $('#wheelG'), zonesG = $('#zonesG'), pill = $('#hoverPill'), dot = $('#touchDot');
+
+function geometryFor(btn, chartId) {
+  const r = appRect(btn), panel = appRect($('#panel-' + chartId));
+  const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+  const R = Math.max(150, Math.min(280, panel.y + panel.h - cy - 8, cx - panel.x - 8));
+  const r0 = Math.min(120, Math.round(R * 0.43));
+  return { cx, cy, r0, R };
+}
+function onBtnDown(e) {
+  if (W.ignore.has(e.pointerId)) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  if (W.phase !== 'idle') return; // second touch handled by the document listener
+  e.preventDefault();
+  const btn = e.currentTarget;
+  try { btn.setPointerCapture(e.pointerId); } catch {}
+  Object.assign(W, { phase: 'pressed', btn, chart: btn.dataset.chart, pid: e.pointerId, start: appPoint(e), last: appPoint(e), kb: false, ptype: e.pointerType });
+  btn.classList.add('pressed');
+  showTouch(W.start);
+  W.timer = setTimeout(openWheel, S.holdMs);
+}
+function onBtnMove(e) {
+  if (e.pointerId !== W.pid) return;
+  const p = appPoint(e); W.last = p;
+  if (W.phase === 'pressed') {
+    if (Math.hypot(p.x - W.start.x, p.y - W.start.y) > 10) { clearTimeout(W.timer); W.btn.classList.remove('pressed'); W.phase = 'void'; showTouch(null); }
+    else showTouch(p);
+  } else if (W.phase === 'open') { showTouch(p); updateHover(p, true); }
+}
+function onBtnUp(e) {
+  if (W.ignore.has(e.pointerId)) { W.ignore.delete(e.pointerId); return; }
+  if (e.pointerId !== W.pid) return;
+  const p = appPoint(e);
+  if (W.phase === 'pressed') {
+    clearTimeout(W.timer); const chart = W.chart; resetPress();
+    logEvent('timeframe_button_tap', { chart });
+    openB1(chart);
+  } else if (W.phase === 'open') release(p);
+  else resetPress();
+}
+function onBtnCancel(e) {
+  if (e.pointerId !== W.pid) return;
+  if (W.phase === 'open') cancelWheel('interrupted'); else resetPress();
+}
+function resetPress() { clearTimeout(W.timer); if (W.btn) W.btn.classList.remove('pressed'); W.phase = 'idle'; W.pid = null; showTouch(null); }
+function showTouch(p) { if (!p || !S.touchDot || !isDesktop() || W.kb) { dot.hidden = true; return; } dot.hidden = false; dot.style.left = p.x + 'px'; dot.style.top = p.y + 'px'; }
+
+function openWheel(kb = false) {
+  W.phase = 'open'; W.kb = kb; W.openAt = performance.now();
+  W.btn.classList.remove('pressed'); W.btn.classList.add('open');
+  W.a = geometryFor(W.btn, W.chart);
+  // A hold dismisses N1 and disarms a drawing tool (Flow 3, Flow 5)
+  if (!S.n1Done) dismissN1();
+  for (const id in charts) if (charts[id].armed) disarm(id, true);
+  $('#panel-' + W.chart).classList.add('held');
+  wheelSvg.setAttribute('viewBox', `0 0 ${app.offsetWidth} ${app.offsetHeight}`);
+  wheelG.style.transformOrigin = `${W.a.cx}px ${W.a.cy}px`;
+  wheelG.classList.remove('out', 'in');
+  W.hovered = kb ? 0 : null; W.zone = kb ? 'slot' : 'dead';
+  renderWheel();
+  void wheelG.getBoundingClientRect();
+  requestAnimationFrame(() => wheelG.classList.add('in'));
+  Haptic.fire('open', { x: W.a.cx, y: W.a.cy });
+  logEvent('wheel_open', { chart: W.chart, via: kb ? 'keyboard' : (W.ptype || 'pointer') });
+  say(kb ? 'Quick wheel open. Use arrow keys, Enter to apply, Escape to cancel.' : 'Quick wheel open');
+  if (!kb) updateHover(W.last, true);
+}
+function updateHover(p, haptic) {
+  const ht = hitTest(p.x, p.y, W.a);
+  W.zone = ht.zone;
+  const idx = ht.zone === 'slot' ? ht.i : null;
+  if (idx !== W.hovered) {
+    W.hovered = idx;
+    if (idx !== null && haptic) Haptic.fire('select', p);
+    renderWheel();
+  }
+}
+function renderWheel() {
+  if (W.phase !== 'open') return;
+  wheelG.innerHTML = wheelMarkup(W.a, W.chart, W.hovered);
+  zonesG.innerHTML = S.zones ? zonesMarkup(W.a) : '';
+  // hover label pill at (cx - 150, cy - 12), clamped inside the frame
+  const lbl = $('.tf-l', W.btn), ch = charts[W.chart];
+  if (W.hovered === null) { pill.hidden = true; lbl.textContent = ch.tf; W.btn.classList.remove('preview'); return; }
+  const it = wheelItems()[W.hovered], st = itemState(it, W.chart);
+  const sub = st.reason || st.sub;
+  pill.innerHTML = `${esc(st.name)}${sub ? ` <span class="sub">· ${esc(sub)}</span>` : ''}`;
+  pill.className = 'hover-pill' + (applicable(st) ? '' : ' muted');
+  pill.hidden = false;
+  const pw = pill.offsetWidth, x = clamp(W.a.cx - 150, pw / 2 + 8, app.offsetWidth - pw / 2 - 8);
+  pill.style.left = x + 'px'; pill.style.top = (W.a.cy - 12) + 'px';
+  const preview = it.kind === 'tf' && st.status !== 'unavailable';
+  lbl.textContent = preview ? it.val : ch.tf;
+  W.btn.classList.toggle('preview', preview && it.val !== ch.tf);
+}
+function closeWheel() {
+  const btn = W.btn, chart = W.chart;
+  W.phase = 'idle'; W.pid = null; W.kb = false;
+  clearTimeout(W.timer);
+  btn.classList.remove('open', 'pressed', 'preview');
+  $('.tf-l', btn).textContent = charts[chart].tf;
+  $('#panel-' + chart).classList.remove('held');
+  pill.hidden = true; showTouch(null); zonesG.innerHTML = '';
+  wheelG.classList.remove('in'); wheelG.classList.add('out');
+  setTimeout(() => { if (W.phase !== 'open') { wheelG.innerHTML = ''; wheelG.classList.remove('out'); } }, 90);
+}
+function cancelWheel(reason) {
+  const ms = Math.round(performance.now() - W.openAt), chart = W.chart;
+  closeWheel();
+  logEvent('wheel_cancel', { chart, reason, ms_open: ms });
+}
+function release(p) {
+  if (p) updateHover(p, false);
+  const ms = Math.round(performance.now() - W.openAt), chart = W.chart;
+  if (W.zone === 'dead' || W.hovered === null) return cancelWheel(W.zone === 'outside' ? 'outside' : 'dead_zone');
+  const it = wheelItems()[W.hovered], st = itemState(it, chart);
+  if (st.status === 'active') return cancelWheel('active');
+  if (!applicable(st)) return cancelWheel('unavailable');
+  const at = { x: W.a.cx, y: W.a.cy };
+  closeWheel();
+  logEvent('wheel_select', { chart, slot: it.slot, item: st.status === 'empty' ? 'add' : (it.val || it.kind), ms_from_open: ms });
+  const ok = applyItem(it, st, chart);
+  Haptic.fire(ok === false ? 'error' : 'success', at);
+  if (ok !== false && st.status !== 'empty') { S.applied++; store.set('applied', S.applied); }
+}
+
+// Second finger, tab switch or blur closes the wheel with no change (BR-11, Flow 4)
+document.addEventListener('pointerdown', e => {
+  if (W.phase === 'idle' || e.pointerId === W.pid) return;
+  if (W.phase === 'open' && W.kb) { if (!e.target.closest('.tf-btn.open')) cancelWheel('interrupted'); return; }
+  W.ignore.add(e.pointerId);
+  if (W.phase === 'open') cancelWheel('interrupted'); else resetPress();
+}, true);
+document.addEventListener('pointerup', e => { if (W.ignore.has(e.pointerId) && !e.target.closest('.tf-btn')) W.ignore.delete(e.pointerId); }, true);
+document.addEventListener('visibilitychange', () => { if (document.hidden && W.phase === 'open') cancelWheel('interrupted'); else if (document.hidden) resetPress(); });
+window.addEventListener('blur', () => { if (W.phase === 'open') cancelWheel('interrupted'); else if (W.phase !== 'idle') resetPress(); });
+
+$$('.tf-btn').forEach(btn => {
+  btn.addEventListener('pointerdown', onBtnDown);
+  btn.addEventListener('pointermove', onBtnMove);
+  btn.addEventListener('pointerup', onBtnUp);
+  btn.addEventListener('pointercancel', onBtnCancel);
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+  btn.addEventListener('click', e => { if (e.detail === 0 && W.phase === 'idle') { logEvent('timeframe_button_tap', { chart: btn.dataset.chart, via: 'keyboard' }); openB1(btn.dataset.chart); } });
+  btn.addEventListener('keydown', e => {
+    if (W.phase === 'idle' && (e.key === 'w' || e.key === 'W' || e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10'))) {
+      e.preventDefault(); openWheelKeyboard(btn);
+    }
+  });
+});
+function openWheelKeyboard(btn) {
+  if (W.phase !== 'idle') return;
+  Object.assign(W, { btn, chart: btn.dataset.chart, pid: null, start: null, last: null });
+  btn.focus();
+  openWheel(true);
+}
+document.addEventListener('keydown', e => {
+  if (W.phase !== 'open' || !W.kb) return;
+  if (['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'].includes(e.key)) {
+    e.preventDefault();
+    const d = (e.key === 'ArrowDown' || e.key === 'ArrowRight') ? 1 : -1;
+    W.hovered = W.hovered === null ? 0 : clamp(W.hovered + d, 0, 6); W.zone = 'slot';
+    renderWheel(); Haptic.fire('select', null);
+    const st = itemState(wheelItems()[W.hovered], W.chart); say(st.name + (st.reason ? ', ' + st.reason : st.sub ? ', ' + st.sub : ''));
+  } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); release(null); }
+  else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); cancelWheel('dead_zone'); }
+});
+
+/* =========================================================================
+   Applying items (Appendix A.5)
+   ========================================================================= */
+function applyItem(it, st, chartId) {
+  const ch = charts[chartId];
+  if (st.status === 'empty') { openS2({ focus: it.kind === 'tool' ? 'tools' : 'inds', slot: it.slot, from: 's1' }); return true; }
+  if (it.kind === 'tf') return setTimeframe(chartId, it.val, true);
+  if (it.kind === 'clean') { setClean(chartId, !ch.clean); return true; }
+  if (it.kind === 'ind') {
+    const k = it.val;
+    if (ch.clean) { setClean(chartId, false, true); ch.inds.add(k); toast(`${INDS[k].name} on`); }
+    else if (ch.inds.has(k)) { ch.inds.delete(k); toast(`${INDS[k].name} off`); }
+    else { ch.inds.add(k); toast(`${INDS[k].name} on`); }
+    dirty[chartId] = true; return true;
+  }
+  if (it.kind === 'tool') { if (ch.clean) setClean(chartId, false, true); arm(chartId, it.val); return true; }
+}
+function setTimeframe(chartId, tf, fromWheel) {
+  if (S.failTf) {
+    S.failTf = false; syncDev();
+    toast(`Couldn't load ${tf}. Try again.`, { err: true });
+    return false;
+  }
+  const targets = S.linked ? ['idx', 'opt'] : [chartId];
+  targets.forEach(id => { charts[id].tf = tf; dirty[id] = true; $(`.tf-btn[data-chart="${id}"] .tf-l`).textContent = tf; });
+  if (S.linked) toast(`Both charts set to ${tf}`);
+  else say(`${charts[chartId].name} set to ${tf}`);
+  return true;
+}
+function setClean(chartId, on, silent) {
+  charts[chartId].clean = on; dirty[chartId] = true;
+  $(`.cv-chip[data-cv="${chartId}"]`).hidden = !on;
+  if (!silent) toast(on ? 'Clean view on' : 'Clean view off');
+}
+$$('.cv-chip').forEach(c => c.addEventListener('click', () => setClean(c.dataset.cv, false)));
+
+/* Drawing tools: N3 banner and taps on the chart */
+function arm(chartId, tool) {
+  for (const id in charts) if (charts[id].armed) disarm(id, true);
+  const ch = charts[chartId]; ch.armed = { tool, pts: [], hover: null };
+  const plot = $(`.plot[data-chart="${chartId}"]`); plot.classList.add('arming');
+  setN3(chartId);
+}
+function setN3(chartId) {
+  const ch = charts[chartId], n3 = $(`.plot[data-chart="${chartId}"] .n3`);
+  if (!ch.armed) { n3.hidden = true; return; }
+  const t = TOOLS[ch.armed.tool];
+  const msg = t.taps === 1 ? `Tap a point on the chart to draw a ${t.name}` : ch.armed.pts.length ? `Now tap the second point` : `Tap two points on the chart to draw a ${t.name}`;
+  n3.innerHTML = `${icon(t.icon)}<span class="msg">${esc(msg)}</span><button type="button">Cancel</button>`;
+  n3.hidden = false;
+  $('button', n3).onclick = () => disarm(chartId);
+  say(msg);
+}
+function disarm(chartId, silent) {
+  const ch = charts[chartId]; ch.armed = null; dirty[chartId] = true;
+  $(`.plot[data-chart="${chartId}"]`).classList.remove('arming');
+  setN3(chartId);
+}
+$$('.plot').forEach(plot => {
+  const id = plot.dataset.chart; const cv = $('canvas', plot); let down = null;
+  const pt = e => { const r = appRect(cv), p = appPoint(e); return { x: p.x - r.x, y: p.y - r.y }; };
+  const toData = p => ({ t: view[id].tOfX(p.x), p: view[id].P(p.y) });
+  cv.addEventListener('pointerdown', e => { down = pt(e); if (charts[id].armed) { try { cv.setPointerCapture(e.pointerId); } catch {} } });
+  cv.addEventListener('pointermove', e => { const a = charts[id].armed; if (!a || !view[id]) return; a.hover = toData(pt(e)); if (a.pts.length) dirty[id] = true; });
+  cv.addEventListener('pointerup', e => {
+    const a = charts[id].armed, p = pt(e);
+    if (!a || !down || Math.hypot(p.x - down.x, p.y - down.y) > 12 && !a.pts.length) { down = null; return; }
+    down = null;
+    if (p.x > view[id].pw) return;
+    a.pts.push(toData(p)); dirty[id] = true;
+    if (a.pts.length >= TOOLS[a.tool].taps) {
+      charts[id].drawings.push({ tool: a.tool, pts: a.pts.slice(0, TOOLS[a.tool].taps) });
+      disarm(id); toast(`${TOOLS[a.tool].name} drawn`);
+    } else setN3(id);
+  });
+});
+
+/* =========================================================================
+   N1 coachmark (Flow 5)
+   ========================================================================= */
+let coachEls = null;
+function showN1() {
+  if (coachEls) return;
+  const btn = $('.tf-btn[data-chart="idx"]'), r = appRect(btn);
+  const ring = document.createElement('div'); ring.className = 'coach-ring';
+  Object.assign(ring.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
+  const c = document.createElement('div'); c.className = 'coach'; c.setAttribute('role', 'dialog'); c.setAttribute('aria-label', 'New feature');
+  const right = app.offsetWidth - (r.x + r.w);
+  c.style.right = Math.max(8, right - 4) + 'px'; c.style.top = (r.y + r.h + 12) + 'px';
+  c.style.setProperty('--arrow', Math.max(14, r.w / 2 + 4 - 6) + 'px');
+  c.innerHTML = `<span class="new">New</span><p>Hold ${esc(charts.idx.tf)} for quick switches<small>Slide to a timeframe, indicator or drawing tool, then let go.</small></p><div class="row"><button type="button">Got it</button></div>`;
+  app.append(ring, c);
+  $('button', c).onclick = dismissN1;
+  coachEls = [ring, c];
+}
+function dismissN1() {
+  S.n1Done = true; store.set('n1Done', true);
+  if (coachEls) { coachEls.forEach(e => e.remove()); coachEls = null; }
+}
+
+/* =========================================================================
+   Sheets, screens and modals
+   ========================================================================= */
+const layers = $('#layers');
+function sheet({ title, body, onClose, cls = '' }) {
+  const scrim = document.createElement('div'); scrim.className = 'scrim';
+  const sh = document.createElement('div'); sh.className = 'sheet ' + cls; sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-modal', 'true');
+  sh.innerHTML = `<div class="grab"><span></span></div>${title != null ? `<div class="sh-head"><h2>${esc(title)}</h2><button class="x-btn" data-close aria-label="Close">${icon('x')}</button></div>` : ''}<div class="body"></div>`;
+  $('.body', sh).append(...(Array.isArray(body) ? body : [body]).filter(Boolean));
+  layers.append(scrim, sh);
+  requestAnimationFrame(() => { scrim.classList.add('in'); sh.classList.add('in'); });
+  let closed = false;
+  const close = (silent) => {
+    if (closed) return; closed = true;
+    scrim.classList.remove('in'); sh.classList.remove('in'); sh.style.transform = '';
+    setTimeout(() => { scrim.remove(); sh.remove(); }, 260);
+    if (!silent && onClose) onClose();
+  };
+  scrim.addEventListener('click', () => close());
+  sh.addEventListener('click', e => { if (e.target.closest('[data-close]')) close(); });
+  // swipe down to close
+  const drag = sh.querySelectorAll('.grab, .sh-head');
+  drag.forEach(h => {
+    let y0 = null, dy = 0, pid = null;
+    h.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; y0 = e.clientY; dy = 0; pid = e.pointerId; try { h.setPointerCapture(pid); } catch {} sh.style.transition = 'none'; });
+    h.addEventListener('pointermove', e => { if (y0 == null || e.pointerId !== pid) return; dy = Math.max(0, (e.clientY - y0) / appScale()); sh.style.transform = `translateY(${dy}px)`; });
+    const end = () => { if (y0 == null) return; y0 = null; sh.style.transition = ''; if (dy > 80) close(); else sh.style.transform = ''; };
+    h.addEventListener('pointerup', end); h.addEventListener('pointercancel', end);
+  });
+  return { el: sh, close };
+}
+function h(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
+function tipVisible() { return !S.tipHidden && S.applied < 3; }
+
+/* B1 Chart Menu */
+let b1 = null;
+function openB1(chartId, tab) {
+  const ch = charts[chartId];
+  const root = h(`<div></div>`);
+  const render = (t) => {
+    root.innerHTML = '';
+    if (tipVisible()) {
+      const tip = h(`<div class="tip">${icon('hand')}<span class="t"><b>Tip:</b> hold ${esc(ch.tf)} to open the quick wheel</span><button class="lnk" type="button">Customise</button><button class="x-btn" type="button" aria-label="Hide tip">${icon('x')}</button></div>`);
+      tip.querySelector('.lnk').onclick = () => openS2({ from: 'b1', chartId });
+      tip.querySelector('.x-btn').onclick = () => { S.tipHidden = true; store.set('tipHidden', true); render(t); };
+      root.append(tip);
+    }
+    const tiles = h(`<div class="tiles"><button data-t="range" aria-pressed="${t === 'range'}">${icon('range')}Range</button><button data-t="ind" aria-pressed="false">${icon('fx')}Indicator</button><button data-t="draw" aria-pressed="false">${icon('pencil')}Drawing</button><button data-t="settings" aria-pressed="${t === 'settings'}">${icon('gear')}Settings</button></div>`);
+    tiles.onclick = e => {
+      const b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.t === 'ind') { b1.close(true); openIndicatorsSheet(chartId); }
+      else if (b.dataset.t === 'draw') { b1.close(true); openDrawingSheet(chartId); }
+      else render(b.dataset.t === t ? null : b.dataset.t);
+    };
+    root.append(tiles);
+    if (t === 'settings') {
+      const lst = h(`<div class="list" style="margin-top:6px"><button class="li" data-qw>${icon('wheel')}<span class="main">Quick wheel<small>Choose what the hold-to-open wheel shows</small></span><span class="end">${icon('chev')}</span></button><div class="ph-note">Other chart settings: existing, not in this prototype.</div></div>`);
+      lst.querySelector('[data-qw]').onclick = () => openS2({ from: 'b1', chartId });
+      root.append(lst); return;
+    }
+    if (t === 'range') { root.append(h(`<div class="ph-note">Range: existing sheet, not in this prototype.</div>`)); }
+    const chipRow = (list, label, add) => {
+      const sec = h(`<div><div class="sec-h">${label}${add ? `<span class="add">${icon('plus')}Add interval</span>` : ''}</div><div class="chips"></div></div>`);
+      list.forEach(tf => {
+        const ok = tfSupported(tf), cur = ch.tf === tf;
+        const b = h(`<button class="chip${cur ? ' cur' : ''}" ${ok ? '' : 'disabled title="Not in prototype"'}>${tf}${cur ? icon('check') : ''}</button>`);
+        if (ok) b.onclick = () => { b1.close(true); if (setTimeframe(chartId, tf)) dirty[chartId] = true; };
+        sec.querySelector('.chips').append(b);
+      });
+      return sec;
+    };
+    root.append(chipRow(TF_SECOND, 'Second', true), chipRow(TF_MINUTE, 'Minute'), chipRow(TF_HOUR, 'Hour'));
+    root.append(h(`<div class="ph-note">Second and Hour intervals: not in this prototype.</div>`));
+  };
+  render(tab || null);
+  b1 = sheet({ title: null, body: root, onClose: () => { b1 = null; } });
+  b1.chartId = chartId;
+}
+function openIndicatorsSheet(chartId) {
+  const ch = charts[chartId];
+  const body = h(`<div><div class="search">${icon('search')}<input placeholder="Search" aria-label="Search indicators"></div><div class="list"></div></div>`);
+  const list = $('.list', body), inp = $('input', body);
+  const draw = () => {
+    const q = inp.value.trim().toLowerCase();
+    list.innerHTML = '';
+    Object.entries(INDS).filter(([k, m]) => !q || m.name.toLowerCase().includes(q)).forEach(([k, m]) => {
+      const on = ch.inds.has(k), na = m.only && m.only !== chartId;
+      const b = h(`<button class="li" ${na ? 'disabled' : ''}><span class="plus${on ? ' on' : ''}">${icon(on ? 'check' : 'plus')}</span><span class="main">${esc(m.name)}${m.badge ? `<span class="badge">${m.badge}</span>` : ''}<small>${na ? 'Not on this chart' : esc(m.by || '')}</small></span><span class="end">${icon(m.starred ? 'starf' : 'star')}</span></button>`);
+      b.onclick = () => { if (ch.clean) setClean(chartId, false, true); on ? ch.inds.delete(k) : ch.inds.add(k); dirty[chartId] = true; toast(`${m.name} ${on ? 'off' : 'on'}`); draw(); };
+      list.append(b);
+    });
+    if (!list.children.length) list.append(h(`<div class="empty-st">No indicators match "${esc(inp.value)}"</div>`));
+  };
+  inp.oninput = draw; draw();
+  sheet({ title: 'Add indicators', body });
+}
+function openDrawingSheet(chartId) {
+  const body = h(`<div><div class="sub-h" style="margin-top:0">Tools</div><div class="list">
+    <div class="li">${icon('toolbar')}<span class="main">Enable drawing toolbar</span><span class="tog"></span></div>
+    <div class="li">${icon('magnet')}<span class="main">Enable magnet</span><span class="tog"></span></div>
+    <div class="li">${icon('eye')}<span class="main">Hide all drawings</span><span class="tog"></span></div>
+    <div class="li">${icon('lock')}<span class="main">Lock all drawings</span><span class="tog"></span></div></div>
+    <div class="sub-h">Drawings</div><div class="list" data-tools></div></div>`);
+  let s;
+  Object.entries(TOOLS).forEach(([k, t]) => {
+    const b = h(`<button class="li" ${t.na ? 'disabled' : ''}>${icon(t.icon)}<span class="main">${esc(t.name)}${t.na ? '<small>Not in prototype</small>' : ''}</span></button>`);
+    b.onclick = () => { s.close(true); if (charts[chartId].clean) setClean(chartId, false, true); arm(chartId, k); };
+    $('[data-tools]', body).append(b);
+  });
+  s = sheet({ title: 'Drawing Tools', body });
+}
+
+/* S2 Customise Quick Wheel */
+let s2 = null;
+function openS2({ from = 's1', chartId = 'opt', focus = null, slot = null } = {}) {
+  if (b1) b1.close(true);
+  if (s2) { s2.render(); return; }
+  const scr = h(`<div class="screen" role="dialog" aria-modal="true" aria-label="Quick wheel"><div class="nav"><button class="x-btn" aria-label="Back">${icon('back')}</button><h2>Quick wheel</h2></div><div class="scroll"></div></div>`);
+  layers.append(scr);
+  requestAnimationFrame(() => scr.classList.add('in'));
+  const scroll = $('.scroll', scr);
+  const close = () => { scr.classList.remove('in'); setTimeout(() => scr.remove(), 280); s2 = null; if (from === 'b1') openB1(chartId); };
+  $('.nav .x-btn', scr).onclick = close;
+  const render = (flashSlot) => {
+    const s = S.slots, top = scroll.scrollTop;
+    scroll.innerHTML = '';
+    scroll.append(previewEl());
+    scroll.append(h(`<p class="helper">Hold the timeframe button on either chart to open the wheel. Both charts use this layout.</p>`));
+    const grp = (key, title, rows) => { const g = h(`<div class="grp" data-grp="${key}"><h3>${title}</h3><div class="card"></div></div>`); g.querySelector('.card').append(...rows); return g; };
+    const row = (n, label, iconId, kind, idx) => {
+      const b = h(`<button class="li" data-slot="${n}"><span class="slotno">${n}</span>${iconId ? icon(iconId) : ''}<span class="main">${esc(label)}</span><span class="end">${icon('chev')}</span></button>`);
+      if (label === 'Empty') b.querySelector('.main').style.color = 'var(--ink-3)';
+      b.onclick = () => openB2(kind, idx, render);
+      return b;
+    };
+    scroll.append(grp('tf', 'Timeframes', s.tf.map((tf, i) => row(i + 1, tf, null, 'tf', i))));
+    const loadState = (key, title, rows) => {
+      if (S.slotLoad === 'loading') return grp(key, title, [h(`<div class="skrow"><i style="width:26px;height:26px;border-radius:8px"></i><i class="skel" style="width:120px"></i></div>`), h(`<div class="skrow" style="border:0"><i style="width:26px;height:26px;border-radius:8px"></i><i class="skel" style="width:90px"></i></div>`)]);
+      if (S.slotLoad === 'failed') { const e = h(`<div class="errbox"><span>Couldn't load your tools and indicators.</span><button type="button">Retry</button></div>`); e.querySelector('button').onclick = () => { setSlotLoad('loading'); setTimeout(() => setSlotLoad('loaded'), 700); }; return grp(key, title, [e]); }
+      return grp(key, title, rows);
+    };
+    scroll.append(loadState('tools', 'Drawing tools', s.tools.map((t, i) => row(i + 3, t ? TOOLS[t].name : 'Empty', t ? TOOLS[t].icon : null, 'tool', i))));
+    const indRows = s.inds.map((k, i) => row(i + 5, k ? INDS[k].name : 'Empty', null, 'ind', i));
+    const inds = loadState('inds', 'Indicators', indRows);
+    if (S.slotLoad === 'loaded') inds.querySelector('.card').append(h(`<div class="li"><span class="slotno">7</span>${icon('clean')}<span class="main">Clean view<small>Always the last slot</small></span></div>`));
+    scroll.append(inds);
+    if (!slotsEqual(S.slots, DEFAULT_SLOTS)) { const r = h(`<button class="reset" type="button">Reset to defaults</button>`); r.onclick = () => openM2(render); scroll.append(r); }
+    scroll.scrollTop = top;
+    if (flashSlot) { const el = scroll.querySelector(`[data-slot="${flashSlot}"]`); if (el) { el.classList.add('flash'); } }
+  };
+  s2 = { render, el: scr };
+  render(slot);
+  if (focus) setTimeout(() => { const g = scroll.querySelector(`[data-grp="${focus}"]`); if (g) scroll.scrollTo({ top: g.offsetTop - 12, behavior: S.reduceMotion ? 'auto' : 'smooth' }); }, 300);
+}
+function previewEl() {
+  // The same wheel as M1, at its real geometry on the option chart, cropped to the fan
+  const btn = $('.tf-btn[data-chart="opt"]');
+  const a = geometryFor(btn, 'opt');
+  const pad = 14, x0 = a.cx - a.R - pad, y0 = a.cy - 26, w = a.R + pad + 40, hh = a.R + 26 + pad;
+  const wrap = h(`<div class="preview"><svg viewBox="${x0} ${y0} ${w} ${hh}" role="img" aria-label="Wheel preview: ${wheelItems().map(it => it.kind === 'tf' ? it.val : it.kind === 'clean' ? 'Clean view' : it.val ? (it.kind === 'tool' ? TOOLS[it.val].name : INDS[it.val].name) : 'Empty').join(', ')}"></svg></div>`);
+  const svg = $('svg', wrap);
+  svg.innerHTML = `<rect x="${a.cx - 30}" y="${a.cy - 15}" width="60" height="30" rx="8" fill="#313136"/><text x="${a.cx - 6}" y="${a.cy}" text-anchor="middle" dominant-baseline="central" font-size="13.5" font-weight="500" fill="#fff" font-family="Inter, system-ui">${charts.opt.tf}</text><svg x="${a.cx + 8}" y="${a.cy - 8}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b4b4ba" stroke-width="1.7" stroke-linecap="round"><use href="#i-menu"/></svg>` + wheelMarkup(a, 'opt', null);
+  return wrap;
+}
+function saveSlots(next, rerender) {
+  if (S.failSave) { S.failSave = false; syncDev(); toast("Couldn't save. Try again.", { err: true }); Haptic.fire('error', null); return false; }
+  next.tf.sort((a, b) => tfMin(a) - tfMin(b));
+  S.slots = next; store.set('slots', next);
+  if (rerender) rerender();
+  return true;
+}
+/* B2 Slot Picker */
+function openB2(kind, idx, rerender) {
+  const s = S.slots, slotNo = kind === 'tf' ? idx + 1 : kind === 'tool' ? idx + 3 : idx + 5;
+  const title = kind === 'tf' ? `Timeframe for slot ${slotNo}` : kind === 'tool' ? `Drawing tool for slot ${slotNo}` : `Indicator for slot ${slotNo}`;
+  let sh;
+  const pick = val => {
+    const next = JSON.parse(JSON.stringify(S.slots));
+    next[kind === 'tf' ? 'tf' : kind === 'tool' ? 'tools' : 'inds'][idx] = val;
+    sh.close(true);
+    saveSlots(next, () => rerender(kind === 'tf' ? (next.tf.slice().sort((a, b) => tfMin(a) - tfMin(b)).indexOf(val) + 1) : slotNo));
+  };
+  let body;
+  if (kind === 'tf') {
+    body = h(`<div></div>`);
+    const other = s.tf[1 - idx];
+    [[TF_SECOND, 'Second'], [TF_MINUTE, 'Minute'], [TF_HOUR, 'Hour']].forEach(([list, label]) => {
+      const sec = h(`<div><div class="sec-h">${label}</div><div class="chips noted"></div></div>`);
+      list.forEach(tf => {
+        const cur = s.tf[idx] === tf, used = tf === other, ok = tfSupported(tf);
+        const note = used ? `In slot ${2 - idx}` : !ok ? 'Not in prototype' : '';
+        const b = h(`<button class="chip${cur ? ' cur' : ''}" ${used || !ok ? 'disabled' : ''}>${tf}${cur ? icon('check') : ''}${note ? `<span class="note">${note}</span>` : ''}</button>`);
+        b.onclick = () => cur ? sh.close(true) : pick(tf);
+        sec.querySelector('.chips').append(b);
+      });
+      body.append(sec);
+    });
+  } else if (kind === 'tool') {
+    body = h(`<div class="list"></div>`);
+    const other = s.tools[1 - idx];
+    const mk = (val, label, ic, note, dis, cur) => { const b = h(`<button class="li${cur ? ' cur' : ''}" ${dis ? 'disabled' : ''}>${ic ? icon(ic) : `<span style="width:20px"></span>`}<span class="main">${esc(label)}${note ? `<small>${note}</small>` : ''}</span>${cur ? `<span class="end">${icon('check')}</span>` : ''}</button>`); b.onclick = () => cur ? sh.close(true) : pick(val); return b; };
+    body.append(mk(null, 'Empty', null, '', false, s.tools[idx] === null));
+    Object.entries(TOOLS).forEach(([k, t]) => {
+      const used = other === k;
+      body.append(mk(k, t.name, t.icon, used ? `In slot ${idx === 0 ? 4 : 3}` : t.na ? 'Not in prototype' : '', used || t.na, s.tools[idx] === k));
+    });
+  } else {
+    body = h(`<div><div class="search">${icon('search')}<input placeholder="Search" aria-label="Search indicators"></div><div class="tabs" role="tablist"><button role="tab" data-tab="starred" aria-selected="true">Starred</button><button role="tab" data-tab="tpl" aria-selected="false">My Templates</button><button role="tab" data-tab="all" aria-selected="false">All</button></div><div class="list"></div></div>`);
+    let tab = 'starred';
+    const list = $('.list', body), inp = $('input', body);
+    const other = s.inds[1 - idx];
+    const draw = () => {
+      $$('.tabs button', body).forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
+      const q = inp.value.trim().toLowerCase(); list.innerHTML = '';
+      if (tab === 'tpl') {
+        TEMPLATES.filter(t => !q || t.toLowerCase().includes(q)).forEach(t => list.append(h(`<button class="li" disabled><span class="main">${esc(t)}<small>Not in prototype</small></span></button>`)));
+      } else {
+        if (!q) { const cur = s.inds[idx] === null; const e = h(`<button class="li${cur ? ' cur' : ''}"><span class="main">Empty</span>${cur ? `<span class="end">${icon('check')}</span>` : ''}</button>`); e.onclick = () => cur ? sh.close(true) : pick(null); list.append(e); }
+        const entries = Object.entries(INDS).filter(([k, m]) => (tab === 'all' || m.starred) && (!q || m.name.toLowerCase().includes(q)));
+        entries.forEach(([k, m]) => {
+          const used = other === k, cur = s.inds[idx] === k;
+          const b = h(`<button class="li${cur ? ' cur' : ''}" ${used ? 'disabled' : ''}><span class="main">${esc(m.name)}${m.badge ? `<span class="badge">${m.badge}</span>` : ''}<small>${used ? `In slot ${idx === 0 ? 6 : 5}` : esc(m.by || '') + (m.only ? ' · index chart only' : '')}</small></span><span class="end">${cur ? icon('check') : icon(m.starred ? 'starf' : 'star')}</span></button>`);
+          b.onclick = () => cur ? sh.close(true) : pick(k);
+          list.append(b);
+        });
+        if (q && !entries.length) list.append(h(`<div class="empty-st">No indicators match "${esc(inp.value)}"</div>`));
+      }
+    };
+    $('.tabs', body).onclick = e => { const b = e.target.closest('button'); if (b) { tab = b.dataset.tab; draw(); } };
+    inp.oninput = draw; draw();
+  }
+  sh = sheet({ title, body });
+}
+/* M2 Reset Quick Wheel */
+function openM2(rerender) {
+  const scrim = h(`<div class="scrim"></div>`);
+  const m = h(`<div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="m2t"><h2 id="m2t">Reset quick wheel?</h2><p>Slots go back to 1m, 5m, Trend Line, Fibonacci Retracement, VWAP and EMA.</p><div class="acts"><button class="btn-s" type="button">Cancel</button><button class="btn-p" type="button">Reset</button></div></div>`);
+  layers.append(scrim, m);
+  requestAnimationFrame(() => { scrim.classList.add('in'); m.classList.add('in'); });
+  const close = () => { scrim.classList.remove('in'); m.classList.remove('in'); setTimeout(() => { scrim.remove(); m.remove(); }, 200); };
+  scrim.onclick = close; m.querySelector('.btn-s').onclick = close;
+  m.querySelector('.btn-p').onclick = () => { close(); saveSlots(JSON.parse(JSON.stringify(DEFAULT_SLOTS)), () => rerender()); };
+}
+
+/* =========================================================================
+   S1 extras: link icon, divider, order panel
+   ========================================================================= */
+function setLinked(on) {
+  S.linked = on; $('#linkBtn').setAttribute('aria-pressed', on); syncDev();
+  if (on && charts.opt.tf !== charts.idx.tf) { charts.opt.tf = charts.idx.tf; $('.tf-btn[data-chart="opt"] .tf-l').textContent = charts.idx.tf; dirty.opt = true; toast(`Charts linked · both on ${charts.idx.tf}`); }
+  else toast(on ? 'Charts linked' : 'Charts unlinked');
+}
+$('#linkBtn').addEventListener('click', () => setLinked(!S.linked));
+(() => {
+  const d = $('#divider'), a = $('#panel-idx'), b = $('#panel-opt'); let y0 = null, ha, hb, pid;
+  d.addEventListener('pointerdown', e => { y0 = e.clientY; pid = e.pointerId; ha = a.offsetHeight; hb = b.offsetHeight; try { d.setPointerCapture(pid); } catch {} });
+  d.addEventListener('pointermove', e => { if (y0 == null || e.pointerId !== pid) return; const dy = (e.clientY - y0) / appScale(); const tot = ha + hb; const na = clamp(ha + dy, tot * .3, tot * .7); a.style.flex = `${na} 1 0`; b.style.flex = `${tot - na} 1 0`; dirty.idx = dirty.opt = true; });
+  const end = () => { y0 = null; }; d.addEventListener('pointerup', end); d.addEventListener('pointercancel', end);
+})();
+(() => {
+  let lots = 1; const upd = () => { $('#qV').textContent = lots * 65; $('#qL').textContent = `${lots} lot${lots > 1 ? 's' : ''}`; };
+  $('#qMinus').onclick = () => { lots = Math.max(1, lots - 1); upd(); };
+  $('#qPlus').onclick = () => { lots = Math.min(20, lots + 1); upd(); };
+  $$('[data-order]').forEach(b => b.onclick = () => toast('Orders aren’t part of this prototype'));
+  $$('.seg button').forEach(b => b.onclick = () => $$('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b)));
+})();
+
+/* =========================================================================
+   Dev panel (Appendix A.8)
+   ========================================================================= */
+function syncDev() {
+  const set = (id, v) => { const el = $('#' + id); if (el) el.checked = v; };
+  set('optLinked', S.linked); set('optOffline', S.offline); set('optFailTf', S.failTf); set('optFailSave', S.failSave);
+  $$('#optLoad button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.slotLoad));
+  $('#linkBtn').setAttribute('aria-pressed', S.linked);
+}
+function setSlotLoad(v) { S.slotLoad = v; syncDev(); if (s2) s2.render(); }
+function bindDev() {
+  const on = (id, fn) => $('#' + id).addEventListener('change', e => fn(e.target.checked));
+  on('optHaptics', v => S.haptics = v);
+  on('optPulse', v => S.pulses = v);
+  on('optSound', v => S.sound = v);
+  on('optZones', v => { S.zones = v; renderWheel(); });
+  on('optTouch', v => S.touchDot = v);
+  on('optRm', v => { S.reduceMotion = v; app.classList.toggle('rm', v); });
+  on('optLinked', v => setLinked(v));
+  on('optOffline', v => { S.offline = v; updateHeaderPrices(); toast(v ? 'You’re offline' : 'Back online'); });
+  on('optFailTf', v => S.failTf = v);
+  on('optFailSave', v => S.failSave = v);
+  $('#optHold').addEventListener('input', e => { S.holdMs = +e.target.value; $('#optHoldV').textContent = S.holdMs + ' ms'; });
+  $('#optLoad').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setSlotLoad(b.dataset.v); });
+  $$('[data-jump]').forEach(b => b.addEventListener('click', () => {
+    const j = b.dataset.jump;
+    if (j === 'b1') openB1('opt');
+    if (j === 's2') openS2({ from: 's1' });
+    if (j === 'n1') { S.n1Done = false; showN1(); }
+    if (j === 'kb') openWheelKeyboard($('.tf-btn[data-chart="opt"]'));
+    if (j === 'reset') { store.clear(); location.reload(); }
+  }));
+  $('#optRm').checked = S.reduceMotion; app.classList.toggle('rm', S.reduceMotion);
+  const sup = Haptic.canVibrate ? 'This browser supports the Vibration API: haptics play on Android phones.' : 'No Vibration API here. On an iPhone (iOS 18+), the prototype tries the system switch tick; elsewhere it shows pulses instead.';
+  $('#hSupport').textContent = sup + ' Open this page on your phone to feel them.';
+}
+
+/* =========================================================================
+   Fit the phone to the window on desktop
+   ========================================================================= */
+function fit() {
+  const dev = $('#device'), wrap = $('#deviceWrap');
+  if (!isDesktop()) { dev.style.transform = ''; wrap.style.width = ''; wrap.style.height = ''; return; }
+  const s = Math.min(1, (window.innerHeight - 40) / 868);
+  dev.style.transform = `scale(${s})`; wrap.style.width = 414 * s + 'px'; wrap.style.height = 868 * s + 'px';
+  dirty.idx = dirty.opt = true;
+}
+window.addEventListener('resize', () => { fit(); if (W.phase === 'open') cancelWheel('interrupted'); });
+new ResizeObserver(() => { dirty.idx = dirty.opt = true; }).observe(app);
+
+/* =========================================================================
+   Boot
+   ========================================================================= */
+bindDev(); syncDev(); fit(); updateHeaderPrices();
+requestAnimationFrame(frame);
+setInterval(tick, 1000);
+if (!S.n1Done) setTimeout(showN1, 500);
+</script>
+</body>
+</html>
