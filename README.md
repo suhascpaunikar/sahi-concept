@@ -11,7 +11,9 @@ Three feature concepts for Sahi, each with a PRD and a clickable prototype: **Mi
 | `docs/sahi-payoff-desktop-prd.html` | The same Payoff PRD as a styled page with contents, linked IDs and an open-items filter. Open it in a browser |
 | `docs/sahi-quick-action-wheel-prd.html` | Quick Action Wheel PRD v1.4: hold the timeframe button on the mobile Option Scalper to open a radial menu, with a tap alternative |
 | `docs/sahi-quick-action-wheel-prd-v1.2.html` | The earlier v1.2 PRD, kept because it embeds the R1 to R5 screenshots |
+| `docs/sahi-quick-action-wheel-placements-prd.html` | Quick Action Wheel placement PRD v1.0: six places to anchor the same wheel, with research, measurements, a recommendation and a study plan |
 | `prototype/quick-wheel/index.html` | Clickable phone prototype of the Quick Action Wheel PRD, with haptics. One self-contained file, no build step |
+| `prototype/quick-wheel-placements/index.html` | Placement prototype: the six placements on a rebuild of the Sahi split chart, with haptics and timed tasks. One self-contained file, no build step |
 | `prototype/index.html` | Clickable phone prototype of the Mirror PRD. One self-contained file, no build step |
 | `prototype/payoff/index.html` | Clickable desktop prototype of the Payoff PRD on the Scalper split view. One self-contained file, no build step |
 | `prototype/payoff/src/` | Sources for the Payoff prototype; `sh prototype/payoff/src/build.sh` rebuilds `index.html` |
@@ -98,3 +100,34 @@ Market data is seeded sample data that ticks every second. Preferences, the invi
 ### Quick Wheel surfaces covered
 
 S1 Option Scalper (hold and tap on both timeframe buttons, chart outline, status row, Clean View chip, position, pending order, SL and TP) · M1 Quick Action Wheel · Q1 Quick actions · B1 Chart Menu with the Indicator and Drawing sheets and the favourite toolbar · S2 Quick wheel settings · B2 Choice picker · M2 Reset · N1 Invitation · T1 Tutorial · N2 Toasts and inline errors · N3 Drawing banner.
+
+## Quick Action Wheel: placement study
+
+Where should the wheel live? PRD v1.4 anchors it on the timeframe pill, which on the index chart is in the top 15% of the screen and out of one-handed reach. The placement study compares six anchors for the same seven actions.
+
+### Placement PRD
+
+`docs/sahi-quick-action-wheel-placements-prd.html` (v1.0) covers the research (pie and marking menus, thumb reach and touch accuracy, edge and system gestures, shipped hold-and-slide menus), what each part of the Sahi screen already does, the six placements, measured fit, reach and target size on five screen sizes, a scored comparison, the placements ruled out, a recommendation, a study plan, requirements and analytics.
+
+| Placement | Hold to open | Acts on |
+|---|---|---|
+| V1 Pill fan (baseline, PRD v1.4) | Timeframe pill; quarter fan down-left | That chart |
+| V2 Axis-corner fan | Corner where the price and time axes meet; quarter fan up-left | That chart |
+| V3 Price-axis arc | Anywhere on the price axis; half ring at finger height | That chart |
+| V4 Split-handle dial | Handle between the charts; top half index, bottom half option | The half you slide into |
+| V5 Thumb dock | Floating button at the bottom right; quarter fan up-left | The chart touched last |
+| V6 Press-drag list | Timeframe pill; a list you slide down (linear control) | That chart |
+
+The recommendation is to test V1, V4, V5 and V6 with traders and drop V3. If something ships before that study, ship V4 alongside V1.
+
+### Run the placement prototype
+
+Open `prototype/quick-wheel-placements/index.html`. The Sahi screens are rebuilt from four app screenshots at 412×915 (within 1 to 3 px); the candles were read from the chart screenshot.
+
+- **Desktop:** a panel next to the phone switches placement, phone size (Android 412×915 and 360×800, iPhone 390×844 and 430×932) and options (left-handed, touch zones, touches, linked timeframes, haptics, sound). It also shows the wheel geometry for the current phone, timed-task results and the event log.
+- **Phone:** the app fills the screen; the ⋮ button in the top bar opens the placement picker, options, Show me how, Timed tasks, the Quick actions list and Reset charts.
+- **Links:** `?v=1` to `?v=6` open a placement; add `&frame=small|iphone|max`, `&hand=left`, `&zones=1`, `&touches=1` or `&coach=0`.
+- Everything on the chart works: the timeframe menu (tap the pill), Settings (seven chart types and view toggles), Add indicators (EMA, SMA, VWAP, Bollinger Bands and Key Levels are drawn), Range, drawing tools, crosshair (long-press the candles), pan, pinch, axis scaling (drag the price axis) and split resizing (drag the handle).
+- **Timed tasks** run eight tasks in random order and record time, wrong actions, cancels and fallbacks per placement, exportable as JSON.
+- **On a real Android phone,** a slide that starts within a finger's width of the right edge can trigger Back. That is the conflict the PRD's PL-07 describes, so hold a little in from the edge.
+
