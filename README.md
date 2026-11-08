@@ -9,7 +9,8 @@ Three feature concepts for Sahi, each with a PRD and a clickable prototype: **Mi
 | `docs/sahi-mirror-mobile-prd.md` | Full PRD v2.0, rewritten from the web desktop PRD v1.1 for the Sahi iOS and Android app |
 | `docs/sahi-payoff-desktop-prd.md` | Payoff (desktop) PRD v1.7: the Payoff mode on the Scalper split view, for Sahi web and the Sahi Desktop app |
 | `docs/sahi-payoff-desktop-prd.html` | The same Payoff PRD as a styled page with contents, linked IDs and an open-items filter. Open it in a browser |
-| `docs/sahi-quick-action-wheel-prd.html` | Quick Action Wheel PRD v1.2: hold the timeframe button on the mobile Option Scalper to open a radial menu |
+| `docs/sahi-quick-action-wheel-prd.html` | Quick Action Wheel PRD v1.4: hold the timeframe button on the mobile Option Scalper to open a radial menu, with a tap alternative |
+| `docs/sahi-quick-action-wheel-prd-v1.2.html` | The earlier v1.2 PRD, kept because it embeds the R1 to R5 screenshots |
 | `prototype/quick-wheel/index.html` | Clickable phone prototype of the Quick Action Wheel PRD, with haptics. One self-contained file, no build step |
 | `prototype/index.html` | Clickable phone prototype of the Mirror PRD. One self-contained file, no build step |
 | `prototype/payoff/index.html` | Clickable desktop prototype of the Payoff PRD on the Scalper split view. One self-contained file, no build step |
@@ -67,20 +68,33 @@ S1 Scalper split view (Payoff button, hold-to-peek) · N1 Payoff introduction ti
 
 ## Sahi Quick Action Wheel: mobile concept
 
-On the mobile Option Scalper, holding a chart's timeframe button ("5m") opens a quarter-circle wheel of 7 slots: 2 timeframes, Trend Line, Fibonacci Retracement, VWAP, EMA and Clean view. Slide onto a slot and release to apply it to that chart in one touch. A tap still opens the chart menu.
+On the mobile Option Scalper, holding a chart's timeframe button ("5m") opens a quarter-circle wheel of seven fixed actions: Timeframe A and B, Trend Line, Fibonacci Retracement, a VWAP preset, an EMA preset and Clean View. Slide onto a sector and release to apply it to that chart. A tap still opens the chart menu, and every action is also in a tap list, Quick actions.
+
+### PRD
+
+`docs/sahi-quick-action-wheel-prd.html` is v1.4: v1.3 after a feasibility review. Section 01 lists what changed and why. The main findings:
+
+- **Layout eligibility.** Scaled from the R1 screenshot, standard phones (360 to 393 wide) can't fit the 264-unit wheel while the order panel is open, so the hold opens Quick actions instead. Large phones fit it. Section 5 has the table; open decision OD-1 proposes letting the index chart's wheel extend over the option chart.
+- **Labels.** "EMA 20" at the 14-unit minimum doesn't fit its sector, so labels may use two lines.
+- **Figure 1** showed v1.2's 40-unit cancel circle; it's redrawn with the real 120-unit inner area.
+- Clarified the fallback hint, edge-slot misses, corrupt preferences, reset copy, B1 placement, where the Clean View chip goes, and a five-step tutorial (T1).
+
+`docs/sahi-quick-action-wheel-prd-v1.2.html` is the earlier version, kept because it embeds the R1 to R5 screenshots.
 
 ### Run the Quick Wheel prototype
 
-Open `prototype/quick-wheel/index.html` in a browser. On a desktop you get a phone frame and a dev panel; on a phone the app fills the screen.
+Open `prototype/quick-wheel/index.html` in a browser. On a desktop you get a phone frame (Android 360×800, iPhone 390×844 or iPhone 430×932, with status bars) and a dev panel; on a phone the app fills the screen.
 
-- **Hold** either timeframe button for 300 ms, **slide** to a slot, **release**. Release on the button, outside the fan, on the current timeframe or on a greyed slot to cancel.
-- **Tap** the button for the chart menu (B1), with the tip row and a Quick wheel row in Settings.
-- **Haptics:** light impact on open, a selection tick each time the hovered slot changes, success on apply, warning on failure. They use `navigator.vibrate` on Android Chrome. On iPhone (iOS 18+) the prototype tries Safari's switch-toggle tick, which is best effort. On desktop, haptics show as on-screen pulses, with optional tick sounds. Android only vibrates after the page has had one tap, for example "Got it" on the coachmark.
-- Keyboard: focus a timeframe button and press **W**, then use the arrow keys and Enter.
-- The dev panel has hit zones, the hold threshold (200 to 500 ms), linked charts, offline, failed timeframe load, failed save, slot settings loading or failed, reduce motion, the analytics event log and a reset.
+- **Hold** a timeframe button for 300 ms, **slide** onto a sector, **release**. Releasing on the button, in a gap between sectors, past the ring or on a greyed sector cancels. The action pill shows exactly what will happen, for example "Set both charts to 1m" or "Exit Clean View and show EMA 20".
+- **Tap** for the chart menu, which now starts with a Quick actions row. Keyboard: Enter opens the menu; Shift+F10 or Q opens Quick actions.
+- **When the chart is too small** (for example after tapping the option chart to open the order panel on a standard phone), holding shows "Release here for Quick actions"; let go on the button to open the tap list.
+- Timeframe changes load first and apply only when verified; linked charts change together or not at all. Clean View is a mask: turning it off restores each overlay's own visibility.
+- **Haptics:** a light tap on open, a selection tick per sector (at most one per 50 ms), success only after a change is verified, and a warning on failure. Android Chrome vibrates once the page has had a tap; iPhone (iOS 18+) gets a best-effort switch tick; desktop shows pulses.
+- **On a phone browser**, the address bar takes chart height, so the wheel may fall back to Quick actions where the app would not. The prototype says so and offers full screen where the browser allows it; on iPhone, add it to the Home Screen.
+- The dev panel shows an inspector (gesture state, availableR, hovered sector, pending load, last cancel reason) and has controls for frames, the order panel, the divider, OD-1, 200% text, linked charts, offline, load delays and failures, preset and settings failures, accounts, Live and Practice, the favourite drawing toolbar, and an event log you can export as JSON.
 
-Candles are generated sample data that ticks every second, and the charts keep updating while the wheel is open. Slot choices, the coachmark and the tip row are saved in local storage.
+Market data is seeded sample data that ticks every second. Preferences, the invitation and the tip are saved per demo account in local storage; Reset this demo clears only this prototype's keys.
 
 ### Quick Wheel surfaces covered
 
-S1 Option Scalper (hold and tap on both timeframe buttons, chart outline, Clean view chip, position, SL and TP lines) · N1 Hold coachmark · M1 Quick Action Wheel · N2 Result toast · N3 Drawing mode banner (Trend Line, Horizontal Line, Horizontal Ray, Rectangle, Fibonacci) · B1 Chart Menu with Indicator and Drawing sheets · S2 Customise Quick Wheel · B2 Slot Picker (Timeframe, Drawing tool, Indicator) · M2 Reset Quick Wheel.
+S1 Option Scalper (hold and tap on both timeframe buttons, chart outline, status row, Clean View chip, position, pending order, SL and TP) · M1 Quick Action Wheel · Q1 Quick actions · B1 Chart Menu with the Indicator and Drawing sheets and the favourite toolbar · S2 Quick wheel settings · B2 Choice picker · M2 Reset · N1 Invitation · T1 Tutorial · N2 Toasts and inline errors · N3 Drawing banner.
