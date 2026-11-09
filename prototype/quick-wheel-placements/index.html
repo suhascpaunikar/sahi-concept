@@ -24,7 +24,7 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
    App root. Every size below is in CSS px of the 412 x 915 reference frame.
    ========================================================================= */
 .app {
-  --sat: 48px; --sab: 12px;
+  --sat: 48px; --sab: 12px; --fs: 1;
   position: relative; overflow: hidden; background: #000; color: #fff; border-radius: 40px;
   font: 400 14px/1.4 InterQW, Inter, system-ui, -apple-system, Roboto, sans-serif; letter-spacing: -.2px;
   -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; font-synthesis: none;
@@ -52,7 +52,9 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
 .card.focus::after { content: ""; position: absolute; inset: 0; border-radius: 16px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); pointer-events: none; }
 .hd { position: absolute; left: 0; right: 0; top: 0; height: 52px; z-index: 2; pointer-events: none; }
 .hd > * { pointer-events: auto; }
-.sym { position: absolute; left: 12px; top: 10.4px; height: 19.4px; display: flex; align-items: center; font-size: 14px; white-space: nowrap; }
+.sym { position: absolute; left: 12px; top: 10.4px; height: 19.4px; display: flex; align-items: center; font-size: 14px; white-space: nowrap; max-width: calc(100% - 150px); }
+.sym .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sym .ty, .sym .chv { flex: none; }
 .sym .nm { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2.7px; letter-spacing: -.45px; font-feature-settings: "tnum"; }
 .sym .ty { margin-left: 8.5px; }
 .sym .chv { margin-left: 7.4px; margin-top: 1.2px; width: 12px; height: 12px; }
@@ -161,16 +163,16 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
 
 /* generic list sheet (Quick actions, menu) */
 .lsheet .rows { flex: 1; overflow-y: auto; padding: 8px 0 calc(16px + var(--sab)); }
-.qrow { display: flex; align-items: center; height: 56px; padding: 0 16px; gap: 14px; font-size: 14px; width: 100%; text-align: left; box-sizing: border-box; }
+.qrow { display: flex; align-items: center; min-height: 56px; padding: 8px 16px; gap: 14px; font-size: calc(14px * var(--fs)); line-height: 1.3; width: 100%; text-align: left; box-sizing: border-box; }
 .qrow:active { background: #202020; }
-.qrow .qi { width: 36px; height: 36px; border-radius: 10px; background: #272727; display: grid; place-items: center; flex: none; }
-.qrow .qt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.qrow .qt small { font-size: 12px; color: #9e9e9e; }
-.qrow .qs { font-size: 12px; color: #9e9e9e; display: flex; align-items: center; gap: 6px; }
+.qrow .qi { min-width: 36px; height: 36px; padding: 0 4px; box-sizing: border-box; border-radius: 10px; background: #272727; display: grid; place-items: center; flex: none; }
+.qrow .qt { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.qrow .qt small { font-size: calc(12px * var(--fs)); color: #9e9e9e; margin-top: 1px; }
+.qrow .qs { font-size: calc(12px * var(--fs)); flex: none; color: #9e9e9e; display: flex; align-items: center; gap: 6px; }
 .qrow .qs.on { color: #43e097; }
 .qrow[aria-disabled="true"] { opacity: .45; }
 .qhead { display: flex; align-items: center; gap: 8px; margin: 8px 16px 4px; font-size: 12px; color: #9e9e9e; }
-.qhead .chipx { height: 22px; padding: 0 10px; border-radius: 11px; background: #272727; color: #fff; display: flex; align-items: center; }
+.qhead .chipx { height: 22px; padding: 0 10px; border-radius: 11px; background: #272727; color: #fff; display: flex; align-items: center; white-space: nowrap; max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
 .vrow { display: flex; align-items: center; gap: 12px; padding: 10px 16px; width: 100%; text-align: left; box-sizing: border-box; }
 .vrow .vb { width: 52px; height: 52px; border-radius: 12px; background: #202020; flex: none; display: grid; place-items: center; }
 .vrow .vt { flex: 1; min-width: 0; }
@@ -206,20 +208,29 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
 .wheel .hubt { fill: #fff; font: 600 12px InterQW, Inter, system-ui, sans-serif; text-anchor: middle; dominant-baseline: middle; letter-spacing: -.2px; }
 .wheel .hubs { fill: #a9a9a9; font: 400 10.5px InterQW, Inter, system-ui, sans-serif; text-anchor: middle; dominant-baseline: middle; letter-spacing: 0; }
 .wheel .split { stroke: rgba(255,255,255,.28); stroke-width: 1; stroke-dasharray: 3 3; }
+.wheel .ghost { fill: #fff; font: 400 14px InterQW, Inter, system-ui, sans-serif; letter-spacing: -.2px; dominant-baseline: middle; }
+.wheel .sdot { fill: #43e097; }
+.wheel g.hov .sdot { fill: #067a63; }
 .wheel .scope { fill: #9e9e9e; font: 500 10px InterQW, Inter, system-ui, sans-serif; letter-spacing: .4px; text-anchor: middle; dominant-baseline: middle; }
-.vpill { position: absolute; z-index: 41; height: 30px; padding: 0 12px; border-radius: 15px; background: #fff; color: #000; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; white-space: nowrap; box-shadow: 0 6px 20px rgba(0,0,0,.5); opacity: 0; transition: opacity .1s; pointer-events: none; }
+.vpill { position: absolute; z-index: 41; box-sizing: border-box; min-height: 30px; padding: calc(6px * var(--fs)) 12px; border-radius: 15px; background: #fff; color: #000; font-size: calc(13px * var(--fs)); line-height: calc(18px * var(--fs)); font-weight: 600; letter-spacing: -.1px; box-shadow: 0 6px 20px rgba(0,0,0,.5); opacity: 0; transition: opacity .1s; pointer-events: none; width: max-content; }
+.vpill .in { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.vpill .sc { font-weight: 500; color: #6a6a6a; margin-right: 6px; }
+.vpill.muted .sc { color: #9a9a9a; }
 .vpill.on { opacity: 1; }
 .vpill.muted { background: #2a2a2a; color: #e6e6e6; font-weight: 500; }
 .qlist { position: absolute; z-index: 41; width: 228px; border-radius: 16px; background: #171717; box-shadow: 0 14px 40px rgba(0,0,0,.6), inset 0 0 0 1px #262626; padding: 6px 0; transform-origin: top right; animation: qlin .14s cubic-bezier(.2,.8,.2,1); pointer-events: none; }
 @keyframes qlin { from { transform: scale(.94); opacity: 0; } }
 .qlist .qh { font-size: 11px; color: #9e9e9e; padding: 6px 14px 6px; display: flex; justify-content: space-between; letter-spacing: 0; }
-.qlist .qli { height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 14px; font-size: 14px; }
+.qlist .qli { height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 14px; font-size: calc(14px * var(--fs)); }
+.qlist .qli .qtf { min-width: 18px; flex: none; font-weight: 600; font-size: calc(13px * var(--fs)); }
+.qlist.fit .qli .qn { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qlist .qli .ico { flex: none; }
 .qlist .qli.hov { background: #fff; color: #000; }
-.qlist .qli .s { margin-left: auto; font-size: 11px; color: #9e9e9e; }
+.qlist .qli .s { margin-left: auto; font-size: calc(11px * var(--fs)); color: #9e9e9e; flex: none; }
 .qlist .qli .s.on { color: #43e097; }
 .qlist .qli.hov .s { color: #444; } .qlist .qli.hov .s.on { color: #067a63; }
 .qlist .qli.na { opacity: .45; }
-.fbhint { position: absolute; z-index: 41; padding: 8px 12px; border-radius: 12px; background: #2a2a2a; color: #fff; font-size: 12.5px; box-shadow: 0 8px 22px rgba(0,0,0,.55); white-space: nowrap; pointer-events: none; }
+.fbhint { position: absolute; z-index: 41; padding: 8px 12px; border-radius: 12px; background: #2a2a2a; color: #fff; font-size: calc(12.5px * var(--fs)); line-height: 1.35; box-shadow: 0 8px 22px rgba(0,0,0,.55); max-width: calc(100% - 16px); box-sizing: border-box; width: max-content; pointer-events: none; }
 .zones { position: absolute; inset: 0; z-index: 39; pointer-events: none; }
 .zones .z { position: absolute; border: 1px dashed rgba(255,214,10,.85); background: rgba(255,214,10,.10); border-radius: 6px; }
 .zones .z.sys { border-color: rgba(255,80,80,.8); background: rgba(255,80,80,.13); border-radius: 0; }
@@ -296,6 +307,15 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
   .devwrap, .device { position: static; padding: 0; border-radius: 0; box-shadow: none; background: #000; transform: none !important; width: auto !important; height: auto !important; }
   .app { position: fixed; inset: 0; width: 100% !important; height: 100% !important; border-radius: 0; --sat: env(safe-area-inset-top, 0px); --sab: max(env(safe-area-inset-bottom, 0px), 0px); }
 }
+
+/* label stress test */
+.ltag { position: absolute; z-index: 30; left: 10px; bottom: calc(var(--sab) + 6px); height: 20px; padding: 0 8px; border-radius: 10px; background: rgba(255,196,0,.16); color: #ffcf4d; font-size: 10.5px; letter-spacing: 0; display: none; align-items: center; gap: 5px; white-space: nowrap; }
+.ltag.on { display: flex; }
+.segl { padding: 6px 16px 8px; }
+.segl > span { display: block; font-size: 13px; color: #cfcfcf; margin-bottom: 7px; }
+.seg2 { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg2 button { height: 30px; padding: 0 12px; border-radius: 15px; background: #262626; color: #e6e6e6; font-size: 13px; }
+.seg2 button.on { background: #fff; color: #000; font-weight: 500; }
 
 </style>
 </head>
@@ -411,6 +431,7 @@ const FRAMES = {
 const S = {
   v: 'v1', frame: 'ref', hand: 'right', haptics: true, sound: false, touches: false, zones: false, pulses: true,
   linked: false, focus: 'opt', split: .5, fontsReady: false,
+  labels: 'default', fs: 1, fit: true,
 };
 
 /* ---- Event log (no prices, symbols only as chart ids) ---- */
@@ -1107,29 +1128,49 @@ function regionAt(id, p) {
 const SLOTS = [
   { id: 'tfA', kind: 'tf', tf: '1m' },
   { id: 'tfB', kind: 'tf', tf: '15m' },
-  { id: 'trend', kind: 'tool', tool: 'trend', label: 'Trend', icon: 'trend' },
-  { id: 'fib', kind: 'tool', tool: 'fib', label: 'Fib', icon: 'fib' },
-  { id: 'vwap', kind: 'ind', ind: 'vwap', label: 'VWAP', icon: 'vwap' },
-  { id: 'ema', kind: 'ind', ind: 'ema', label: 'EMA 20', icon: 'ema' },
-  { id: 'clean', kind: 'clean', label: 'Clean', icon: 'scan' },
+  { id: 'trend', kind: 'tool', tool: 'trend', icon: 'trend' },
+  { id: 'fib', kind: 'tool', tool: 'fib', icon: 'fib' },
+  { id: 'vwap', kind: 'ind', ind: 'vwap', icon: 'vwap' },
+  { id: 'ema', kind: 'ind', ind: 'ema', icon: 'ema' },
+  { id: 'clean', kind: 'clean', icon: 'scan' },
 ];
+/* Label sets for the label stress test (placements PRD v1.1, section 15).
+   Each action has [label it asks for in the wheel, authored short label, full name].
+   For indicators the short label is the chart legend's own short name. Only names change:
+   the chart still draws VWAP and EMA, and timeframe slots use real intervals from the catalogue. */
+const LABELSETS = {
+  default: { name: 'Default', note: 'Shipping defaults', tf: ['1m', '15m'], a: {
+    trend: ['Trend', 'Trend', 'Trend line'], fib: ['Fib', 'Fib', 'Fib retracement'], vwap: ['VWAP', 'VWAP', 'VWAP'], ema: ['EMA 20', 'EMA 20', 'EMA 20'], clean: ['Clean', 'Clean', 'Clean view'] } },
+  presets: { name: 'Own presets', note: 'Any interval and other VWAP and EMA presets, as the MVP allows', tf: ['125m', '1D'], a: {
+    trend: ['Trend', 'Trend', 'Trend line'], fib: ['Fib', 'Fib', 'Fib retracement'], vwap: ['VWAP · weekly', 'VWAP W', 'VWAP · weekly'], ema: ['EMA 200', 'EMA 200', 'EMA 200 · close'], clean: ['Clean', 'Clean', 'Clean view'] } },
+  any: { name: 'Any indicator', note: 'If any tool or indicator can go in a slot (after the MVP)', tf: ['125m', '3h'], a: {
+    trend: ['Parallel channel', 'Channel', 'Parallel channel'], fib: ['Fib extension', 'Fib ext', 'Trend-based Fib extension'], vwap: ['Supertrend 10 3', 'ST 10 3', 'Supertrend (10, 3)'], ema: ['Bollinger Bands', 'BB 20 2', 'Bollinger Bands (20, 2)'], clean: ['Clean view', 'Clean', 'Clean view'] } },
+  full: { name: 'Full names', note: 'Catalogue names typed in full, and long chart names', tf: ['125m', '75m'], chart: { idx: ['NIFTY FIN SERVICE', 'FINNIFTY'], opt: ['25 Nov 23500', '23500 CE'] }, a: {
+    trend: ['Trend line', 'Trend', 'Trend line'], fib: ['Fibonacci retracement', 'Fib', 'Fibonacci retracement'], vwap: ['Volume Weighted Average Price (VWAP)', 'VWAP', 'Volume Weighted Average Price (VWAP)'], ema: ['Exponential Moving Average (EMA) 200', 'EMA 200', 'Exponential Moving Average (EMA) 200'], clean: ['Clean view', 'Clean', 'Clean view (hides indicators and drawings)'] } },
+};
+let LS = LABELSETS.default;
+const act = id => { const [label, short, name] = LS.a[id]; return { label, short, name }; };
+const escH = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// tool names read mid-sentence in lower case ("Draw trend line"), except Fib and acronyms
+const midS = s => /^(Fib|[A-Z]{2})/.test(s) ? s : s[0].toLowerCase() + s.slice(1);
 function describe(slot, id) {
   const c = CH[id];
   if (slot.kind === 'tf') {
     const cur = c.tf === slot.tf;
-    return { label: slot.tf, big: true, cap: cur ? 'Current' : 'Timeframe', status: cur ? 'current' : 'ok', verb: cur ? `Already ${slot.tf}` : `Switch to ${slot.tf}`, action: cur ? `${c.short} is already on ${slot.tf}` : `Switch ${S.linked ? 'both charts' : c.short} to ${slot.tf}` };
+    return { label: slot.tf, big: true, name: cur ? 'Current timeframe' : 'Timeframe ' + slot.tf, cap: cur ? 'Current' : 'Timeframe', status: cur ? 'current' : 'ok', verb: cur ? `Already ${slot.tf}` : `Switch to ${slot.tf}`, action: cur ? `${c.short} is already on ${slot.tf}` : `Switch ${S.linked ? 'both charts' : c.short} to ${slot.tf}` };
   }
+  const a = act(slot.id);
   if (slot.kind === 'tool') {
-    const n = slot.tool === 'fib' ? 'Fib retracement' : 'trend line', armed = c.draft && c.draft.tool === slot.tool;
-    return { label: slot.label, icon: slot.icon, cap: armed ? 'Armed' : '', status: 'ok', verb: slot.tool === 'fib' ? 'Draw Fib' : 'Draw trend line', action: `Draw a ${n} on ${c.short}` };
+    const armed = c.draft && c.draft.tool === slot.tool;
+    return { label: a.label, short: a.short, name: a.name, icon: slot.icon, cap: armed ? 'Armed' : '', status: 'ok', verb: `Draw ${midS(a.name)}`, action: `Draw a ${midS(a.name)} on ${c.short}` };
   }
   if (slot.kind === 'ind') {
-    const on = !!c.ind[slot.ind], hidden = on && c.clean, nm = IND[slot.ind].name;
-    if (c.clean && !on) return { label: slot.label, icon: slot.icon, cap: 'Off', status: 'ok', verb: `Show ${nm}`, action: `Exit clean view and turn on ${nm} · ${c.short}` };
-    return { label: slot.label, icon: slot.icon, cap: hidden ? 'Hidden' : on ? 'On' : 'Off', capOn: on && !hidden, status: 'ok', verb: `Turn ${on ? 'off' : 'on'} ${nm}`, action: `Turn ${on ? 'off' : 'on'} ${nm} · ${c.short}` };
+    const on = !!c.ind[slot.ind], hidden = on && c.clean, nm = a.name;
+    if (c.clean && !on) return { label: a.label, short: a.short, name: nm, icon: slot.icon, cap: 'Off', status: 'ok', verb: `Show ${nm}`, action: `Exit clean view and turn on ${nm} · ${c.short}` };
+    return { label: a.label, short: a.short, name: nm, icon: slot.icon, cap: hidden ? 'Hidden' : on ? 'On' : 'Off', capOn: on && !hidden, status: 'ok', verb: `Turn ${on ? 'off' : 'on'} ${nm}`, action: `Turn ${on ? 'off' : 'on'} ${nm} · ${c.short}` };
   }
   const on = c.clean;
-  return { label: slot.label, icon: slot.icon, cap: on ? 'On' : 'Off', capOn: on, status: 'ok', verb: `Clean view ${on ? 'off' : 'on'}`, action: `Turn ${on ? 'off' : 'on'} clean view · ${c.short}` };
+  return { label: a.label, short: a.short, name: a.name, icon: slot.icon, cap: on ? 'On' : 'Off', capOn: on, status: 'ok', verb: `Turn ${on ? 'off' : 'on'} ${midS(a.name)}`, action: `Turn ${on ? 'off' : 'on'} ${midS(a.name)} · ${c.short}` };
 }
 function applySlot(i, id, meta = {}) {
   const slot = SLOTS[i], c = CH[id], d = describe(slot, id);
@@ -1141,6 +1182,107 @@ function applySlot(i, id, meta = {}) {
   return true;
 }
 
+/* =========================================================================
+   Label fit (placements PRD v1.1, section 15)
+   A label must sit inside its own slot. In order, try: the label on one line; on two lines;
+   the authored short label; without the state caption; without the icon; smaller type down to
+   11 px (13 px for intervals), scaled by the text-size setting. Never an ellipsis. If a slot still
+   does not fit, the wheel does not open and the hold falls back to Quick actions (reason "labels").
+   With fit rules off (S.fit === false) labels are drawn as the v1.0 build drew them, to show the failure.
+   ========================================================================= */
+const FIT = { margin: 1.5, icon: 16, gapIcon: 3, gapCap: 1, ink: .92 };
+const MCTX = document.createElement('canvas').getContext('2d');
+function tw(t, px, wt = 500, ls = -0.2) { MCTX.font = `${wt} ${px}px InterQW, Inter, sans-serif`; return MCTX.measureText(t).width + ls * Math.max(0, [...t].length - 1); }
+function split2(t, px, wt) {
+  const w = t.split(' '); if (w.length < 2) return null;
+  let best = null;
+  for (let k = 1; k < w.length; k++) { const l = [w.slice(0, k).join(' '), w.slice(k).join(' ')], m = Math.max(tw(l[0], px, wt), tw(l[1], px, wt)); if (!best || m < best.m) best = { l, m }; }
+  return best.l;
+}
+function boxFits(geo, s, x0, y0, w, h) {
+  const m = FIT.margin;
+  for (let k = 0; k <= 4; k++) {
+    const f = k / 4;
+    for (const [x, y] of [[x0 + f * w, y0], [x0 + f * w, y0 + h], [x0, y0 + f * h], [x0 + w, y0 + f * h]]) {
+      const dx = x - geo.hub.x, dy = y - geo.hub.y, r = Math.hypot(dx, dy);
+      if (r < geo.rIn + m || r > geo.rOut - m) return false;
+      let th = Math.atan2(dy, dx) * 180 / Math.PI; if (th < 0) th += 360;
+      const rel = (th - s.a0 + 720) % 360; if (rel > s.span) return false;
+      if (r * Math.sin(Math.min(rel, s.span - rel) * Math.PI / 180) < m) return false;
+    }
+  }
+  return true;
+}
+// The stack is icon, label lines and state caption, centred on a point. Each piece is tested in its
+// own box (text by its ink: 0.92 em around the line's middle), so a short caption under a wide label
+// is not penalised for the label's width.
+function stackOf(c, d) {
+  const lh = c.px * 1.18, clh = c.capPx * 1.2, parts = [];
+  const h = (c.icon ? FIT.icon + FIT.gapIcon : 0) + c.lines.length * lh + (c.cap ? FIT.gapCap + clh : 0);
+  let y = -h / 2;
+  if (c.icon) { parts.push([-FIT.icon / 2, y, FIT.icon, FIT.icon]); y += FIT.icon + FIT.gapIcon; }
+  for (const t of c.lines) { const w = tw(t, c.px, c.wt); parts.push([-w / 2, y + (lh - c.px * FIT.ink) / 2, w, c.px * FIT.ink]); y += lh; }
+  if (c.cap) { const w = tw(d.cap, c.capPx, 400, 0); parts.push([-w / 2, y + FIT.gapCap + (clh - c.capPx * FIT.ink) / 2, w, c.capPx * FIT.ink]); }
+  return { parts, h, lh, clh, w: Math.max(...parts.map(p => p[2])) };
+}
+function placeStack(geo, s, st, lr) {
+  const mid = s.a0 + s.span / 2; let best = null;
+  for (let r = geo.rIn + 4; r <= geo.rOut - 4; r += 2) {
+    const [x, y] = pol(geo.hub, r, mid);
+    if (st.parts.every(([dx, dy, w, h]) => boxFits(geo, s, x + dx, y + dy, w, h))) { const dd = Math.abs(r - lr); if (!best || dd < best.dd) best = { x, y, dd }; }
+  }
+  return best;
+}
+function labelLR(geo) { return geo.quarter ? (geo.rIn + geo.rOut) / 2 + 6 : (geo.rIn + geo.rOut) / 2 + 2; }
+/* Order of attempts, first fit wins:
+   1 label, one line, then two lines; authored short label, one line, then two lines   (icon and caption)
+   2 the same without the state caption (state shows as a dot when on, and in words in the readout)
+   3 smaller type, down to 11 px, still with the icon
+   4 the same without the icon
+   Never an ellipsis: if the short label does not fit at the smallest size, the wheel does not open.
+   `force` carries a group decision: once one timeframe slot drops its caption, the other does too;
+   once one slot drops its icon, every slot in that wheel does. */
+function layoutSlot(geo, s, d, force = {}) {
+  const fs = S.fs || 1, big = !!d.big, base = (big ? 15 : 12.5) * fs, min = (big ? 13 : 11) * fs, wt = big ? 600 : 500, capPx = 10 * fs, lr = labelLR(geo);
+  if (S.fit === false) {
+    const c = { lines: [d.label], px: base, wt, capPx, icon: !!d.icon, cap: !!d.cap, how: 'raw' }, st = stackOf(c, d), [x, y] = pol(geo.hub, lr, s.a0 + s.span / 2);
+    return { ...c, ...st, x, y: big ? y + 3.5 : y - 20 + st.h / 2 };
+  }
+  const texts = [d.label]; if (d.short && d.short !== d.label) texts.push(d.short);
+  const forms = (t, px) => { const o = [[t]], s2 = split2(t, px, wt); if (s2) o.push(s2); return o; };
+  const tryC = c => { const st = stackOf(c, d), p = placeStack(geo, s, st, lr); return p ? { ...c, ...st, x: p.x, y: p.y, noCap: !!d.cap && !c.cap, noIcon: !!d.icon && !c.icon } : null; };
+  const levels = [];
+  if (!force.noCap && !force.noIcon) levels.push({ icon: !!d.icon, cap: !!d.cap });
+  if (!force.noIcon) levels.push({ icon: !!d.icon, cap: false });
+  for (const lv of levels) for (const [k, t] of texts.entries()) for (const lines of forms(t, base)) {
+    const r = tryC({ lines, px: base, wt, capPx, ...lv, how: k ? 'short' : lines.length > 1 ? 'wrap' : 'full' }); if (r) return r;
+  }
+  const t = texts[texts.length - 1];
+  for (const icon of force.noIcon ? [false] : [!!d.icon, false]) {
+    if (!icon && d.icon) for (const [k, tt] of texts.entries()) for (const lines of forms(tt, base)) { const r = tryC({ lines, px: base, wt, capPx, icon, cap: false, how: k ? 'short' : lines.length > 1 ? 'wrap' : 'full' }); if (r) return r; }
+    for (let px = base - .5; px >= min - 1e-6; px -= .5) for (const lines of forms(t, px)) { const r = tryC({ lines, px, wt, capPx, icon, cap: false, how: 'small' }); if (r) return r; }
+  }
+  // No ellipsis in a slot: a cut label ("VW…", "EM…") no longer says which action it is.
+  // The authored short label is the floor; below it the hold goes to Quick actions.
+  return null;
+}
+// One line of text into maxW: shrink to minPx, then ellipsis.
+function fitLine(t, px, wt, maxW, minPx) {
+  for (let p = px; p >= minPx - 1e-6; p -= .5) if (tw(t, p, wt) <= maxW) return { t, px: p };
+  const ch = [...t]; for (let n = ch.length - 1; n >= 1; n--) { const s = ch.slice(0, n).join('').trimEnd() + '…'; if (tw(s, minPx, wt) <= maxW) return { t: s, px: minPx }; }
+  return { t: '…', px: minPx };
+}
+const rowName = (sl, d) => d.name;
+function listMetrics(id) {
+  const fs = S.fs || 1;
+  if (S.fit === false) return { w: 228, rowH: 44, px: 14 * fs };
+  const px = 14 * fs, rowH = Math.max(44, Math.round(px * 1.3 + 20)); let need = 0;
+  for (const sl of SLOTS) {
+    const d = describe(sl, id), ib = d.big ? Math.max(18, tw(d.label, 13 * fs, 600)) : 18, st = d.big ? 0 : tw(d.cap || 'Off', 11 * fs, 400, 0);
+    need = Math.max(need, 14 + ib + 12 + tw(rowName(sl, d), px, 400) + 12 + st + 14);
+  }
+  return { w: clamp(Math.ceil(need), 228, Math.min(L.W - 16, 340)), rowH, px };
+}
 /* =========================================================================
    Placements
    ========================================================================= */
@@ -1186,14 +1328,14 @@ function geometry(ctx) {
     else { const dr = rectIn($('#dock')); hub = { x: dr.x + dr.w / 2, y: dr.y + dr.h / 2 }; R = Math.min(280, (left ? L.W - hub.x : hub.x) - 8, hub.y - L.sat - 8); start = left ? 0 : 180; dir = left ? -1 : 1; }
     const sectors = fan(start, 90, 7, .5, dir).map((s, i) => ({ ...s, i, chart: id }));
     const ok = R >= 264, bis = start + dir * 45;
-    return { kind: 'radial', quarter: true, hub, rIn: 120, rOut: Math.max(R, 0), R, need: 264, ok, reason: ok ? null : 'space', sectors, bis, chart: id };
+    return withLabels({ kind: 'radial', quarter: true, hub, rIn: 120, rOut: Math.max(R, 0), R, need: 264, ok, reason: ok ? null : 'space', sectors, bis, chart: id });
   }
   if (v === 'v3') {
     const hub = { x: ctx.p0.x, y: ctx.p0.y }, rIn = 56, rOut = 156;
     const sectors = fan(270, 180, 7, .75, -1).map((s, i) => ({ ...s, i, chart: id }));
     const top = L.sat + 4, bot = L.H - L.sab - 4, roomUp = hub.y - top - 8, roomDown = bot - hub.y - 8;
     const ok = roomUp >= rOut && roomDown >= rOut && hub.x - rOut - 8 >= 0;
-    return { kind: 'radial', hub, rIn, rOut, ok, reason: ok ? null : 'space', need: rOut, R: Math.min(roomUp, roomDown), sectors, chart: id, band: [top + 8 + rOut, bot - 8 - rOut] };
+    return withLabels({ kind: 'radial', hub, rIn, rOut, ok, reason: ok ? null : 'space', need: rOut, R: Math.min(roomUp, roomDown), sectors, chart: id, band: [top + 8 + rOut, bot - 8 - rOut] });
   }
   if (v === 'v4') {
     const hub = { x: L.W / 2, y: L.divY + L.gap / 2 }, rIn = 56;
@@ -1201,21 +1343,41 @@ function geometry(ctx) {
     const topS = fan(186, 168, 7, .75, 1).map((s, i) => ({ ...s, i, chart: 'idx' }));
     const botS = fan(174, 168, 7, .75, -1).map((s, i) => ({ ...s, i, chart: 'opt' }));
     const ok = rOut >= 150;
-    return { kind: 'radial', dial: true, hub, rIn, rOut, ok, reason: ok ? null : 'space', need: 150, R: rOut, sectors: [...topS, ...botS], chart: null };
+    return withLabels({ kind: 'radial', dial: true, hub, rIn, rOut, ok, reason: ok ? null : 'space', need: 150, R: rOut, sectors: [...topS, ...botS], chart: null });
   }
   // v6: list under the pill
-  const pr = rectIn($('.tfb', CH[id].el)), w = 228, hh = SLOTS.length * 44 + 12;
+  const pr = rectIn($('.tfb', CH[id].el)), m = listMetrics(id), w = m.w, hh = SLOTS.length * m.rowH + 12;
   let top = pr.y + pr.h + 6; const below = top + hh <= L.H - L.sab - 8;
   if (!below) top = pr.y - 6 - hh;
   const x = clamp(pr.x + pr.w - w, 8, L.W - w - 8);
   const ok = top >= L.sat + 4;
-  return { kind: 'list', rect: { x, y: top, w, h: hh }, rowsTop: top + 6, ok, reason: ok ? null : 'space', chart: id, above: !below, anchor: pr };
+  return { kind: 'list', rect: { x, y: top, w, h: hh }, rowsTop: top + 6, rowH: m.rowH, ok, reason: ok ? null : 'space', chart: id, above: !below, anchor: pr };
+}
+function withLabels(geo) {
+  if (!geo.ok) return geo;
+  for (const s of geo.sectors) s.lay = layoutSlot(geo, s, describe(SLOTS[s.i], s.chart));
+  if (S.fit !== false) {
+    // one structure per group in each wheel: both timeframes keep or drop their caption together,
+    // the three on/off slots likewise, and icons go from every slot or from none
+    const grp = s => SLOTS[s.i].kind === 'tf' ? 'tf' : SLOTS[s.i].kind === 'tool' ? 'tool' : 'state';
+    for (const chart of [...new Set(geo.sectors.map(s => s.chart))]) {
+      const secs = geo.sectors.filter(s => s.chart === chart && s.lay), noCap = {}, noIcon = secs.some(s => s.lay.noIcon);
+      for (const s of secs) if (s.lay.noCap) noCap[grp(s)] = true;
+      for (const s of secs) {
+        const d = describe(SLOTS[s.i], s.chart), f = { noCap: !!noCap[grp(s)] && !!d.cap, noIcon: noIcon && !!d.icon };
+        if ((f.noCap && s.lay.cap) || (f.noIcon && s.lay.icon)) s.lay = layoutSlot(geo, s, d, f);
+      }
+    }
+  }
+  const bad = geo.sectors.filter(s => !s.lay);
+  if (bad.length) { geo.ok = false; geo.reason = 'labels'; geo.bad = [...new Set(bad.map(s => SLOTS[s.i].id))]; }
+  return geo;
 }
 function hitTest(geo, p) {
   if (geo.kind === 'list') {
     const r = geo.rect;
-    if (p.x < r.x || p.x > r.x + r.w || p.y < geo.rowsTop || p.y > geo.rowsTop + SLOTS.length * 44) return { zone: inRect(p, geo.anchor, 6) ? 'inner' : 'outside' };
-    const i = Math.floor((p.y - geo.rowsTop) / 44); return { zone: 'slot', sec: { i, chart: geo.chart } };
+    if (p.x < r.x || p.x > r.x + r.w || p.y < geo.rowsTop || p.y > geo.rowsTop + SLOTS.length * geo.rowH) return { zone: inRect(p, geo.anchor, 6) ? 'inner' : 'outside' };
+    const i = Math.min(SLOTS.length - 1, Math.floor((p.y - geo.rowsTop) / geo.rowH)); return { zone: 'slot', sec: { i, chart: geo.chart } };
   }
   const dx = p.x - geo.hub.x, dy = p.y - geo.hub.y, r = hyp(dx, dy);
   if (r < geo.rIn) return { zone: 'inner', r };
@@ -1225,6 +1387,13 @@ function hitTest(geo, p) {
   return { zone: 'separator', r };
 }
 const inRect = (p, r, pad = 0) => p.x >= r.x - pad && p.x <= r.x + r.w + pad && p.y >= r.y - pad && p.y <= r.y + r.h + pad;
+
+function fitCounts(geo) {
+  if (geo.kind !== 'radial') return {};
+  const o = { labels: S.labels || 'default', fs: S.fs || 1 };
+  for (const s of geo.sectors) { const k = s.lay.how; if (k !== 'full' && k !== 'raw') o['fit_' + k] = (o['fit_' + k] || 0) + 1; if (s.lay.noCap) o.fit_nostate = (o.fit_nostate || 0) + 1; if (s.lay.noIcon) o.fit_noicon = (o.fit_noicon || 0) + 1; }
+  return o;
+}
 
 /* =========================================================================
    Gesture: idle → pending (300 ms, 10 px) → wheel | list | fallback
@@ -1246,8 +1415,8 @@ function onHold() {
   G.chart = id;
   const geo = geometry({ chart: id, p0: G.p0, region: G.region });
   G.geo = geo;
-  if (geo.ok) { G.st = geo.kind === 'list' ? 'list' : 'wheel'; $('#ov').classList.add('on'); renderOverlay(); Haptic.fire('open', geo.hub || G.p0); track('wheel_open', { chart: geo.dial ? 'both' : id, region: G.region, R: Math.round(geo.R || 0), iid: G.iid }); }
-  else { G.st = 'fallback'; renderFallback(); Haptic.fire('open', G.p0); track('fallback_open', { chart: id, region: G.region, reason: geo.reason, R: Math.round(geo.R || 0), iid: G.iid }); }
+  if (geo.ok) { G.st = geo.kind === 'list' ? 'list' : 'wheel'; $('#ov').classList.add('on'); renderOverlay(); Haptic.fire('open', geo.hub || G.p0); track('wheel_open', { chart: geo.dial ? 'both' : id, region: G.region, R: Math.round(geo.R || 0), iid: G.iid, ...fitCounts(geo) }); }
+  else { G.st = 'fallback'; renderFallback(); Haptic.fire('open', G.p0); track('fallback_open', { chart: id, region: G.region, reason: geo.reason, R: Math.round(geo.R || 0), iid: G.iid, ...(geo.bad ? { slots: geo.bad.join(',') } : {}) }); }
   if (S.v === 'v5') $$('.card').forEach(c => c.classList.toggle('focus', c.dataset.chart === id));
   dismissCoach(true);
 }
@@ -1323,25 +1492,19 @@ function sectorPath(hub, r0, r1, s) {
   return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r1} ${r1} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}L${x2.toFixed(2)} ${y2.toFixed(2)}A${r0} ${r0} 0 ${large} 0 ${x3.toFixed(2)} ${y3.toFixed(2)}Z`;
 }
 function slotGroup(geo, s, hov) {
-  const d = describe(SLOTS[s.i], s.chart), mid = s.a0 + s.span / 2;
-  const lr = geo.quarter ? (geo.rIn + geo.rOut) / 2 + 6 : (geo.rIn + geo.rOut) / 2 + 2;
-  const [lx, ly] = pol(geo.hub, lr, mid);
+  const d = describe(SLOTS[s.i], s.chart), Lo = s.lay;
   const cls = ['slot', hov ? 'hov' : '', d.status === 'current' ? 'cur' : ''].join(' ');
-  let inner;
-  if (d.big) inner = `<text class="lab" x="${lx}" y="${ly - 3}" style="font-size:15px;font-weight:600">${d.label}</text><text class="cap" x="${lx}" y="${ly + 12}">${d.cap}</text>`;
-  else inner = `<svg x="${lx - 8}" y="${ly - 20}" width="16" height="16" viewBox="0 0 24 24"><g class="wi">${P[d.icon]}</g></svg><text class="lab" x="${lx}" y="${ly + 4}">${d.label}</text>${d.cap ? `<text class="cap${d.capOn ? ' on' : ''}" x="${lx}" y="${ly + 17}">${d.cap}</text>` : ''}`;
-  return `<g class="${cls}"><path class="sec${hov ? ' hov' : ''}" d="${sectorPath(geo.hub, geo.rIn, geo.rOut, s)}"/>${inner}</g>`;
+  let inner = '', y = Lo.y - Lo.h / 2;
+  if (Lo.icon) { inner += `<svg x="${(Lo.x - 8).toFixed(1)}" y="${y.toFixed(1)}" width="16" height="16" viewBox="0 0 24 24"><g class="wi">${P[d.icon]}</g></svg>`; y += FIT.icon + FIT.gapIcon; }
+  for (const t of Lo.lines) { inner += `<text class="lab" x="${Lo.x.toFixed(1)}" y="${(y + Lo.lh / 2).toFixed(1)}" style="font-size:${Lo.px}px;font-weight:${Lo.wt}">${escH(t)}</text>`; y += Lo.lh; }
+  if (Lo.cap) inner += `<text class="cap${d.capOn ? ' on' : ''}" x="${Lo.x.toFixed(1)}" y="${(y + FIT.gapCap + Lo.clh / 2).toFixed(1)}" style="font-size:${Lo.capPx}px">${escH(d.cap)}</text>`;
+  else if (d.capOn) { const [dx, dy] = pol(geo.hub, geo.rIn + 7, s.a0 + s.span / 2); inner += `<circle class="sdot" cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="2.6"/>`; }
+  return `<g class="${cls}" data-fit="${Lo.how}${Lo.noCap ? '-nocap' : ''}${Lo.noIcon ? '-noicon' : ''}"><path class="sec${hov ? ' hov' : ''}" d="${sectorPath(geo.hub, geo.rIn, geo.rOut, s)}"/>${inner}</g>`;
 }
 function renderOverlay() {
   $$('svg.wheel, .vpill, .qlist', app).forEach(x => x.remove());
-  const geo = G.geo, hov = G.hover;
+  const geo = G.geo, hov = G.hover, fit = S.fit !== false, fs = S.fs || 1;
   if (geo.kind === 'list') return renderList(geo, hov);
-  const hubTxt = () => {
-    if (hov && hov.zone === 'slot') { const d = describe(SLOTS[hov.sec.i], hov.sec.chart); return [CH[hov.sec.chart].short, d.verb]; }
-    if (geo.dial) return ['Up: NIFTY50', 'Down: 24950 CE'];
-    return [CH[geo.chart].short, hov && hov.zone === 'outside' ? 'Release to cancel' : 'Slide to an action'];
-  };
-  const [t1, t2] = hubTxt();
   let s = `<svg class="wheel" width="${L.W}" height="${L.H}" viewBox="0 0 ${L.W} ${L.H}">`;
   // inner (cancel) zone
   if (geo.quarter) {
@@ -1351,37 +1514,72 @@ function renderOverlay() {
   for (const sec of geo.sectors) s += slotGroup(geo, sec, hov && hov.zone === 'slot' && hov.sec === sec);
   if (geo.dial) {
     s += `<line class="split" x1="${geo.hub.x - geo.rOut - 4}" y1="${geo.hub.y}" x2="${geo.hub.x + geo.rOut + 4}" y2="${geo.hub.y}"/>`;
-    s += `<text class="scope" x="${geo.hub.x}" y="${geo.hub.y - geo.rOut - 11}">NIFTY50 ▲</text><text class="scope" x="${geo.hub.x}" y="${geo.hub.y + geo.rOut + 13}">▼ 24950 CE</text>`;
+    const up = fitLine(`${CH.idx.short} ▲`, 10 * fs, 500, L.W - 32, 9), dn = fitLine(`▼ ${CH.opt.short}`, 10 * fs, 500, L.W - 32, 9);
+    s += `<text class="scope" x="${geo.hub.x}" y="${geo.hub.y - geo.rOut - 11}" style="font-size:${up.px}px">${escH(up.t)}</text><text class="scope" x="${geo.hub.x}" y="${geo.hub.y + geo.rOut + 13}" style="font-size:${dn.px}px">${escH(dn.t)}</text>`;
   }
-  if (geo.quarter) {
-    const [tx, ty] = pol(geo.hub, 64, geo.bis);
-    s += `<text class="hubt" x="${tx}" y="${ty - 7}">${t1}</text><text class="hubs" x="${tx}" y="${ty + 9}">${t2}</text>`;
-    s += anchorGhost();
-  } else {
-    s += `<circle class="hub" cx="${geo.hub.x}" cy="${geo.hub.y}" r="${geo.rIn - 5}"/>`;
-    const tx = S.v === 'v3' ? geo.hub.x - 22 : geo.hub.x;
-    s += `<text class="hubt" x="${tx}" y="${geo.hub.y - 8}">${t1}</text><text class="hubs" x="${tx}" y="${geo.hub.y + 9}"${S.v === 'v3' ? ' style="font-size:9.5px"' : ''}>${t2}</text>`;
-    if (geo.dial) s += `<rect x="${geo.hub.x - 18}" y="${geo.hub.y - 1.2}" width="36" height="2.4" rx="1.2" fill="#fff" opacity=".9"/>`;
-  }
+  if (!fit) {
+    // v1.0 behaviour: the readout sits in the hub (and under the finger in V3 and V4)
+    const hubTxt = () => {
+      if (hov && hov.zone === 'slot') { const d = describe(SLOTS[hov.sec.i], hov.sec.chart); return [CH[hov.sec.chart].short, d.verb]; }
+      if (geo.dial) return [`Up: ${CH.idx.short}`, `Down: ${CH.opt.short}`];
+      return [CH[geo.chart].short, hov && hov.zone === 'outside' ? 'Release to cancel' : 'Slide to an action'];
+    };
+    const [t1, t2] = hubTxt();
+    if (geo.quarter) { const [tx, ty] = pol(geo.hub, 64, geo.bis); s += `<text class="hubt" x="${tx}" y="${ty - 7}">${escH(t1)}</text><text class="hubs" x="${tx}" y="${ty + 9}">${escH(t2)}</text>`; }
+    else { s += `<circle class="hub" cx="${geo.hub.x}" cy="${geo.hub.y}" r="${geo.rIn - 5}"/>`; const tx = S.v === 'v3' ? geo.hub.x - 22 : geo.hub.x; s += `<text class="hubt" x="${tx}" y="${geo.hub.y - 8}">${escH(t1)}</text><text class="hubs" x="${tx}" y="${geo.hub.y + 9}"${S.v === 'v3' ? ' style="font-size:9.5px"' : ''}>${escH(t2)}</text>`; }
+  } else if (geo.quarter) {
+    // the hub keeps only the chart it acts on; the action reads out in the pill outside the wheel
+    const [tx, ty] = pol(geo.hub, 66, geo.bis), f = fitLine(CH[geo.chart].short, 12 * fs, 600, 92, 10);
+    s += `<text class="hubt" x="${tx}" y="${ty}" style="font-size:${f.px}px">${escH(f.t)}</text>`;
+  } else s += `<circle class="hub" cx="${geo.hub.x}" cy="${geo.hub.y}" r="${geo.rIn - 5}"/>`;
+  if (geo.quarter) s += anchorGhost();
+  else if (geo.dial) s += `<rect x="${geo.hub.x - 18}" y="${geo.hub.y - 1.2}" width="36" height="2.4" rx="1.2" fill="#fff" opacity=".9"/>`;
   s += '</svg>';
   $('#ov').appendChild(h(s));
+  if (fit) renderReadout(geo, hov);
+}
+/* Readout pill: the full action, outside the wheel, on the side away from the hand. Two lines at most. */
+function readoutText(geo, hov) {
+  if (hov && hov.zone === 'slot') {
+    const d = describe(SLOTS[hov.sec.i], hov.sec.chart), c = CH[hov.sec.chart];
+    if (d.status === 'current') return { t: `${c.short} is already on ${SLOTS[hov.sec.i].tf}`, muted: true };
+    return { t: d.verb, sc: c.short };
+  }
+  if (hov && (hov.zone === 'outside' || hov.zone === 'separator')) return { t: 'Release to cancel', muted: true };
+  if (geo.dial) return { t: `Up: ${CH.idx.short} · Down: ${CH.opt.short}`, muted: true };
+  return { t: 'Slide to an action', sc: CH[geo.chart].short, muted: true };
+}
+function renderReadout(geo, hov) {
+  const r = readoutText(geo, hov), hub = geo.hub, v = S.v;
+  const el = h(`<div class="vpill on${r.muted ? ' muted' : ''}"><span class="in">${r.sc ? `<span class="sc">${escH(r.sc)}</span>` : ''}${escH(r.t)}</span></div>`);
+  let maxW = Math.min(L.W - 16, 340);
+  if (v === 'v3') maxW = Math.min(maxW, Math.max(120, hub.x - geo.rOut - 18));
+  el.style.maxWidth = maxW + 'px';
+  $('#ov').appendChild(el);
+  const w = el.offsetWidth, hh = el.offsetHeight; let x, y;
+  if (v === 'v1') { const pr = rectIn($('.tfb', CH[geo.chart].el)); x = pr.x + pr.w - w; y = pr.y - 8 - hh; }
+  else if (v === 'v3') { x = hub.x - geo.rOut - 10 - w; y = hub.y - hh / 2; }
+  else if (v === 'v4') { x = hub.x - w / 2; y = hub.y - geo.rOut - 24 - hh; if (y < L.sat + 4) y = hub.y + geo.rOut + 24; }
+  else { x = (S.hand === 'left' ? hub.x + geo.rOut / 2 : hub.x - geo.rOut / 2) - w / 2; y = hub.y - geo.rOut - 8 - hh; }
+  el.style.left = clamp(x, 8, L.W - 8 - w) + 'px'; el.style.top = clamp(y, L.sat + 4, L.H - L.sab - 4 - hh) + 'px';
 }
 function anchorGhost() {
-  if (S.v === 'v1') { const r = rectIn($('.tfb', CH[G.geo.chart].el)); return `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="12" fill="#3a3a3a"/><text class="hubt" x="${r.x + 19}" y="${r.y + r.h / 2 + .5}" style="font-weight:400;font-size:14px">${CH[G.geo.chart].tf}</text>`; }
+  if (S.v === 'v1') { const id = G.geo.chart, r = rectIn($('.tfb', CH[id].el)), t = rectIn($('.tfl', CH[id].el)); return `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="12" fill="#3a3a3a"/><text class="ghost" x="${t.x}" y="${r.y + r.h / 2 + .5}">${escH(CH[id].tf)}</text>`; }
   if (S.v === 'v5') { const r = rectIn($('#dock')); return `<circle cx="${r.x + r.w / 2}" cy="${r.y + r.h / 2}" r="22" fill="#3a3a3a"/><svg x="${r.x + 11}" y="${r.y + 11}" width="22" height="22" viewBox="0 0 24 24"><g class="wi" style="stroke-width:1.6">${P.wheel}</g></svg>`; }
   if (S.v === 'v2') { const hub = G.geo.hub; return `<circle cx="${hub.x}" cy="${hub.y}" r="14" fill="#3a3a3a"/><svg x="${hub.x - 9}" y="${hub.y - 9}" width="18" height="18" viewBox="0 0 24 24"><g class="wi" style="stroke-width:1.6">${P.wheel}</g></svg>`; }
   return '';
 }
 function renderList(geo, hov) {
-  const id = geo.chart, r = geo.rect;
-  const el = h(`<div class="qlist" style="left:${r.x}px;top:${r.y}px;transform-origin:${geo.above ? 'bottom' : 'top'} right">${SLOTS.map((sl, i) => {
+  const id = geo.chart, r = geo.rect, fit = S.fit !== false;
+  const el = h(`<div class="qlist${fit ? ' fit' : ''}" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;transform-origin:${geo.above ? 'bottom' : 'top'} right">${SLOTS.map((sl, i) => {
     const d = describe(sl, id), on = hov && hov.zone === 'slot' && hov.sec.i === i;
-    return `<div class="qli${on ? ' hov' : ''}${d.status === 'current' ? ' na' : ''}">${d.big ? `<b style="width:18px;font-weight:600;font-size:13px">${d.label}</b>` : ic(d.icon, 18, 1.8)}<span>${d.big ? (d.status === 'current' ? 'Current timeframe' : 'Timeframe ' + d.label) : (sl.kind === 'clean' ? 'Clean view' : sl.kind === 'tool' ? (sl.tool === 'fib' ? 'Fib retracement' : 'Trend line') : IND[sl.ind].name)}</span><span class="s${d.capOn ? ' on' : ''}">${d.big ? '' : d.cap}</span></div>`;
+    return `<div class="qli${on ? ' hov' : ''}${d.status === 'current' ? ' na' : ''}" style="height:${geo.rowH}px">${d.big ? `<b class="qtf">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}<span class="qn">${escH(rowName(sl, d))}</span><span class="s${d.capOn ? ' on' : ''}">${d.big ? '' : escH(d.cap)}</span></div>`;
   }).join('')}</div>`);
   $('#ov').appendChild(el);
 }
 function renderFallback() {
-  const p = G.p0, el = h(`<div class="fbhint">Not enough room for the wheel · release for Quick actions</div>`);
+  const p = G.p0, why = G.geo && G.geo.reason === 'labels' ? 'Labels don’t fit the wheel at this text size' : 'Not enough room for the wheel';
+  const el = h(`<div class="fbhint">${why} · release for Quick actions</div>`);
   $('#ov').appendChild(el); const w = el.offsetWidth;
   el.style.left = clamp(p.x - w / 2, 8, L.W - w - 8) + 'px'; el.style.top = clamp(p.y + 28, L.sat + 8, L.H - 60) + 'px';
   if (p.y > L.H - 120) el.style.top = (p.y - 70) + 'px';
@@ -1391,9 +1589,9 @@ function hideTouch() { $('#touch').classList.remove('on'); }
 
 /* ---- Quick actions list (fallback and accessible route) ---- */
 function openQ1(id, from = 'a11y') {
-  const render = () => `<div class="qhead">Applies to <span class="chipx">${CH[id].short}</span>${from === 'dock' ? '<button class="chipx swap" style="margin-left:auto">Switch chart</button>' : ''}</div>` + SLOTS.map((sl, i) => {
+  const render = () => `<div class="qhead">Applies to <span class="chipx">${escH(CH[id].short)}</span>${from === 'dock' ? '<button class="chipx swap" style="margin-left:auto">Switch chart</button>' : ''}</div>` + SLOTS.map((sl, i) => {
     const d = describe(sl, id);
-    return `<button class="qrow" data-i="${i}" aria-disabled="${d.status === 'current'}"><span class="qi">${d.big ? `<b style="font-size:13px;font-weight:600">${d.label}</b>` : ic(d.icon, 18, 1.8)}</span><span class="qt">${d.big ? 'Timeframe ' + d.label : (sl.kind === 'clean' ? 'Clean view' : sl.kind === 'tool' ? (sl.tool === 'fib' ? 'Fib retracement' : 'Trend line') : IND[sl.ind].name)}<small>${d.action}</small></span><span class="qs${d.capOn ? ' on' : ''}">${d.status === 'current' ? 'Current' : d.big ? '' : d.cap}</span></button>`;
+    return `<button class="qrow" data-i="${i}" aria-disabled="${d.status === 'current'}"><span class="qi">${d.big ? `<b style="font-size:13px;font-weight:600">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}</span><span class="qt">${escH(d.big ? 'Timeframe ' + d.label : d.name)}<small>${escH(d.action)}</small></span><span class="qs${d.capOn ? ' on' : ''}">${d.status === 'current' ? 'Current' : d.big ? '' : escH(d.cap)}</span></button>`;
   }).join('');
   const sh = h(`<div class="sheet lsheet" style="max-height:${L.H - L.sat - 40}px"><div class="sh-title">Quick actions</div><button class="sh-x" aria-label="Close">${ic('x', 18, 1.7)}</button><div class="rows"></div></div>`);
   $('.rows', sh).innerHTML = render();
@@ -1543,6 +1741,10 @@ function openMenu() {
     <button class="setrow" data-o="hand" style="width:100%"><span>Left-handed (mirrors V2 and V5)</span><span class="tog${S.hand === 'left' ? ' on' : ''}"></span></button>
     <button class="setrow" data-o="haptics" style="width:100%"><span>Haptics</span><span class="tog${S.haptics ? ' on' : ''}"></span></button>
     <button class="setrow" data-o="zones" style="width:100%"><span>Show touch zones</span><span class="tog${S.zones ? ' on' : ''}"></span></button>
+    <div class="secl">Label stress test</div>
+    <div class="segl"><span>Labels</span><div class="seg2">${Object.entries(LABELSETS).map(([k, l]) => `<button data-l="${k}" class="${S.labels === k ? 'on' : ''}">${l.name}</button>`).join('')}</div></div>
+    <div class="segl"><span>Text size</span><div class="seg2">${TEXT_SIZES.map(f => `<button data-fs="${f}" class="${S.fs === f ? 'on' : ''}">${Math.round(f * 100)}%</button>`).join('')}</div></div>
+    <button class="setrow" data-o="fit" style="width:100%"><span>Fit rules (shorten, wrap, readout pill)</span><span class="tog${S.fit ? ' on' : ''}"></span></button>
     <div class="secl">Try it</div>
     <button class="qrow" data-a="demo"><span class="qi">${ic('eye', 18, 1.8)}</span><span class="qt">Show me how<small>Plays the gesture for the current placement</small></span></button>
     <button class="qrow" data-a="study"><span class="qi">${ic('ruler', 18, 1.8)}</span><span class="qt">Timed tasks<small>8 tasks, timed, for comparing placements</small></span></button>
@@ -1552,10 +1754,37 @@ function openMenu() {
   sh.addEventListener('click', e => {
     if (e.target.closest('.sh-x')) return layer.close('close');
     const v = e.target.closest('.vrow'); if (v) { layer.close('picked'); setVariant(v.dataset.v); return; }
-    const o = e.target.closest('.setrow'); if (o) { const k = o.dataset.o; if (k === 'hand') S.hand = S.hand === 'left' ? 'right' : 'left'; else S[k] = !S[k]; $('.tog', o).classList.toggle('on', k === 'hand' ? S.hand === 'left' : S[k]); relayout(); syncDev(); return; }
+    const lb = e.target.closest('[data-l]'); if (lb) { setLabels(lb.dataset.l); $$('[data-l]', sh).forEach(b => b.classList.toggle('on', b === lb)); return; }
+    const fb = e.target.closest('[data-fs]'); if (fb) { setTextSize(+fb.dataset.fs); $$('[data-fs]', sh).forEach(b => b.classList.toggle('on', b === fb)); return; }
+    const o = e.target.closest('.setrow'); if (o) { const k = o.dataset.o; if (k === 'hand') S.hand = S.hand === 'left' ? 'right' : 'left'; else S[k] = !S[k]; $('.tog', o).classList.toggle('on', k === 'hand' ? S.hand === 'left' : S[k]); if (k === 'fit') { syncLabelTag(); track('fit_rules', { on: S.fit }); } relayout(); syncDev(); return; }
     const a = e.target.closest('[data-a]'); if (!a) return; layer.close('picked');
     setTimeout(() => ({ demo: () => demo(), study: () => Study.start(), q1: () => openQ1(S.focus, 'menu'), reset: () => { resetCharts(); toast('Charts reset'); } })[a.dataset.a](), 280);
   });
+}
+/* ---- Label stress test (placements PRD v1.1, section 15) ---- */
+const TEXT_SIZES = [1, 1.3, 2];
+let ORIG = null;
+function setLabels(id, { silent = false } = {}) {
+  if (!LABELSETS[id]) return;
+  cancelGesture('invalid_context');
+  if (!ORIG) ORIG = Object.fromEntries(CHART_IDS.map(c => [c, { sym: CH[c].sym, short: CH[c].short }]));
+  S.labels = id; LS = LABELSETS[id];
+  SLOTS[0].tf = LS.tf[0]; SLOTS[1].tf = LS.tf[1];
+  for (const c of CHART_IDS) { const nm = LS.chart && LS.chart[c]; CH[c].sym = nm ? nm[0] : ORIG[c].sym; CH[c].short = nm ? nm[1] : ORIG[c].short; const n = $('.sym .nm', CH[c].el); if (n) n.textContent = CH[c].sym; }
+  syncFocus(); syncLabelTag(); syncDev(); syncDevHints();
+  if (!silent) track('labels', { to: id });
+}
+function setTextSize(f, { silent = false } = {}) {
+  cancelGesture('invalid_context');
+  S.fs = TEXT_SIZES.includes(f) ? f : 1; app.style.setProperty('--fs', S.fs);
+  syncLabelTag(); syncDev(); syncDevHints();
+  if (!silent) track('text_size', { to: S.fs });
+}
+function syncLabelTag() {
+  let t = $('#ltag'); if (!t) { t = h('<button class="ltag" id="ltag" aria-label="Label stress test settings"></button>'); app.appendChild(t); t.addEventListener('click', () => openMenu()); }
+  const on = S.labels !== 'default' || S.fs !== 1 || !S.fit;
+  t.classList.toggle('on', on);
+  t.textContent = 'Label test · ' + [LABELSETS[S.labels].name, S.fs !== 1 ? Math.round(S.fs * 100) + '% text' : '', S.fit ? '' : 'fit rules off'].filter(Boolean).join(' · ');
 }
 function setVariant(v, { silent = false } = {}) {
   cancelGesture('invalid_context'); S.v = v; app.dataset.v = v; store.set('v', v);
@@ -1625,7 +1854,7 @@ const Study = (() => {
   const bar = () => $('#study');
   function show(html) { const b = bar(); b.innerHTML = html; b.classList.add('on'); }
   function start() {
-    closeAllLayers('system'); resetCharts();
+    closeAllLayers('system'); resetCharts(); if (S.labels !== 'default') setLabels('default'); if (S.fs !== 1) setTextSize(1); S.fit = true; syncLabelTag();
     const order = TASKS.map((t, i) => [Math.random(), t]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
     st = { v: S.v, frame: S.frame, hand: S.hand, order, k: -1, rows: [], running: false };
     show(`<div class="sq">Timed tasks · ${VAR[S.v].n} ${VAR[S.v].name}<small>8 tasks. Use the wheel only. The clock starts when each task appears.</small></div><button class="ghost" data-s="quit">Quit</button><button data-s="go">Start</button>`);
@@ -1718,21 +1947,29 @@ function buildDev() {
       <label class="dt">Sound ticks (desktop stand-in for haptics)<input type="checkbox" data-t="sound"></label>
       <div class="hmeter" style="margin-top:6px"><i id="hDot"></i><span id="hTxt">${Haptic.canVibrate ? 'Vibration API available' : 'No Vibration API here: pulses and optional sound stand in'}</span></div></div>
     <div class="box"><h2>Wheel geometry on this phone</h2><div class="geo" id="geo"></div></div>
+    <div class="box"><h2>Label stress test</h2><div class="seg" id="lsets">${Object.entries(LABELSETS).map(([k, l]) => `<button data-l="${k}" title="${l.note}">${l.name}</button>`).join('')}</div>
+      <div class="seg" id="lfs" style="margin-top:6px">${TEXT_SIZES.map(f => `<button data-fs="${f}">${Math.round(f * 100)}% text</button>`).join('')}</div>
+      <label class="dt" style="margin-top:6px">Fit rules (shorten, wrap, readout pill)<input type="checkbox" data-t="fit"></label>
+      <div class="geo" id="fitrep" style="margin-top:6px"></div></div>
     <div class="box"><h2>Timed tasks</h2><div style="display:flex;gap:6px"><button class="dbtn pri" data-d="study">Run 8 tasks</button><button class="dbtn" data-d="clear">Clear history</button></div><div class="results" id="results" style="margin-top:8px"></div></div>
     <div class="box"><h2>Event log</h2><ul class="log" id="log"></ul><div style="display:flex;gap:6px;margin-top:8px"><button class="dbtn" data-d="copylog">Copy JSON</button><button class="dbtn" data-d="reset">Reset charts</button></div></div>`;
   dev.addEventListener('click', e => {
     const vb = e.target.closest('.vbtn'); if (vb) return setVariant(vb.dataset.v);
     const fb = e.target.closest('[data-f]'); if (fb) { S.frame = fb.dataset.f; relayout(); syncDev(); return; }
+    const lb = e.target.closest('[data-l]'); if (lb) return setLabels(lb.dataset.l);
+    const zb = e.target.closest('[data-fs]'); if (zb) return setTextSize(+zb.dataset.fs);
     const d = e.target.closest('[data-d]'); if (!d) return;
     ({ demo: () => demo(), coach: () => showCoach(true), q1: () => openQ1(S.focus, 'panel'), study: () => Study.start(), clear: () => { store.set('study', []); renderResults(); }, copylog: () => copyJSON(LOG), reset: () => resetCharts() })[d.dataset.d]();
   });
-  dev.addEventListener('change', e => { const t = e.target.dataset.t; if (!t) return; if (t === 'hand') S.hand = e.target.checked ? 'left' : 'right'; else S[t] = e.target.checked; if (t === 'touches') app.classList.toggle('touches', S.touches); if (t === 'linked') updateHeaders(); relayout(); });
+  dev.addEventListener('change', e => { const t = e.target.dataset.t; if (!t) return; if (t === 'hand') S.hand = e.target.checked ? 'left' : 'right'; else S[t] = e.target.checked; if (t === 'touches') app.classList.toggle('touches', S.touches); if (t === 'linked') updateHeaders(); if (t === 'fit') syncLabelTag(); relayout(); });
   renderResults();
 }
 function syncDev() {
   const dev = $('#dev'); if (!dev) return;
   $$('.vbtn', dev).forEach(b => b.classList.toggle('on', b.dataset.v === S.v));
   $$('#frames button', dev).forEach(b => b.classList.toggle('on', b.dataset.f === S.frame));
+  $$('#lsets button', dev).forEach(b => b.classList.toggle('on', b.dataset.l === S.labels));
+  $$('#lfs button', dev).forEach(b => b.classList.toggle('on', +b.dataset.fs === S.fs));
   $$('input[data-t]', dev).forEach(i => { const t = i.dataset.t; i.checked = t === 'hand' ? S.hand === 'left' : !!S[t]; });
   syncDevHints();
 }
@@ -1751,6 +1988,19 @@ function syncDevHints() {
   }
   lines.push(`Frame ${L.W}×${Math.round(L.H)} · safe top ${L.sat} · bottom ${L.sab}`);
   el.innerHTML = lines.join('\n');
+  const fr = $('#fitrep'); if (!fr) return;
+  const HOW = { full: '', wrap: '2 lines', short: 'short', small: 'smaller', raw: 'as typed' };
+  const out = [];
+  for (const id of S.v === 'v4' ? ['idx', 'opt'] : [S.v === 'v5' ? S.focus : 'idx']) {
+    let p0 = { x: 0, y: 0 };
+    if (S.v === 'v3') { const r = L.cards[id], g = CH[id].g; p0 = { x: r.x + g.paneR + g.axisW / 2, y: r.y + (r.paneT + r.paneB) / 2 }; }
+    const geo = geometry({ chart: id, p0 });
+    if (geo.kind === 'list') { out.push(`${escH(CH[id].short)}: list ${geo.rect.w}px wide, rows ${geo.rowH}px · ${fmt(geo.ok, geo.ok ? 'fits' : 'no room')}`); continue; }
+    if (!geo.ok) { out.push(`${escH(CH[id].short)}: ${fmt(false, geo.reason === 'labels' ? 'labels do not fit (' + geo.bad.join(', ') + ') → Quick actions' : 'no room → Quick actions')}`); continue; }
+    const secs = geo.dial ? geo.sectors.filter(s => s.chart === id) : geo.sectors;
+    out.push(`${escH(CH[id].short)}: ` + secs.map(s => { const tag = [HOW[s.lay.how], s.lay.noCap ? 'no state' : '', s.lay.noIcon ? 'no icon' : ''].filter(Boolean).join(', '); return `${escH(s.lay.lines.join(' '))}${tag ? ` <span class="ok">(${tag})</span>` : ''}`; }).join(' · '));
+  }
+  fr.innerHTML = out.join('\n');
 }
 function renderLog() {
   const el = $('#log'); if (!el) return;
@@ -1786,8 +2036,11 @@ async function init() {
   if (q.get('hand') === 'left') S.hand = 'left';
   if (q.get('zones') === '1') S.zones = true;
   if (q.get('touches') === '1') { S.touches = true; app.classList.add('touches'); }
+  if (q.get('fit') === '0') S.fit = false;
   app.dataset.v = S.v;
   buildCards(); bindChrome(); buildDev();
+  const ql = q.get('labels'), qt = +q.get('text');
+  setLabels(LABELSETS[ql] ? ql : 'default', { silent: true }); setTextSize(qt ? qt / 100 : 1, { silent: true });
   computeLayout(); placeChrome(); fit(); syncDev(); syncFocus();
   try { await Promise.race([Promise.all(['400 11.3px RobotoQW', '400 12.5px RobotoQW', '400 14px InterQW', '500 14px InterQW', '600 18px InterQW'].map(f => document.fonts.load(f))), new Promise(r => setTimeout(r, 1500))]); } catch {}
   S.fontsReady = true; redraw(); requestAnimationFrame(frame);

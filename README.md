@@ -11,7 +11,7 @@ Three feature concepts for Sahi, each with a PRD and a clickable prototype: **Mi
 | `docs/sahi-payoff-desktop-prd.html` | The same Payoff PRD as a styled page with contents, linked IDs and an open-items filter. Open it in a browser |
 | `docs/sahi-quick-action-wheel-prd.html` | Quick Action Wheel PRD v1.4: hold the timeframe button on the mobile Option Scalper to open a radial menu, with a tap alternative |
 | `docs/sahi-quick-action-wheel-prd-v1.2.html` | The earlier v1.2 PRD, kept because it embeds the R1 to R5 screenshots |
-| `docs/sahi-quick-action-wheel-placements-prd.html` | Quick Action Wheel placement PRD v1.0: six places to anchor the same wheel, with research, measurements, a recommendation and a study plan |
+| `docs/sahi-quick-action-wheel-placements-prd.html` | Quick Action Wheel placement PRD v1.1: six places to anchor the same wheel, with research, measurements, a label stress test, trading-app prior art, a recommendation and a study plan |
 | `prototype/quick-wheel/index.html` | Clickable phone prototype of the Quick Action Wheel PRD, with haptics. One self-contained file, no build step |
 | `prototype/quick-wheel-placements/index.html` | Placement prototype: the six placements on a rebuild of the Sahi split chart, with haptics and timed tasks. One self-contained file, no build step |
 | `prototype/index.html` | Clickable phone prototype of the Mirror PRD. One self-contained file, no build step |
@@ -107,7 +107,12 @@ Where should the wheel live? PRD v1.4 anchors it on the timeframe pill, which on
 
 ### Placement PRD
 
-`docs/sahi-quick-action-wheel-placements-prd.html` (v1.0) covers the research (pie and marking menus, thumb reach and touch accuracy, edge and system gestures, shipped hold-and-slide menus), what each part of the Sahi screen already does, the six placements, measured fit, reach and target size on five screen sizes, a scored comparison, the placements ruled out, a recommendation, a study plan, requirements and analytics.
+`docs/sahi-quick-action-wheel-placements-prd.html` (v1.1) covers the research (pie and marking menus, thumb reach and touch accuracy, edge and system gestures, shipped hold-and-slide menus), what each part of the Sahi screen already does, the six placements, measured fit, reach and target size on five screen sizes, a scored comparison, the placements ruled out, a recommendation, a study plan, requirements and analytics.
+
+v1.1 adds two sections:
+
+- **Long names (section 15).** A stress test of every label in all six placements, with four label sets (Default, Own presets, Any indicator, Full names) and text at 130% and 200%, on 412×915 and 360×800 phones. In v1.0, 16 of 63 slots already spilled with the default labels, 50 of 63 with long indicator names, and the readout in the centre couldn't hold a full name. The section sets the fit rules: a label, an authored short label and a full name for every action; one or two lines, then the short label, then smaller type, never an ellipsis in a slot; one layout per group of slots; the full action read out in a pill outside the wheel; and Quick actions when a label can't fit. It also gives a label budget per placement: about six characters (45 px) in the quarter fans, nine in V4 and full names in V6.
+- **Prior art (section 16).** No trading app we found uses a hold–slide–release menu on a chart. MetaTrader 5's tap-opened radial chart menu is the closest. Long-press on a chart is the crosshair almost everywhere. In Kite, FYERS, Angel One and IBKR, a hold at a price or on the price axis starts an order, which is one more reason to drop V3.
 
 | Placement | Hold to open | Acts on |
 |---|---|---|
@@ -127,6 +132,7 @@ Open `prototype/quick-wheel-placements/index.html`. The Sahi screens are rebuilt
 - **Desktop:** a panel next to the phone switches placement, phone size (Android 412×915 and 360×800, iPhone 390×844 and 430×932) and options (left-handed, touch zones, touches, linked timeframes, haptics, sound). It also shows the wheel geometry for the current phone, timed-task results and the event log.
 - **Phone:** the app fills the screen; the ⋮ button in the top bar opens the placement picker, options, Show me how, Timed tasks, the Quick actions list and Reset charts.
 - **Links:** `?v=1` to `?v=6` open a placement; add `&frame=small|iphone|max`, `&hand=left`, `&zones=1`, `&touches=1` or `&coach=0`.
+- **Label stress test:** in the ⋮ menu or the desktop panel, pick a label set (Default, Own presets, Any indicator, Full names) and a text size (100%, 130%, 200%). Turn off the fit rules to see how v1.0 behaved. By link: `&labels=presets|any|full`, `&text=130|200`, `&fit=0`. A yellow tag at the bottom left shows when a test is on, and the desktop panel lists how each slot was fitted. Only the names change; the chart still draws VWAP and EMA.
 - Everything on the chart works: the timeframe menu (tap the pill), Settings (seven chart types and view toggles), Add indicators (EMA, SMA, VWAP, Bollinger Bands and Key Levels are drawn), Range, drawing tools, crosshair (long-press the candles), pan, pinch, axis scaling (drag the price axis) and split resizing (drag the handle).
 - **Timed tasks** run eight tasks in random order and record time, wrong actions, cancels and fallbacks per placement, exportable as JSON.
 - **On a real Android phone,** a slide that starts within a finger's width of the right edge can trigger Back. That is the conflict the PRD's PL-07 describes, so hold a little in from the edge.
