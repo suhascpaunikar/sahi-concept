@@ -1,6 +1,6 @@
 # Sahi concepts
 
-Three feature concepts for Sahi, each with a PRD and a clickable prototype: **Mirror** (mobile), **Payoff** (desktop Scalper) and the **Quick Action Wheel** (mobile Option Scalper).
+Feature concepts for Sahi, each with a PRD and a clickable prototype: **Mirror** (mobile), **Payoff** (desktop Scalper, and now the mobile Option Scalper) and the **Quick Action Wheel** (mobile Option Scalper).
 
 ## What's here
 
@@ -18,6 +18,9 @@ Three feature concepts for Sahi, each with a PRD and a clickable prototype: **Mi
 | `prototype/payoff/index.html` | Clickable desktop prototype of the Payoff PRD on the Scalper split view. One self-contained file, no build step |
 | `prototype/payoff/src/` | Sources for the Payoff prototype; `sh prototype/payoff/src/build.sh` rebuilds `index.html` |
 | `prototype/payoff/data/` | Real 1-minute Kite data the prototype runs on (CSVs and handover note); `python3 prototype/payoff/data/build_data.py` regenerates `src/data.js` |
+| `docs/sahi-payoff-mobile-prd.md` | Payoff (Mobile) PRD v1.0: Payoff on the mobile Option Scalper, opened from the Quick Action Wheel's seventh slot, which was Clean View |
+| `prototype/payoff-mobile/index.html` | Clickable phone prototype of the mobile Payoff PRD, built on the placement study's Option Scalper rebuild, with all six wheel placements. One self-contained file, no build step |
+| `prototype/payoff-mobile/src/` and `build.py` | Sources for the mobile Payoff prototype; `python3 prototype/payoff-mobile/build.py` rebuilds `index.html` with the desktop engine and data from `prototype/payoff/src/` |
 
 ## Sahi Mirror: mobile concept
 
@@ -68,9 +71,45 @@ NIFTY 50 and the NIFTY 19 Oct 22500 Call and Put run on real 1-minute data from 
 
 S1 Scalper split view (Payoff button, hold-to-peek) · N1 Payoff introduction tip · S2 Payoff mode: one position · S3 Payoff mode: several positions · N2 Pricing status banner · D1 Pinned point card · M1 Confirm order from pin · N3 Order result toast · scheduled exit markers.
 
+## Sahi Payoff: mobile concept
+
+Payoff on the phone: on the mobile Option Scalper, the Quick Action Wheel's seventh slot, where Clean View was, now turns Payoff on and off for both charts. The index chart gains a future zone with breakeven lines and profit shading, and a **Payoff point** the trader taps, drags or long-presses into place. A docked readout shows the P&L at that Nifty level and time. With one position, the option chart shows the premium at the point; with several, a Payoff list replaces it. It never forecasts, recommends or opens a trade.
+
+### PRD
+
+`docs/sahi-payoff-mobile-prd.md` is a Full PRD (v1.0) written with the house PRD format. It adapts the desktop PRD v1.7 and changes the Quick Action Wheel PRD v1.4. It covers 14 surfaces: S1, S2, S3, B1, B2, N1 to N3, and the wheel surfaces it touches (QW-M1, QW-Q1, QW-B1, QW-N1, QW-T1, QW-S2). It has 32 functional and 10 non-functional requirements, 37 business rules and 53 open items and assumptions. Section 1.4 maps each desktop mechanism to its phone version and says why:
+
+- **No hold-to-peek.** A phone has no modifier key; holding the chart is the crosshair and holding the timeframe button opens the wheel. Slot 7 and Quick actions turn Payoff on; a close button and Android back turn it off.
+- **Hover becomes a Payoff point** that stays where it is left. Tap the shaded future zone to move it, drag it, or long-press and slide. It snaps to the chart's candles and to 5 Nifty points, and gives a haptic tick when it crosses a breakeven or an expiry.
+- **The readout is docked** in the top-left corner of the index chart, away from the thumb, and moves when the point would sit under it.
+- **The pinned point card becomes a sheet** (B1) with level and time steppers, the screen-reader path and, in the Later release, the target, stop and exit actions.
+- **The opening view scrolls** so the rest of the session is in view, keeping each chart's timeframe and candle width, because a phone chart's right margin is only about six candles wide.
+
+Example values in the PRD come from the desktop research model (Nifty 25,000, IV 12%); the prototype runs on real Kite data near 22,665, so its numbers differ.
+
+### Run the mobile Payoff prototype
+
+Open `prototype/payoff-mobile/index.html`. On a desktop you get the 412 × 915 phone with a panel beside it; on a phone the app fills the screen and the ⋮ button opens the same controls.
+
+- **Hold** the "5m" button on either chart, **slide** to Payoff and **release**. Hold again and release on Payoff (now "On") to turn it off, or tap × in the Payoff bar. Esc stands in for Android back.
+- **Move the point:** tap the shaded zone, drag the ring, or long-press anywhere and slide into the zone. Pan and pinch work as before; the point keeps its level and time, and an edge pill brings it back.
+- **Tap the readout** for B1: steppers move the level 5 points and the time one candle. Hold a stepper to repeat.
+- **Date chips** fit the view to today or to an expiry; "19 Oct" shows the holiday shift ("moved from Tue 20 Oct").
+- **Tap the option chart** for the order panel; buying while Payoff is on switches pre-trade to the held position, and a second position switches to the Payoff list.
+- **Demo controls:** 12 sample position sets (one position, pre-trade, no contract, weekly + monthly book, iron condor, straddles, calendar, futures + put, intraday + carry-forward), carry-forward or intraday, the clock (9:30 am, 11:15 am, 12:59 pm latest data, 3:05 pm simulated, 3:45 pm closed), live, delayed, offline or unavailable prices, the Later release (order actions, B2, N3), failing orders, and the N1 tip again.
+- **Links:** `?payoff=1` opens with Payoff on; `&pos=book|condor|pretrade|empty|mixed|…`, `&product=intraday`, `&clock=15:45`, `&pricing=delayed|offline|unavailable`, `&later=1`, `&v=1` to `&v=6` for the placement, `&frame=small|iphone|max`, `&text=130|200`, `&coach=0&tip=0` to skip the first-run marks.
+
+NIFTY 50 and the NIFTY 19 Oct 22500 Call and Put run on the desktop prototype's real 1-minute Kite data, up to 12:59 pm on Wed 14 Oct 2026; later times are simulated and other contracts are modelled. Values come from the same engine as desktop (Black-Scholes on trading time, IV held).
+
+### Mobile Payoff surfaces covered
+
+S1 Option Scalper with Payoff in slot 7 of every placement and in Quick actions · N1 Payoff introduction tip · S2 Payoff mode: one position (pre-trade, empty, intraday, expired, too-uncertain and at-expiry readouts) · S3 Payoff mode: several positions (Payoff list, squared-off and expired legs, realised today, max profit and loss) · B1 Payoff point sheet · N2 Pricing status banner (delayed, offline, closed, unavailable with Retry) · B2 Confirm order sheet and N3 snackbar (Later release) · the order panel.
+
 ## Sahi Quick Action Wheel: mobile concept
 
 On the mobile Option Scalper, holding a chart's timeframe button ("5m") opens a quarter-circle wheel of seven fixed actions: Timeframe A and B, Trend Line, Fibonacci Retracement, a VWAP preset, an EMA preset and Clean View. Slide onto a sector and release to apply it to that chart. A tap still opens the chart menu, and every action is also in a tap list, Quick actions.
+
+> Since the mobile Payoff PRD (v1.0), the seventh action is **Payoff**, not Clean View. The wheel PRDs and prototypes below keep Clean View as they were written; `prototype/payoff-mobile/` has the wheel with Payoff.
 
 ### PRD
 
