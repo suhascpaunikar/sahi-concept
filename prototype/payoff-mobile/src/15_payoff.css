@@ -1,0 +1,134 @@
+/* =========================================================================
+   Payoff on mobile (Payoff mobile PRD v1.0)
+   ========================================================================= */
+.app [hidden] { display: none !important; }
+.pbar { position: absolute; left: 0; height: 34px; z-index: 4; display: flex; align-items: center; gap: 6px; padding: 0 4px 0 8px; box-sizing: border-box; }
+.pchips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; padding: 2px 0; }
+.pchips::-webkit-scrollbar { display: none; }
+.pchips button { flex: none; height: min(calc(26px * var(--fs)), 37.7px); min-height: 26px; padding: 0 11px; border-radius: 13px; background: #272727; color: #e6e6e6; font-size: min(calc(12px * var(--fs)), 17.4px); font-weight: 500; letter-spacing: -.1px; }
+.pchips button.on { background: #fff; color: #000; }
+.pclose { flex: none; width: 32px; height: 32px; border-radius: 16px; display: grid; place-items: center; color: #e6e6e6; background: #272727; position: relative; }
+.pclose::after { content: ""; position: absolute; inset: -8px; }
+.app.po-on #card-idx .legend { top: calc(58px + var(--pbh, 34px)); }
+.app.po-on #card-idx .legend .lg:not(:first-child) { display: none; }
+.app.po-on #card-idx .legend .lg:first-child::after { content: attr(data-more); color: #8d8d93; }
+.app.po-on #card-idx .ohlc { top: calc(58px + var(--pbh, 34px)) !important; }
+.app.po-on #card-idx .banner { top: calc(60px + var(--pbh, 34px)); }
+.pban { position: absolute; left: 8px; right: 62px; z-index: 4; display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 10px; border-radius: 10px; background: #3a2f12; color: #f3c574; font-size: min(calc(11.5px * var(--fs)), 16.7px); line-height: 1.35; box-sizing: border-box; }
+.pban span { flex: 1; }
+.pban button { flex: none; height: 26px; min-width: 26px; padding: 0 10px; border-radius: 13px; background: rgba(255,255,255,.14); color: #fff; font-size: 12px; font-weight: 600; display: grid; place-items: center; }
+.pban.warn { background: #3a1616; color: #ffb4ac; }
+.pread, .pcard { position: absolute; z-index: 4; box-sizing: border-box; min-width: 156px; max-width: 220px; padding: 7px 10px 6px; border-radius: 12px; background: rgba(30,30,32,.94); box-shadow: 0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px #343438; color: #fff; font-size: min(calc(11.5px * var(--fs)), 16.7px); line-height: 1.35; width: max-content; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pread .rt, .pcard .rt { color: #b9b9be; font-size: min(calc(11.5px * var(--fs)), 16.7px); }
+.pread .rp, .pcard .rp { display: flex; align-items: baseline; gap: 6px; margin-top: 1px; }
+.pread .rp span, .pcard .rp span { font-size: min(calc(11px * var(--fs)), 15.9px); color: #b9b9be; }
+.pread .rp b, .pcard .rp b { font-size: min(calc(19px * var(--fs)), 27.6px); line-height: 1.2; font-weight: 700; letter-spacing: -.3px; font-feature-settings: "tnum"; }
+.pread .rr, .pcard .rr { color: #d4d4d8; font-feature-settings: "tnum"; }
+.pread .rf { display: flex; align-items: center; gap: 6px; margin-top: 4px; padding-top: 4px; border-top: 1px solid #2f2f33; color: #8d8d93; font-size: min(calc(10.5px * var(--fs)), 15.2px); }
+.pread .rf .mi, .mi { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
+.pread .rf .asof { color: #f3c574; }
+.pread .rf .chev { margin-left: auto; display: grid; color: #8d8d93; }
+.pcard .rf2 { margin-top: 3px; color: #8d8d93; font-size: min(calc(10.5px * var(--fs)), 15.2px); }
+.pread b.sk { display: inline-block; width: 70px; height: 18px; border-radius: 4px; background: linear-gradient(90deg, #2a2a2e, #3a3a3e, #2a2a2e); background-size: 200% 100%; animation: sk 1.2s linear infinite; }
+@keyframes sk { to { background-position: -200% 0; } }
+.up { color: #3fd297; } .dn { color: #ee7069; }
+.app.po-grey .pread b, .app.po-grey .pcard b, .app.po-grey #plist .lv b, .app.po-grey #plist .lf2 b, .app.po-grey .b1 .b1p b { color: #8d8d93 !important; }
+.pedge { position: absolute; z-index: 4; height: 26px; padding: 0 10px; border-radius: 13px; background: #4f6ff0; color: #fff; font-size: min(calc(11.5px * var(--fs)), 16.7px); font-weight: 600; white-space: nowrap; }
+.phint { position: absolute; z-index: 4; box-sizing: border-box; padding: 8px 10px; border-radius: 10px; background: rgba(79,111,240,.96); color: #fff; font-size: min(calc(12px * var(--fs)), 17.4px); line-height: 1.35; pointer-events: none; box-shadow: 0 8px 22px rgba(0,0,0,.45); }
+.pempty { position: absolute; left: 16px; right: 70px; z-index: 4; text-align: center; color: #b9b9be; font-size: min(calc(13px * var(--fs)), 18.8px); line-height: 1.4; }
+.pchip { position: absolute; right: 10px; top: 44px; z-index: 4; height: min(calc(22px * var(--fs)), 31.9px); padding: 0 9px; border-radius: 11px; background: #272727; color: #d4d4d8; font-size: min(calc(11px * var(--fs)), 15.9px); font-weight: 500; white-space: nowrap; }
+.app.po-on .card .hd .pxl { max-width: calc(100% - 170px); }
+/* S3: the Payoff list covers the option chart */
+.plist { position: absolute; left: 4px; right: 4px; z-index: 3; background: #171717; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; color: #fff; }
+.plist .lh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px 2px; font-size: calc(13.5px * var(--fs)); }
+.plist .lh b { font-weight: 600; letter-spacing: -.1px; }
+.plist .ochip { height: 22px; padding: 0 9px; border-radius: 11px; background: #272727; color: #d4d4d8; font-size: calc(11px * var(--fs)); }
+.plist .ltitle { display: flex; align-items: center; gap: 4px; padding: 2px 14px 6px; color: #b9b9be; font-size: calc(12px * var(--fs)); text-align: left; }
+.plist .lrows { flex: 1; overflow-y: auto; min-height: 40px; overscroll-behavior: contain; }
+.plist .lgh { padding: 8px 14px 3px; color: #8d8d93; font-size: calc(11px * var(--fs)); font-weight: 500; }
+.plist .lrow { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 6px 14px; box-sizing: border-box; text-align: left; }
+.plist .lrow.sel { background: #232326; }
+.plist .lb { flex: none; width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.plist .lb.b { background: rgba(8,153,129,.2); color: #3fd297; } .plist .lb.s { background: rgba(242,54,69,.18); color: #ee7069; }
+.plist .lt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.plist .lt b { font-size: calc(13.5px * var(--fs)); font-weight: 500; }
+.plist .lt small { font-size: calc(11.5px * var(--fs)); color: #9e9e9e; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 1px; }
+.plist .stc { font-style: normal; font-size: calc(10.5px * var(--fs)); padding: 1px 6px; border-radius: 6px; background: #262629; color: #c9c9ce; }
+.plist .stc.live { color: #3fd297; background: rgba(8,153,129,.14); } .plist .stc.expirestoday { color: #f3c574; background: rgba(243,197,116,.12); }
+.plist .lv { flex: none; display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-feature-settings: "tnum"; }
+.plist .lv b { font-size: calc(14px * var(--fs)); font-weight: 600; }
+.plist .lv small { font-size: calc(11px * var(--fs)); color: #9e9e9e; }
+.plist .lrow.sq .lv b, .plist .lrow.sq .lv small { color: #6b6b70; }
+.plist .lfoot { flex: none; border-top: 1px solid #2a2a2e; padding: 6px 14px 8px; font-size: calc(12px * var(--fs)); color: #c9c9ce; display: flex; flex-direction: column; gap: 2px; font-feature-settings: "tnum"; }
+.plist .lf2 { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 8px; color: #fff; }
+.plist .lf2 b { font-size: calc(17px * var(--fs)); font-weight: 700; }
+.plist .lf2 small { width: 100%; color: #b9b9be; font-size: calc(11.5px * var(--fs)); }
+.plist .lf4, .plist .lf5 { color: #8d8d93; font-size: calc(11px * var(--fs)); }
+@media (max-height: 760px) { .plist .lr { display: none; } }
+/* B1 Payoff point sheet: no scrim, so the index chart above stays live */
+.b1 { position: absolute; left: 0; right: 0; bottom: 0; z-index: 46; background: #1c1c1e; border-radius: 16px 16px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,.55); padding: 0 16px calc(var(--sab) + 12px); box-sizing: border-box; transform: translateY(100%); transition: transform .22s cubic-bezier(.2,.8,.2,1); overflow-y: auto; color: #fff; }
+.b1.on { transform: translateY(0); }
+.b1grab { width: 36px; height: 4px; border-radius: 2px; background: #48484c; margin: 8px auto 2px; }
+.b1hd { display: flex; align-items: center; justify-content: space-between; height: 40px; }
+.b1hd b { font-size: calc(16px * var(--fs)); font-weight: 600; outline: none; }
+.b1x { width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; margin-right: -10px; color: #d4d4d8; }
+.b1st { display: flex; align-items: center; gap: 8px; min-height: 52px; border-bottom: 1px solid #2a2a2e; font-size: calc(13px * var(--fs)); }
+.b1st span { flex: 1; color: #b9b9be; }
+.b1st b { min-width: 96px; text-align: center; font-size: calc(14.5px * var(--fs)); font-weight: 600; font-feature-settings: "tnum"; }
+.b1st button { width: 44px; height: 44px; border-radius: 22px; background: #2a2a2e; display: grid; place-items: center; color: #fff; flex: none; touch-action: none; }
+.b1st button:disabled { opacity: .35; }
+.b1v { padding: 10px 0 2px; display: flex; flex-direction: column; gap: 3px; font-size: calc(13px * var(--fs)); color: #d4d4d8; font-feature-settings: "tnum"; }
+.b1p { display: flex; align-items: baseline; gap: 8px; } .b1p span { color: #b9b9be; font-size: calc(12px * var(--fs)); } .b1p b { font-size: calc(22px * var(--fs)); font-weight: 700; }
+.b1u { color: #f3c574; }
+.b1m { padding: 6px 0 8px; color: #8d8d93; font-size: calc(11.5px * var(--fs)); }
+.b1n, .b1h { margin: 6px 0; color: #9e9e9e; font-size: calc(12px * var(--fs)); line-height: 1.4; }
+.b1a { display: flex; flex-direction: column; gap: 8px; } .b1a.off .b1btn { opacity: .4; pointer-events: none; }
+.b1btn { height: calc(44px * var(--fs)); min-height: 44px; border-radius: 22px; font-size: calc(14px * var(--fs)); font-weight: 600; padding: 0 18px; }
+.b1btn.pri { background: #fff; color: #000; } .b1btn.sec { background: #2a2a2e; color: #fff; } .b1btn.busy { opacity: .7; }
+.b2 .rows p { margin: 6px 0; font-size: calc(13.5px * var(--fs)); line-height: 1.4; color: #d4d4d8; }
+.b2 .b2pos { color: #fff; font-weight: 500; } .b2 .b2n { color: #9e9e9e !important; font-size: calc(12px * var(--fs)) !important; }
+.b2f { display: flex; gap: 10px; padding: 12px 16px calc(var(--sab) + 12px); } .b2f .b1btn { flex: 1; }
+/* order panel (existing Sahi control) */
+.opanel { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; background: #171717; border-radius: 16px 16px 0 0; padding: 8px 10px calc(var(--sab) + 4px); box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; }
+.oph { display: flex; align-items: center; justify-content: center; position: relative; }
+.opt-tabs { display: flex; background: #272727; border-radius: 16px; padding: 2px; }
+.opt-tabs button { height: 28px; padding: 0 14px; border-radius: 14px; font-size: 12.5px; color: #d4d4d8; }
+.opt-tabs button.on { background: #fff; color: #000; font-weight: 500; }
+.oppin { position: absolute; right: 2px; width: 32px; height: 32px; border-radius: 16px; background: #272727; display: grid; place-items: center; color: #d4d4d8; }
+.opr { display: flex; align-items: center; gap: 8px; }
+.opb { flex: 1; height: 48px; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; font-size: 12px; line-height: 1.15; }
+.opb b:last-child { font-size: 14px; font-weight: 700; }
+.opb.buy { background: #089981; } .opb.sell { background: #e0393e; } .opb:disabled { opacity: .4; }
+.opq { flex: none; display: flex; align-items: center; gap: 2px; }
+.opq button { width: 30px; height: 30px; border-radius: 15px; display: grid; place-items: center; color: #d4d4d8; }
+.opq span { display: flex; flex-direction: column; align-items: center; min-width: 36px; } .opq b { font-size: 15px; } .opq small { font-size: 10px; color: #8d8d93; }
+.opm { display: flex; justify-content: space-between; padding: 0 12px; font-size: 10.5px; color: #9e9e9e; }
+/* N1 Payoff introduction tip */
+.ptipn { position: absolute; inset: 0; z-index: 60; }
+.ptipn .pdim { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
+.ptipn .pring { position: absolute; border-radius: 12px; box-shadow: 0 0 0 2px #fff, 0 0 0 6px rgba(255,255,255,.18); pointer-events: none; }
+.ptipn .pbub { position: absolute; left: 12px; right: 12px; background: #fff; color: #000; border-radius: 14px; padding: 12px 12px 10px 14px; box-shadow: 0 14px 36px rgba(0,0,0,.6); font-size: calc(13px * var(--fs)); line-height: 1.4; }
+.ptipn .parr { position: absolute; top: -6px; width: 14px; height: 14px; background: #fff; transform: rotate(45deg); margin-left: -12px; }
+.ptipn .pbt { display: flex; gap: 10px; align-items: flex-start; }
+.ptipn .pic { flex: none; width: 30px; height: 30px; border-radius: 9px; background: #eef1ff; color: #2a45c9; display: grid; place-items: center; }
+.ptipn .pbb { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.ptipn .pbb button { height: 32px; padding: 0 14px; border-radius: 16px; font-size: 13px; font-weight: 600; background: #ededed; color: #000; }
+.ptipn .pbb button.pri { background: #000; color: #fff; }
+/* tooltips and snackbar */
+.ptipb { position: absolute; z-index: 80; box-sizing: border-box; padding: 10px 12px; border-radius: 10px; background: #2b2b2b; color: #fff; font-size: calc(12.5px * var(--fs)); line-height: 1.4; box-shadow: 0 10px 30px rgba(0,0,0,.6), inset 0 0 0 1px #3a3a3a; }
+.snack { position: absolute; left: 12px; right: 12px; z-index: 72; display: flex; align-items: center; gap: 8px; padding: 10px 6px 10px 14px; border-radius: 12px; background: #2b2b2b; box-shadow: 0 10px 30px rgba(0,0,0,.6), inset 0 0 0 1px #3a3a3a; color: #fff; font-size: 13px; line-height: 18px; opacity: 0; transform: translateY(10px); transition: opacity .18s, transform .18s; pointer-events: none; }
+.snack.on { opacity: 1; transform: none; pointer-events: auto; }
+.snack span:not(.tk) { flex: 1; } .snack .tk { width: 18px; height: 18px; border-radius: 9px; background: #089981; display: grid; place-items: center; flex: none; }
+.snack button { width: 32px; height: 32px; border-radius: 16px; display: grid; place-items: center; color: #d4d4d8; flex: none; }
+.tp.pnl b.dn { color: #ee7069; } .tp.pnl b.up { color: #3fd297; }
+/* demo controls */
+.pdl { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 4px 0 8px; font-size: 12.5px; color: #d9d9dc; }
+.pdl select { flex: 1; max-width: 230px; height: 30px; border-radius: 8px; background: #18181b; color: #fff; border: 1px solid #2c2c31; font: inherit; font-size: 12.5px; padding: 0 6px; }
+.pseg { margin-bottom: 8px; } .pseg button:disabled { opacity: .35; }
+.pdrow { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+.pnote { color: #8d8d93; font-size: 11.5px; line-height: 1.4; margin-top: 4px; }
+.lsheet .pdev { padding: 4px 16px 6px; color: #d9d9dc; font-size: 13px; }
+.lsheet .pdev .seg button { font-size: 12.5px; }
+.lsheet .pdev .dbtn { height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid #2c2c31; background: #222; color: #fff; font-size: 12.5px; }
+.lsheet .pdev .dbtn.pri { background: #fff; color: #000; }
+.lsheet .pdev .dt { font-size: 13px; }
