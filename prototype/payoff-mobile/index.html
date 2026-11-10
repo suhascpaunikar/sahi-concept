@@ -2075,9 +2075,10 @@ function slotGroup(geo, s, hov) {
   return `<g class="${cls}" data-fit="${Lo.how}${Lo.noCap ? '-nocap' : ''}${Lo.noIcon ? '-noicon' : ''}"><path class="sec${hov ? ' hov' : ''}" d="${sectorPath(geo.hub, geo.rIn, geo.rOut, s)}"/>${inner}</g>`;
 }
 function renderOverlay() {
-  $$('svg.wheel, .vpill, .qlist', app).forEach(x => x.remove());
   const geo = G.geo, hov = G.hover, fit = S.fit !== false, fs = S.fs || 1;
-  if (geo.kind === 'list') return renderList(geo, hov);
+  // the list is built once per hold and updated in place (renderList), so it is not removed here
+  if (geo.kind === 'list') { $$('svg.wheel, .vpill', app).forEach(x => x.remove()); return renderList(geo, hov); }
+  $$('svg.wheel, .vpill, .qlist', app).forEach(x => x.remove());
   let s = `<svg class="wheel" width="${L.W}" height="${L.H}" viewBox="0 0 ${L.W} ${L.H}">`;
   // inner (cancel) zone
   if (geo.quarter) {
@@ -2144,12 +2145,17 @@ function anchorGhost() {
   return '';
 }
 function renderList(geo, hov) {
-  const id = geo.chart, r = geo.rect, fit = S.fit !== false;
-  const el = h(`<div class="qlist${fit ? ' fit' : ''}" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;transform-origin:${geo.above ? 'bottom' : 'top'} right">${SLOTS.map((sl, i) => {
-    const d = describe(sl, id), on = hov && hov.zone === 'slot' && hov.sec.i === i;
-    return `<div class="qli${on ? ' hov' : ''}${d.status === 'current' || d.status === 'na' ? ' na' : ''}" style="height:${geo.rowH}px">${d.big ? `<b class="qtf">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}<span class="qn">${escH(rowName(sl, d))}</span><span class="s${d.capOn ? ' on' : ''}">${d.big ? '' : escH(d.cap)}</span></div>`;
+  const id = geo.chart, r = geo.rect, fit = S.fit !== false, hi = hov && hov.zone === 'slot' ? hov.sec.i : -1;
+  // One element per hold. It used to be rebuilt on every row change, which replayed its open animation
+  // (opacity 0 to 1), so the list and the chart behind it flickered as the finger slid down the rows.
+  let el = $('#ov .qlist');
+  if (el && el._geo === geo) { [...el.children].forEach((row, i) => row.classList.toggle('hov', i === hi)); return; }
+  if (el) el.remove();
+  el = h(`<div class="qlist${fit ? ' fit' : ''}" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;transform-origin:${geo.above ? 'bottom' : 'top'} right">${SLOTS.map((sl, i) => {
+    const d = describe(sl, id);
+    return `<div class="qli${i === hi ? ' hov' : ''}${d.status === 'current' || d.status === 'na' ? ' na' : ''}" style="height:${geo.rowH}px">${d.big ? `<b class="qtf">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}<span class="qn">${escH(rowName(sl, d))}</span><span class="s${d.capOn ? ' on' : ''}">${d.big ? '' : escH(d.cap)}</span></div>`;
   }).join('')}</div>`);
-  $('#ov').appendChild(el);
+  el._geo = geo; $('#ov').appendChild(el);
 }
 function renderFallback() {
   const p = G.p0, why = G.geo && G.geo.reason === 'labels' ? 'Labels don’t fit the wheel at this text size' : 'Not enough room for the wheel';

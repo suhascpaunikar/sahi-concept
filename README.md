@@ -19,6 +19,7 @@ Feature concepts for Sahi, each with a PRD and a clickable prototype: **Mirror**
 | `prototype/payoff/src/` | Sources for the Payoff prototype; `sh prototype/payoff/src/build.sh` rebuilds `index.html` |
 | `prototype/payoff/data/` | Real 1-minute Kite data the prototype runs on (CSVs and handover note); `python3 prototype/payoff/data/build_data.py` regenerates `src/data.js` |
 | `docs/sahi-payoff-mobile-prd.md` | Payoff (Mobile) PRD v1.0: Payoff on the mobile Option Scalper, opened from the Quick Action Wheel's seventh slot, which was Clean View |
+| `docs/sahi-payoff-mobile-ux-research.md` | UX research note v1.1 on mobile Payoff: prototype measurements, other apps, a review of the concept, Payoff position by position, and 21 suggestions with before/after mock-ups (images in `docs/img/payoff-mobile-ux/`) |
 | `prototype/payoff-mobile/index.html` | Clickable phone prototype of the mobile Payoff PRD, built on the placement study's Option Scalper rebuild, with all six wheel placements. One self-contained file, no build step |
 | `prototype/payoff-mobile/src/` and `build.py` | Sources for the mobile Payoff prototype; `python3 prototype/payoff-mobile/build.py` rebuilds `index.html` with the desktop engine and data from `prototype/payoff/src/` |
 
@@ -86,6 +87,16 @@ Payoff on the phone: on the mobile Option Scalper, the Quick Action Wheel's seve
 - **The opening view scrolls** so the rest of the session is in view, keeping each chart's timeframe and candle width, because a phone chart's right margin is only about six candles wide.
 
 Example values in the PRD come from the desktop research model (Nifty 25,000, IV 12%); the prototype runs on real Kite data near 22,665, so its numbers differ.
+
+### UX research and suggestions
+
+`docs/sahi-payoff-mobile-ux-research.md` (v1.1) reviews PRD v1.0 and the prototype before any design work. It is desk research and measurement; no trader has tested Payoff yet.
+
+- **Measured in the prototype:** a breakeven line is on screen in only 11 of 33 opening views; one 5-minute candle is 4.3 px wide, so time is hard to set with a thumb; the chips and close button sit 13% down the screen.
+- **Other apps:** Robinhood, Dhan, moomoo, OptionStrat and Groww set time with its own slider or row, and most show amounts as well as zones.
+- **Review of the concept:** how the wheel and Payoff hold up as an interaction, how new they are, whether traders need them, and the pro-tools and games reasoning.
+- **Payoff by position:** what each kind of position needs from Payoff, with an expiry-day example (an at-the-money call bought at 1:00 pm needs +20 points by 2:00 pm to break even).
+- **21 suggestions (UX-01 to UX-21),** with before/after mock-ups of the first ones, a usability test plan and the PRD changes each would need. None is built.
 
 ### Run the mobile Payoff prototype
 
