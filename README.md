@@ -100,6 +100,12 @@ Example values in the PRD come from the desktop research model (Nifty 25,000, IV
 
 ### Run the mobile Payoff prototype
 
+The prototype now includes the first three suggestions from the research note. Add `&ux=a` to a link, or untick "Improved Payoff" in the demo controls, to see PRD v1.0 as first built.
+
+- **Breakevens in view (UX-01):** when Payoff opens, the index chart's price scale widens to show the nearest breakeven, and the loss side is shaded red. It stops widening when the candles would take less than 20% of the chart's height; a breakeven further out keeps an edge label with its distance, and tapping the label brings it into view. Closing Payoff puts the scale back.
+- **Plain readout (UX-02):** "If Nifty stays at 22,665 till 3:30 pm", the change from now ("−₹521 vs now · time decay"), "Needs Nifty above 22,677 (+12)" for a loss or before a buy, and "If IV moves: …" in place of "Range". The point sheet and the Payoff list use the same wording.
+- **A visible way in (UX-05):** a Payoff button in the index chart's header, named while a position is held and icon-only otherwise. The wheel and Quick actions still work, and the first-run tip points at the button.
+
 Open `prototype/payoff-mobile/index.html`. On a desktop you get the 412 × 915 phone with a panel beside it; on a phone the app fills the screen and the ⋮ button opens the same controls.
 
 - **Hold** the "5m" button on either chart, **slide** to Payoff and **release**. Hold again and release on Payoff (now "On") to turn it off, or tap × in the Payoff bar. Esc stands in for Android back.

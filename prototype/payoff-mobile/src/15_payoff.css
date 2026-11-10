@@ -132,3 +132,16 @@
 .lsheet .pdev .dbtn { height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid #2c2c31; background: #222; color: #fff; font-size: 12.5px; }
 .lsheet .pdev .dbtn.pri { background: #fff; color: #000; }
 .lsheet .pdev .dt { font-size: 13px; }
+
+/* Improved Payoff (UX research note v1.1) */
+.pobtn { position: relative; height: 24px; min-width: 24px; border-radius: 12px; background: #353535; color: #fff; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 0 5px; font-size: 13px; font-weight: 500; letter-spacing: -.1px; white-space: nowrap; }
+.pobtn::after { content: ""; position: absolute; inset: -12px -4px; }
+.pobtn span { display: none; }
+.pobtn.has { padding: 0 10px 0 8px; } .pobtn.has span { display: inline; }
+.pobtn.on { background: #fff; color: #000; }
+.app.ux-b .pread { background: #1e1e20; }
+.pread .rr .vsn, .plist .lf2 small .vsn, .b1 .b1r .vsn { font-weight: 600; }
+.pread .rr.rn, .b1 .b1r.rn { color: #f0b93a; }
+.pread .rr.ri { color: #b9b9be; }
+.plist .lf2 small .vsn { font-size: inherit; }
+.b1 .b1q { color: #b9b9be; }

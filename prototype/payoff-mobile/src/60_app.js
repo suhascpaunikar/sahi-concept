@@ -100,6 +100,7 @@ function bindCard(id) {
     if (mode === 'ptpend' && e.type === 'pointerup') openB1('point');
     if (mode === 'pending' && e.type === 'pointerup' && !moved) {
       if (c.draft && c.g) { const q = cardPt(p); placePoint(id, { t: xToTime(c.g, q.x), p: c.g.y2p(q.y) }); }
+      else if (id === 'idx' && PM.on && poPriced() && beEdgeHit(cardPt(p))) { fitPrice(true); Haptic.fire('open'); track('payoff_fit_breakeven', {}); redraw('idx'); renderPayoffUI(); }
       else if (id === 'idx' && PM.on && poPriced() && inFuture(cardPt(p))) { const pt = pointFromXY(cardPt(p)); if (pt) setPoint(pt, 'tap'); }
       else if (id === 'opt' && !(PM.on && PM.s3)) { if (S.order) closeOrderPanel(); else openOrderPanel(); }
     }
@@ -456,6 +457,7 @@ async function init() {
   if (SCEN[q.get('pos')]) PM.scenario = q.get('pos');
   if (q.get('product') === 'intraday') PM.product = 'INTRADAY';
   if (q.get('later') === '1') PM.later = true;
+  S.ux = q.get('ux') === 'a' ? 'a' : 'b';   // b: the improved Payoff (UX-01, UX-02, UX-05); a: PRD v1.0 as first built
   const qc = q.get('clock'); if (qc) { const m = /^(\d{1,2}):?(\d{2})$/.exec(qc); if (m) MK.mod = clamp(+m[1] * 60 + +m[2], 555, 960); }
   E.calibrate(MK.nowT());
   buildCards(); bindChrome(); bindPayoff(); buildDev();
@@ -486,6 +488,7 @@ function payoffDevHTML() {
     <label class="pdl">Clock<select data-pd="clock">${CLOCKS.map(([m, n]) => `<option value="${m}">${n}</option>`).join('')}</select></label>
     <div class="seg pseg" data-pd="pricing"><button data-v="live">Live</button><button data-v="delayed">Delayed</button><button data-v="offline">Offline</button><button data-v="unavailable">Unavailable</button></div>
     <div class="pdrow"><button class="dbtn pri" data-pa="toggle">Payoff on</button><button class="dbtn" data-pa="tip">Show the tip</button><button class="dbtn" data-pa="order">Order panel</button></div>
+    <label class="dt pdt">Improved Payoff: breakevens in view, plain readout, header button<input type="checkbox" data-pt="ux"></label>
     <label class="dt pdt">Later release: order actions in the point sheet<input type="checkbox" data-pt="later"></label>
     <label class="dt pdt">Orders fail (Later release)<input type="checkbox" data-pt="fail"></label>
     <div class="pnote">Real 1-minute Kite data for NIFTY 50 and the 19 Oct 22500 Call and Put up to 12:59 pm on Wed 14 Oct 2026; later times simulated, other contracts modelled.</div>`;
@@ -497,6 +500,7 @@ function syncPayoffDev() {
   $$('[data-pd="pricing"] button').forEach(b => b.classList.toggle('on', b.dataset.v === MK.pricing));
   $$('[data-pa="toggle"]').forEach(b => b.textContent = PM.on ? 'Payoff off' : 'Payoff on');
   $$('[data-pt="later"]').forEach(c => c.checked = PM.later);
+  $$('[data-pt="ux"]').forEach(c => c.checked = S.ux !== 'a');
   $$('[data-pt="fail"]').forEach(c => c.checked = PM.orderFail);
 }
 function bindPayoffDev(root, closeMenu) {
@@ -506,6 +510,7 @@ function bindPayoffDev(root, closeMenu) {
     else if (k === 'clock') { setClock(+e.target.value); track('demo_clock', { clock: +e.target.value }); }
     else if (tk === 'later') { PM.later = e.target.checked; store.set('later', PM.later); renderPayoffUI(); }
     else if (tk === 'fail') PM.orderFail = e.target.checked;
+    else if (tk === 'ux') { const on = PM.on; if (on) setPayoff(false, { source: 'demo' }); S.ux = e.target.checked ? 'b' : 'a'; renderPayoffUI(); if (on) setPayoff(true, { source: 'demo' }); track('demo_ux', { ux: S.ux }); }
     else return;
     syncPayoffDev();
   });
