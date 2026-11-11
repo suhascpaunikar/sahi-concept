@@ -452,6 +452,84 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
 .lsheet .pdev .dbtn.pri { background: #fff; color: #000; }
 .lsheet .pdev .dt { font-size: 13px; }
 
+/* Improved Payoff (UX research note v1.1) */
+.pobtn { position: relative; height: 24px; min-width: 24px; border-radius: 12px; background: #353535; color: #fff; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 0 5px; font-size: 13px; font-weight: 500; letter-spacing: -.1px; white-space: nowrap; }
+.pobtn::after { content: ""; position: absolute; inset: -12px -4px; }
+.pobtn span { display: none; }
+.pobtn.has { padding: 0 10px 0 8px; } .pobtn.has span { display: inline; }
+.pobtn.on { background: #fff; color: #000; }
+.app.ux-b .pread { background: #1e1e20; }
+.pread .rr .vsn, .plist .lf2 small .vsn, .b1 .b1r .vsn { font-weight: 600; }
+.pread .rr.rn, .b1 .b1r.rn { color: #f0b93a; }
+.pread .rr.ri { color: #b9b9be; }
+.plist .lf2 small .vsn { font-size: inherit; }
+.b1 .b1q { color: #b9b9be; }
+
+/* Seller-panel look: the payoff box (same wording and style as the seller panel's payoff-graph tooltip) */
+.pbox { box-sizing: border-box; padding: 8px 10px; border-radius: 8px; background: #1c1c1c; border: 1px solid #3a3a3a; color: #fff; font-size: min(calc(11px * var(--fs)), 16px); line-height: 1.45; white-space: nowrap; font-feature-settings: "tnum"; }
+.pread.pbox { min-width: 0; max-width: none !important; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
+.pbox .bx2 b { font-weight: 600; }
+.pbox .bx3 { margin-top: 6px; }
+.pbox .bx4 b { font-weight: 500; }
+.pbox .bx5 { margin-top: 4px; color: #f3c574; }
+.pbox .bx5 .asof { color: inherit; }
+.app.po-grey .pbox b, .app.po-grey .pbox .up, .app.po-grey .pbox .dn { color: #8d8d93 !important; }
+/* Seller-panel look: several positions */
+.plist.sp { border-radius: 16px 16px 0 0; }
+.sp .sph { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 12px 8px 4px 16px; }
+.sp .sph b { font-size: calc(17px * var(--fs)); font-weight: 500; letter-spacing: -.2px; }
+.sp .spx { width: 40px; height: 32px; display: grid; place-items: center; color: #e6e6e6; }
+.sp .spt { flex: none; display: flex; border-bottom: 1px solid #2e2e2e; }
+.sp .spt button { flex: 1; height: calc(40px * min(var(--fs), 1.3)); font-size: calc(16px * var(--fs)); color: #8d8d93; position: relative; }
+.sp .spt button.on { color: #fff; font-weight: 500; }
+.sp .spt button.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: #fff; }
+.sp .spb { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 16px; }
+.sp .spb.ana { overflow-y: auto; }
+.sp .spn { color: #b9b9be; font-size: calc(13px * var(--fs)); padding: 16px 0; }
+.sp .spr { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; }
+.sp .spr .ltitle { padding: 0; color: #fff; font-size: calc(13px * var(--fs)); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: #6b6b70; }
+.sp .lrows { margin: 0 -4px; padding: 0 4px; }
+.sp .spc { display: flex; flex-direction: column; align-items: stretch; gap: 0; width: 100%; min-height: 0; padding: 0 14px; margin-bottom: 8px; border-radius: 14px; background: #1f1f1f; text-align: left; }
+.sp .spc.sel { background: #2a2a2e; }
+.sp .spc .c1 { display: flex; align-items: center; gap: 12px; height: calc(34px * min(var(--fs), 1.3)); border-bottom: 1px solid #2e2e2e; font-size: calc(14px * var(--fs)); }
+.sp .spc .sd.b { color: #3fd297; font-weight: 500; } .sp .spc .sd.s { color: #f08379; font-weight: 500; }
+.sp .spc .ex { color: #fff; }
+.sp .spc .ltp { margin-left: auto; color: #e6e6e6; font-size: calc(13.5px * var(--fs)); font-feature-settings: "tnum"; }
+.sp .spc .ltp b { font-weight: 500; margin-left: 6px; color: #fff; }
+.sp .spc .c2 { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: calc(14px * var(--fs)); }
+.sp .spc .ty { min-width: 38px; color: #fff; }
+.sp .spc .pill { height: 34px; padding: 0 14px; border-radius: 18px; background: #2a2a2a; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: calc(15px * var(--fs)); font-weight: 500; font-feature-settings: "tnum"; }
+.sp .spc .pill.q { line-height: 1.05; } .sp .spc .pill.q b { font-weight: 500; } .sp .spc .pill.q small { font-size: calc(9.5px * var(--fs)); color: #8d8d93; font-weight: 400; }
+.sp .spc .lv { margin-left: auto; }
+.sp .spc .lv b { font-size: calc(15px * var(--fs)); }
+.sp .spstat { flex: none; display: flex; padding: 7px 4px; margin: 2px 0 8px; border-radius: 12px; background: #232323; }
+.sp .spstat span { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: calc(13px * var(--fs)); }
+.sp .spstat i { font-style: normal; color: #fff; }
+.sp .spstat b { font-weight: 400; font-feature-settings: "tnum"; }
+.sp .spf { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 16px calc(8px + var(--sab) / 2); border-top: 1px solid #2a2a2e; background: #171717; }
+.sp .spfl { display: flex; flex-direction: column; gap: 1px; font-size: calc(13px * var(--fs)); color: #fff; }
+.sp .spfl small { font-size: calc(11px * var(--fs)); color: #8d8d93; }
+.sp .spf .tot { font-size: calc(20px * var(--fs)); font-weight: 700; letter-spacing: -.3px; font-feature-settings: "tnum"; }
+.sp .spv { flex: none; display: flex; align-items: center; justify-content: space-between; width: 100%; height: calc(42px * min(var(--fs), 1.3)); border-bottom: 1px solid #2e2e2e; font-size: calc(15px * var(--fs)); font-weight: 500; color: #fff; text-align: left; }
+.sp .spchips { flex: none; display: flex; gap: 8px; padding: 10px 0 8px; }
+.sp .spchips button { height: 32px; padding: 0 14px; border-radius: 16px; border: 1px solid #3a3a3a; color: #9e9e9e; font-size: calc(14px * var(--fs)); display: flex; align-items: center; gap: 8px; }
+.sp .spchips button.on { border: 1.5px solid #fff; color: #fff; font-weight: 500; }
+.sp .spsum .spstat { margin: 2px 0 12px; }
+.sp .spg { display: grid; gap: 4px 8px; margin-bottom: 14px; }
+.sp .spg.g3 { grid-template-columns: 1fr 1fr 1fr; } .sp .spg.g4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.sp .spg div, .sp .spbe { display: flex; flex-direction: column; gap: 3px; }
+.sp .spg div:last-child { align-items: flex-end; } .sp .spg.g3 div:nth-child(2) { align-items: center; }
+.sp .spg i, .sp .spbe i { font-style: normal; color: #9e9e9e; font-size: calc(12.5px * var(--fs)); }
+.sp .spg b, .sp .spbe b { font-size: calc(15px * var(--fs)); font-weight: 500; font-feature-settings: "tnum"; }
+.sp .spbe { padding-bottom: 10px; }
+.sp .spbe.one { flex: none; flex-direction: row; align-items: baseline; gap: 10px; padding: 6px 0 10px; } .sp .spbe.one b { font-size: calc(13.5px * var(--fs)); }
+.sp .spleg { flex: none; display: flex; gap: 20px; font-size: calc(12px * var(--fs)); color: #fff; padding-bottom: 4px; }
+.sp .spleg span { display: flex; align-items: center; gap: 7px; }
+.sp .spleg i { width: 20px; height: 3px; border-radius: 2px; } .sp .spleg .l1 { background: #b3186d; } .sp .spleg .l2 { background: linear-gradient(90deg, #3fd297 50%, #f08379 50%); }
+.sp .spgw { flex: 1; min-height: 150px; position: relative; touch-action: none; cursor: crosshair; }
+.sp .spcv { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sp .spgt { position: absolute; pointer-events: none; z-index: 2; }
+
 </style>
 </head>
 <body>
@@ -1216,7 +1294,7 @@ function cardMarkup(id) {
   <div class="hd">
     <button class="sym" data-act="symbol"><span class="nm">${c.sym}</span><span class="ty">${c.ty}</span><svg class="ico chv" viewBox="0 0 12 12" stroke-width="1.5">${P.chev}</svg></button>
     <div class="pxl"><span class="ltp">${c.ltp.toFixed(2)}</span><span class="chg"></span></div>
-    <div class="hdr">${id === 'idx' ? `<button class="lnk" data-act="link" aria-label="Link timeframes" aria-pressed="false">${ic('link', 14.5, 2.1)}</button>` : ''}<button class="tfb" data-chart="${id}" aria-haspopup="dialog" aria-label="Timeframe ${c.tf}. Tap for chart menu"><span class="tfl">${c.tf}</span><i class="sep"></i><svg class="ico tfi" width="12.8" height="9.2" viewBox="0 0 12.8 9.2" stroke-width="1.15">${P.tfmenu}</svg></button></div>
+    <div class="hdr">${id === 'idx' ? `<button class="pobtn" aria-pressed="false" aria-label="Show payoff" hidden>${ic('payoff', 14, 2)}<span>Payoff</span></button><button class="lnk" data-act="link" aria-label="Link timeframes" aria-pressed="false">${ic('link', 14.5, 2.1)}</button>` : ''}<button class="tfb" data-chart="${id}" aria-haspopup="dialog" aria-label="Timeframe ${c.tf}. Tap for chart menu"><span class="tfl">${c.tf}</span><i class="sep"></i><svg class="ico tfi" width="12.8" height="9.2" viewBox="0 0 12.8 9.2" stroke-width="1.15">${P.tfmenu}</svg></button></div>
   </div>
   <div class="legend"></div>
   ${id === 'idx' ? `<div class="pbar" hidden><div class="pchips" role="group" aria-label="Look ahead to"></div><button class="pclose" aria-label="Close payoff">${ic('x', 16, 2.2)}</button></div><div class="pban" role="status" hidden></div><div class="pread" role="button" tabindex="0" hidden></div><button class="pedge" hidden></button><div class="phint" hidden></div><div class="pempty" hidden>Pick a contract on the option chart to see its payoff</div>` : `<button class="pchip" hidden></button><div class="pcard" hidden></div>`}
@@ -2341,8 +2419,48 @@ function slotRoots(b, T) {
 // sign of P&L at level S using the cached roots
 function signAt(r, S) { let s = r.signLow; for (const x of r.roots) if (S > x) s = -s; return s; }
 
+/* ---------- improved Payoff (UX research note v1.1): UX-01, UX-02, UX-05. ?ux=a turns it off ---------- */
+const uxB = () => S.ux !== 'a';
+// UX-01: widen the index chart's price scale so the nearest breakeven on each side of the current level,
+// at the point's time, is in view. It stops when the candles in view would take less than 20% of the pane's
+// height; a breakeven further out keeps its edge label, and tapping that label fits it anyway (full).
+function priceFit(full) {
+  if (!uxB() || !PM.on || !PM.pt || !poPriced()) return null;
+  const b = book(); if (!b.legs.length) return null;
+  const c = CH.idx, keep = c.ys; c.ys = PM.ys0 || null;
+  const g = geomOf('idx'); c.ys = keep;
+  const lo = g.y2p(g.pB), hi = g.y2p(g.pT), cap = full ? Infinity : Math.max(hi - lo, (g.hi - g.lo) / .2);
+  const r = slotRoots(b, PM.pt.T).roots, S0 = b.S0;
+  const dn = r.filter(x => x < S0).sort((a, z) => z - a)[0], up = r.filter(x => x > S0).sort((a, z) => a - z)[0];
+  const span = (a, z) => { let l = lo, h = hi; if (a != null && a < l) l = a; if (z != null && z > h) h = z; const pad = (h - l) * .1; if (l < lo) l -= pad; if (h > hi) h += pad; return { lo: l, hi: h }; };
+  const near = dn == null ? [null, up] : up == null ? [dn, null] : (S0 - dn <= up - S0 ? [dn, null] : [null, up]);
+  for (const [a, z] of [[dn, up], near]) { const s = span(a, z); if (s.hi - s.lo <= cap + 1e-6) return (s.lo < lo || s.hi > hi) ? s : null; }
+  return null;
+}
+function fitPrice(full) {
+  if (!uxB() || !PM.on) return;
+  const s = priceFit(full); CH.idx.ys = s || PM.ys0 || null;
+}
+// the edge label of an off-screen breakeven is a button (UX-01): q is in card coordinates
+function beEdgeHit(q) { return uxB() && (PM.beBtns || []).find(r => q.x >= r.x - 6 && q.x <= r.x + r.w + 6 && q.y >= r.y - 15 && q.y <= r.y + r.h + 15); }
+// UX-02: the readout says what the point means, how it compares with now, what moves the range and what the position needs
+const ptsTxt = n => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(Math.round(n))}`;
+function whenTxt(T, stay) { const { di, mod } = E.split(T), w = stay ? 'till' : 'at'; return di === E.TODAY ? `${w} ${E.clock(mod)}` : `${w} ${E.clock(mod)}, ${E.DAYS[di].label}`; }
+function plain(b, v) {
+  const stay = v.S === snap5(b.S0), hasOpt = b.legs.some(l => l.c.type !== 'FUT');
+  const o = { head: `${stay ? `If ${idxName()} stays at` : `If ${idxName()} is at`} ${lvl(v.S)} ${whenTxt(v.T, stay)}`, vs: '', iv: '', needs: '' };
+  if (b.pretrade) o.vs = `If you buy ${b.legs[0].qty} now at ${E.prem(b.legs[0].avg)}`;
+  else { const d = v.pnl - PF.pnl(b, b.S0, MK.nowT()); o.vs = `<b class="vsn ${pnlCls(d)}">${sgn(d)}</b> vs now${stay && hasOpt && Math.round(d) ? ' · time decay' : ''}`; }
+  if (!v.fixed) { const a = Math.round(v.lo), z = Math.round(v.hi), m = Math.round(v.pnl); o.iv = a === m && z === m ? '' : z === m ? `If IV moves: down to ${sgn(v.lo)}` : a === m ? `If IV moves: up to ${sgn(v.hi)}` : `If IV moves: ${sgn(v.lo)} to ${sgn(v.hi)}`; }
+  if (b.pretrade || Math.round(v.pnl) < 0) {
+    const r = slotRoots(b, v.T), x = r.roots.slice().sort((p, q) => Math.abs(p - b.S0) - Math.abs(q - b.S0))[0];
+    if (x != null) { const above = signAt(r, x + 1) > 0, lv2 = above ? Math.ceil(x) : Math.floor(x); o.needs = `Needs ${idxName()} ${above ? 'above' : 'below'} ${lvl(lv2)} (${ptsTxt(lv2 - b.S0)})`; }
+  }
+  return o;
+}
+
 /* ---------- drawing ---------- */
-const PO_COL = { be: '#f0b93a', pt: '#7f9bff', up: 'rgba(8,153,129,.16)', zone: 'rgba(255,255,255,.035)', strike: '#b0b6c3' };
+const PO_COL = { be: '#f0b93a', pt: '#7f9bff', up: 'rgba(8,153,129,.16)', dn: 'rgba(242,54,69,.11)', zone: 'rgba(255,255,255,.035)', strike: '#b0b6c3' };
 function payoffYRange(id, info) {
   if (!PM.on || id !== 'opt' || PM.s3 || !poPriced()) return null;
   const b = book(); if (!b.legs.length || b.legs.length > 1) return null;
@@ -2381,15 +2499,16 @@ function drawShading(ctx, g, b, nowX, endX) {
   const vis = visSlots(g, nowX, endX); if (!vis.length) return;
   const top = g.y2p(g.pT), bot = g.y2p(g.pB);
   ctx.save(); ctx.beginPath(); ctx.rect(nowX, g.pT, Math.min(endX, g.paneR) - nowX, g.pB - g.pT); ctx.clip();
-  const path = new Path2D();
+  const path = new Path2D(), loss = new Path2D();
   vis.forEach((i, k) => {
     const r = slotRoots(b, g.slotAt(i).T1);
     // each slot spans from its left edge to its right edge; the first one starts at Now
     const xa = k === 0 ? nowX : Math.round(g.xOf(i) - g.s / 2), xb = Math.round(g.xOf(i) + g.s / 2);
     const cuts = [bot, ...r.roots.filter(v => v > bot && v < top), top];
-    for (let q = 0; q < cuts.length - 1; q++) { const mid = (cuts[q] + cuts[q + 1]) / 2; if (signAt(r, mid) > 0) { const y1 = g.p2y(cuts[q + 1]), y0 = g.p2y(cuts[q]); path.rect(xa, y1, Math.max(0, xb - xa), y0 - y1); } }
+    for (let q = 0; q < cuts.length - 1; q++) { const mid = (cuts[q] + cuts[q + 1]) / 2, y1 = g.p2y(cuts[q + 1]), y0 = g.p2y(cuts[q]); (signAt(r, mid) > 0 ? path : loss).rect(xa, y1, Math.max(0, xb - xa), y0 - y1); }
   });
   ctx.fillStyle = PO_COL.up; ctx.fill(path, 'nonzero');
+  if (uxB()) { ctx.fillStyle = PO_COL.dn; ctx.fill(loss, 'nonzero'); }   // UX-01: the loss side is shaded too, lighter
   ctx.restore();
 }
 function payoffOver(id, ctx, g) {
@@ -2437,7 +2556,12 @@ function payoffOver(id, ctx, g) {
     const narrow = L.W < 380;
     inView.forEach(v => { const y = g.p2y(v), txt = `${narrow ? 'BE' : 'Breakeven'} ${lvl(v)}`, w = ctx.measureText(txt).width; const x = Math.max(4, xr - w - 6); ctx.fillStyle = 'rgba(23,23,23,.88)'; ctx.fillRect(x - 4, y - 9 * fs - 1, w + 8, 18 * fs); ctx.fillStyle = PO_COL.be; ctx.fillText(txt, x, y - 1); });
     const above = r.roots.filter(v => v >= top), below = r.roots.filter(v => v <= bot);
-    const arrow = (v, up) => { const txt = `${narrow ? 'BE' : 'Breakeven'} ${lvl(v)} ${up ? '↑' : '↓'}`, w = ctx.measureText(txt).width, x = Math.max(4, xr - w - 6), y = up ? g.pT + 30 * fs : g.pB - 10 * fs; ctx.fillStyle = 'rgba(23,23,23,.88)'; ctx.fillRect(x - 4, y - 9 * fs, w + 8, 18 * fs); ctx.fillStyle = PO_COL.be; ctx.fillText(txt, x, y); };
+    PM.beBtns = [];
+    const arrow = (v, up) => {
+      const dist = uxB() ? ` · ${ptsTxt(v - b.S0)}` : '', txt = `${narrow || uxB() ? 'BE' : 'Breakeven'} ${lvl(v)} ${up ? '↑' : '↓'}${dist}`, w = ctx.measureText(txt).width, x = Math.max(4, xr - w - 6), y = up ? g.pT + 30 * fs : g.pB - 10 * fs;
+      ctx.fillStyle = 'rgba(23,23,23,.88)'; ctx.fillRect(x - 4, y - 9 * fs, w + 8, 18 * fs); ctx.fillStyle = PO_COL.be; ctx.fillText(txt, x, y);
+      if (uxB()) { ctx.strokeStyle = 'rgba(240,185,58,.55)'; ctx.lineWidth = 1; ctx.strokeRect(x - 3.5, y - 9 * fs + .5, w + 7, 18 * fs - 1); PM.beBtns.push({ x: x - 4, y: y - 9 * fs, w: w + 8, h: 18 * fs }); }
+    };
     if (above.length) arrow(Math.min(...above), true);
     if (below.length) arrow(Math.max(...below), false);
     // Profit / Loss words in the biggest region of each sign at the right edge
@@ -2541,6 +2665,7 @@ function setPayoff(on, meta = {}) {
     if (!payoffAvailable()) { Haptic.fire('error'); toast('Payoff needs an index with options'); return; }
     closeOrderPanel(true);
     PM.on = true; PM.chip = null; PM.strike = null; PM.preAvg = null; PM.bannerClosed = false;
+    PM.ys0 = CH.idx.ys; PM.beBtns = [];
     PM.views = { idx: { ro: CH.idx.ro, spacing: CH.idx.spacing, tf: CH.idx.tf }, opt: { ro: CH.opt.ro, spacing: CH.opt.spacing, tf: CH.opt.tf } };
     PM.s3 = isS3(); PM.prevOpt = null;
     const b0 = book();
@@ -2568,10 +2693,11 @@ function setPayoff(on, meta = {}) {
   renderPayoffUI(); updateHeaders(); redraw(); syncDev && syncDev();
 }
 function animateRo(targets, ms = 250, done) {
-  const t0 = performance.now(), from = {}; for (const id in targets) from[id] = { ro: CH[id].ro, sp: CH[id].spacing };
+  const t0 = performance.now(), from = {};
+  for (const id in targets) { from[id] = { ro: CH[id].ro, sp: CH[id].spacing }; if (targets[id].ys) { const g = geomOf(id); from[id].ys = { hi: g.y2p(g.pT), lo: g.y2p(g.pB) }; } }
   const step = () => {
     const k = clamp((performance.now() - t0) / ms, 0, 1), e = 1 - Math.pow(1 - k, 3);
-    for (const id in targets) { const tg = targets[id]; if (tg.sp != null) CH[id].spacing = from[id].sp + (tg.sp - from[id].sp) * e; CH[id].ro = from[id].ro + (tg.ro - from[id].ro) * e; redraw(id); }
+    for (const id in targets) { const tg = targets[id]; if (tg.sp != null) CH[id].spacing = from[id].sp + (tg.sp - from[id].sp) * e; CH[id].ro = from[id].ro + (tg.ro - from[id].ro) * e; if (tg.ys) CH[id].ys = { hi: from[id].ys.hi + (tg.ys.hi - from[id].ys.hi) * e, lo: from[id].ys.lo + (tg.ys.lo - from[id].ys.lo) * e }; redraw(id); }
     if (k < 1) requestAnimationFrame(step); else done && done();
   };
   requestAnimationFrame(step);
@@ -2593,11 +2719,15 @@ function openView() {
   let T = Tend;
   if (endX > gi.paneR - 1) { const iMax = gi.n - 1 + Math.floor((gi.paneR - gi.s / 2 - xn1T) / gi.s); const sl = gi.slotAt(Math.min(iMax, gi.N - 1)); T = sl ? sl.T1 : Tend; }
   PM.pt = b.legs.length && poPriced() ? { T, S: snap5(b.S0) } : null;
+  // UX-01: fit the price scale for the view the chart is scrolling to, and ease into it
+  if (uxB()) { const ro0 = CH.idx.ro; CH.idx.ro = tgt.idx.ro; const s = priceFit(); CH.idx.ro = ro0; if (s) tgt.idx.ys = s; }
   animateRo(tgt, 250);
 }
 function restoreViews() {
   const v = PM.views; if (!v) return; const tgt = {};
   for (const id of CHART_IDS) if (CH[id].tf === v[id].tf) tgt[id] = { ro: v[id].ro, sp: v[id].spacing };
+  if (uxB() && CH.idx.tf === v.idx.tf) CH.idx.ys = PM.ys0 || null;   // UX-01: the price scale goes back too
+  PM.ys0 = null; PM.beBtns = [];
   PM.views = null; animateRo(tgt, 220);
 }
 // Horizon chips: fit from Now to the chip's time, Now at 10% and the time at 96% (FR-14)
@@ -2614,6 +2744,7 @@ function fitTo(T, chipKey) {
   animateRo(tgt, 260, () => {
     const g = geomOf('idx'), r = ptRange(g);
     if (PM.pt && r) { const i = ptSlot(g), x = g.xOf(i); if (x < 0 || x > g.paneR || i < r[0] || i > r[1]) { setPoint({ T: Math.min(T, g.slotAt(r[1]).T1), S: PM.pt.S }, 'chip'); } }
+    fitPrice(); redraw('idx');
     renderPayoffUI();
   });
   track('payoff_horizon_change', { chip: chipKey });
@@ -2669,6 +2800,7 @@ function bookChanged(opening) {
     if (!opening && b.legs.length && poPriced() && !PM.pt) PM.pt = { T: sessionEndT(b), S: snap5(b.S0) };
     if (!b.legs.length) PM.pt = null;
     if (PM.pt && g) { const r = ptRange(g); if (r) { const i = ptSlot(g); if (i < r[0] || i > r[1]) PM.pt = { T: g.slotAt(clamp(i, r[0], r[1])).T1, S: PM.pt.S }; } }
+    if (!opening) fitPrice();
   }
   renderPayoffUI(); updatePnlPill(); redraw();
 }
@@ -2748,6 +2880,10 @@ function renderPayoffUI() {
   const bar = $('.pbar', ic_), rd = $('.pread', ic_), edge = $('.pedge', ic_), hint = $('.phint', ic_), empty = $('.pempty', ic_);
   const chip = $('.pchip', oc), card = $('.pcard', oc), list = $('#plist');
   const hideAll = () => { [bar, rd, edge, hint, empty, chip, card].forEach(e => e.hidden = true); list.hidden = true; $('.pban', ic_).hidden = true; };
+  // UX-05: a visible way in, in the index chart's header. It carries its name while a position is held
+  const pb = $('.pobtn', ic_);
+  if (pb) { const held = PM.legs.some(l => l.c.und === 'NIFTY' && l.qty > 0); pb.hidden = !uxB() || !payoffAvailable(); pb.classList.toggle('on', PM.on); pb.classList.toggle('has', held || PM.on); pb.setAttribute('aria-pressed', PM.on); pb.setAttribute('aria-label', PM.on ? 'Hide payoff' : 'Show payoff'); }
+  app.classList.toggle('ux-b', uxB());
   if (!PM.on) { hideAll(); renderB1(); return; }
   const b = book(), g = CH.idx.g, fs = S.fs || 1;
   const r = L.cards.idx;
@@ -2777,12 +2913,15 @@ function renderPayoffUI() {
     else if (v.fixed) rng = '';
     else rng = `Range ${sgn(v.lo)} to ${sgn(v.hi)}`;
     const asOf = MK.pricing === 'delayed' || MK.pricing === 'offline' ? ` <span class="asof">as of ${asOfText(true)}</span>` : '';
-    html = `<div class="rt">${idxName()} ${lvl(v.S)} · ${ptTime(v.T)}</div><div class="rp"><span>${lead}</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div>${rng ? `<div class="rr">${rng}</div>` : ''}<div class="rf"><span class="mi" data-tip="model">Model estimate ${ic('info', 12, 2)}</span>${asOf}<span class="chev">${ic('chevR', 14, 2)}</span></div>`;
+    const px = uxB() ? plain(b, v) : null;
+    if (px && rng.startsWith('Range')) rng = px.iv;
+    html = `<div class="rt">${px ? px.head : `${idxName()} ${lvl(v.S)} · ${ptTime(v.T)}`}</div><div class="rp"><span>${lead}</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div>${px && px.vs ? `<div class="rr">${px.vs}</div>` : ''}${px && px.needs ? `<div class="rr rn">${px.needs}</div>` : ''}${rng ? `<div class="rr${px ? ' ri' : ''}">${rng}</div>` : ''}<div class="rf"><span class="mi" data-tip="model">Model estimate ${ic('info', 12, 2)}</span>${asOf}<span class="chev">${ic('chevR', 14, 2)}</span></div>`;
+    if (uxB()) html = payBoxHTML(b, v, asOf ? `<div class="bx5">${asOf}</div>` : '');
   } else if (b.legs.length && !PM.pt) html = `<div class="rt">Pricing your position…</div><div class="rp"><span>P&amp;L</span><b class="sk"></b></div>`;
   if (html && rd._h !== html) { rd.innerHTML = html; rd._h = html; }
-  rd.hidden = !html;
+  rd.hidden = !html; rd.classList.toggle('pbox', uxB() && !!v && !expiredBook(b));
   if (!rd.hidden && g) {
-    rd.style.maxWidth = Math.round(Math.min(g.paneR - 16, Math.max(220 * fs, g.paneR * (fs > 1.5 ? .7 : .62)))) + 'px';
+    rd.style.maxWidth = Math.round(Math.min(g.paneR - 16, Math.max((uxB() ? 236 : 220) * fs, g.paneR * (fs > 1.5 ? .7 : .62)))) + 'px';
     const w = rd.offsetWidth, h = rd.offsetHeight;
     let left = 8, top = g.pT + 6 + legendH + bannerH;
     const i = PM.pt ? ptSlot(g) : null, px = i != null ? g.xOf(i) : g.paneR, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
@@ -2829,7 +2968,9 @@ function renderPayoffUI() {
   }
   // S3: the Payoff list
   list.hidden = !PM.s3;
-  if (PM.s3) renderPayoffList(b, v);
+  if (!PM.s3) PM.pexp = false;
+  list.classList.toggle('sp', PM.s3 && uxB());
+  if (PM.s3) (uxB() ? renderSellerPanel : renderPayoffList)(b, v);
   renderB1();
 }
 function asOfText(short) {
@@ -2855,7 +2996,7 @@ function renderPayoffList(b, v) {
   const rows = [...b.legs.map(l => ({ l, d: PF.legDetail(l, S, T, b) })), ...b.settled.map(l => { const val = E.intrinsic(l.c, E.settleS(l.c)); return { l, d: { value: val, pnl: PF.legPnl(l, val), status: 'Settled', lo: val, hi: val, pnlLo: null } }; })];
   rows.sort((a, c) => a.l.c.expT - c.l.c.expT || (a.l.c.strike || 0) - (c.l.c.strike || 0));
   for (const x of rows) { const k = x.l.c.exp.key; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(x); }
-  const expiries = groups.size, title = PM.pt && poPriced() ? `${idxName()} ${lvl(S)} · ${ptTime(T)}` : 'Payoff now';
+  const expiries = groups.size, px = uxB() && v ? plain(b, v) : null, title = px ? px.head : PM.pt && poPriced() ? `${idxName()} ${lvl(S)} · ${ptTime(T)}` : 'Payoff now';
   const others = PM.others.length ? `<button class="ochip" data-tip="others">${PM.others.length} position${PM.others.length > 1 ? 's' : ''} on other charts</button>` : '';
   let body = '';
   for (const [k, xs] of groups) {
@@ -2870,9 +3011,9 @@ function renderPayoffList(b, v) {
       body += `<button class="lrow${PM.strike === l.id ? ' sel' : ''}${sq ? ' sq' : ''}" data-leg="${l.id}" aria-label="${side} ${l.qty}, ${name}, average ${E.prem(l.avg)}, value ${E.prem(d.value)}, P&L ${sgn(d.pnl)}, ${d.status}"><span class="lb ${l.side > 0 ? 'b' : 's'}">${l.side > 0 ? 'B' : 'S'}</span><span class="lt"><b>${name}</b><small>${side} ${l.qty} · avg ${E.prem(l.avg)} <i class="stc ${st}">${d.status}</i></small></span><span class="lv"><b class="${sq ? '' : pnlCls(d.pnl)}"${sq ? ' data-tip="sq"' : ''}>${sgn(d.pnl)}</b><small>${E.prem(d.value)}</small>${rng ? `<small class="lr">${rng}</small>` : ''}</span></button>`;
     }
   }
-  const total = v ? v.pnl : PF.pnl(b, S, T), rg = v && !v.fixed ? `<small>Range ${sgn(v.lo)} to ${sgn(v.hi)}</small>` : '';
+  const total = v ? v.pnl : PF.pnl(b, S, T), rg = px ? `<small>${[px.vs, px.needs, px.iv].filter(Boolean).join(' · ')}</small>` : v && !v.fixed ? `<small>Range ${sgn(v.lo)} to ${sgn(v.hi)}</small>` : '';
   const mx = PF.maxAtExpiry({ ...b, S0: b.S0 });
-  const flat = v ? `<div class="lf3">If ${idxName()} stays at ${lvl(v.flatS)}: <b class="${pnlCls(v.flat)}">${sgn(v.flat)}</b></div>` : '';
+  const flat = v && !(px && v.S === v.flatS) ? `<div class="lf3">If ${idxName()} stays at ${lvl(v.flatS)}: <b class="${pnlCls(v.flat)}">${sgn(v.flat)}</b></div>` : '';
   const foot = `${PM.realised ? `<div class="lf1">Realised today <b class="${pnlCls(PM.realised)}">${sgn(PM.realised)}</b></div>` : ''}<div class="lf2"><span>Total open P&amp;L</span><b class="${pnlCls(total)}">${sgn(total)}</b>${rg}</div>${flat}${mx ? `<div class="lf4">Max profit at expiry ${E.rupees(mx.maxProfit)} · Max loss at expiry ${E.rupees(Math.abs(mx.maxLoss))}</div>` : ''}<div class="lf5"><span class="mi" data-tip="model">Model estimate, not a forecast ${ic('info', 12, 2)}</span></div>`;
   const html = `<div class="lh"><b>Payoff · ${positionCount()} positions · ${expiries} expir${expiries > 1 ? 'ies' : 'y'}</b>${others}</div><button class="ltitle" data-a="b1">${title}${ic('chevR', 14, 2)}</button><div class="lrows">${body}</div><div class="lfoot">${foot}</div>`;
   if (el._h !== html) { const sc = $('.lrows', el) ? $('.lrows', el).scrollTop : 0; el.innerHTML = html; el._h = html; if ($('.lrows', el)) $('.lrows', el).scrollTop = sc; }
@@ -2911,9 +3052,12 @@ function renderB1() {
   const b = book(), v = pointVals(b); if (!v) return;
   const g = CH.idx.g, r = g ? ptRange(g) : null, i = g ? ptSlot(g) : null;
   const atFirst = r && i <= r[0], atLast = r && i >= r[1];
-  const rng = !PM.s3 && v.uncertain ? `<div class="b1u">Too uncertain to price. Time value left: ${E.prem(v.timeValue)}. Worth at expiry at this level: ${E.prem(v.worthAtExp)}</div>` : !PM.s3 && v.atExpiry ? `<div class="b1r">Worth ${E.prem(v.worth)} at expiry</div>` : v.fixed ? '' : `<div class="b1r">Range ${sgn(v.lo)} to ${sgn(v.hi)}</div>`;
+  let rng = !PM.s3 && v.uncertain ? `<div class="b1u">Too uncertain to price. Time value left: ${E.prem(v.timeValue)}. Worth at expiry at this level: ${E.prem(v.worthAtExp)}</div>` : !PM.s3 && v.atExpiry ? `<div class="b1r">Worth ${E.prem(v.worth)} at expiry</div>` : v.fixed ? '' : `<div class="b1r">Range ${sgn(v.lo)} to ${sgn(v.hi)}</div>`;
+  const px = uxB() ? plain(b, v) : null;
+  if (px && rng.includes('>Range ')) rng = px.iv ? `<div class="b1r">${px.iv}</div>` : '';
+  const extra = px ? `${px.vs ? `<div class="b1r">${px.vs}</div>` : ''}${px.needs ? `<div class="b1r rn">${px.needs}</div>` : ''}` : '';
   const prem = !PM.s3 && v.prem != null ? `<div class="b1r">Premium ${E.prem(v.prem)}${v.atExpiry || v.uncertain ? '' : ` (${E.prem(v.premLo)} to ${E.prem(v.premHi)})`}</div>` : '';
-  const flat = `<div class="b1r">If ${idxName()} stays at ${lvl(v.flatS)}: <b class="${pnlCls(v.flat)}">${sgn(v.flat)}</b></div>`;
+  const flat = px && v.S === v.flatS ? '' : `<div class="b1r">If ${idxName()} stays at ${lvl(v.flatS)}: <b class="${pnlCls(v.flat)}">${sgn(v.flat)}</b></div>`;
   const lead = b.pretrade ? '' : `<div class="b1p"><span>${PM.s3 ? 'Total P&amp;L' : 'P&amp;L'}</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div>`;
   const pre = b.pretrade && !PM.later ? `<p class="b1n">Not holding · priced as a buy of ${PM.lots * E.LOT} at ${E.prem(b.legs[0].avg)} (last price). Actions appear for positions you hold</p>` : '';
   const live = MK.pricing === 'live' || MK.pricing === 'offline' && false;
@@ -2921,7 +3065,7 @@ function renderB1() {
   const html = `<div class="b1grab"></div><div class="b1hd"><b class="b1t" tabindex="-1">Payoff at a point</b><button class="b1x" aria-label="Close">${ic('x', 18, 1.8)}</button></div>
     <div class="b1st"><span>${idxName()} level</span><button data-s="lv-" aria-label="Lower level 5 points">${ic('minus', 18, 2.2)}</button><b>${lvl(v.S)}</b><button data-s="lv+" aria-label="Raise level 5 points">${ic('plus', 18, 2.2)}</button></div>
     <div class="b1st"><span>Time</span><button data-s="t-" aria-label="One candle earlier"${atFirst ? ' disabled' : ''}>${ic('chevL', 18, 2.2)}</button><b>${ptTime(v.T)}</b><button data-s="t+" aria-label="One candle later"${atLast ? ' disabled' : ''}>${ic('chevR', 18, 2.2)}</button></div>
-    <div class="b1v" aria-live="polite">${lead}${rng}${prem}${flat}</div>
+    <div class="b1v" aria-live="polite">${px ? `<div class="b1r b1q">${px.head}</div>` : ''}${lead}${extra}${rng}${prem}${flat}</div>
     <div class="b1m"><span class="mi" data-tip="model">Model estimate, not a forecast ${ic('info', 12, 2)}</span></div>${pre}<div class="b1a${live ? '' : ' off'}">${acts}</div>${!live && acts ? '<p class="b1h">Prices aren’t live</p>' : ''}`;
   if (el._h !== html) { el.innerHTML = html; el._h = html; }
   const top = L.cards.opt.y - 6;
@@ -3027,10 +3171,10 @@ function marketOrder(side) {
 /* ---------- N1 Payoff introduction tip ---------- */
 function showPayoffTip(force) {
   if (!force && (PM.tipSeen || PM.on || $('.coach') || LAYERS.length)) return;
-  const tf = $('.tfb', CH.idx.el); if (!tf) return;
-  const q = rectIn(tf);
+  const pb = uxB() && $('.pobtn', CH.idx.el), tf = pb && !pb.hidden ? pb : $('.tfb', CH.idx.el); if (!tf) return;
+  const q = rectIn(tf), viaBtn = tf === pb;
   $$('.ptipn').forEach(x => x.remove());
-  const el = h(`<div class="ptipn" role="dialog" aria-label="New in your quick wheel"><div class="pdim"></div><div class="pring" style="left:${q.x - 4}px;top:${q.y - 4}px;width:${q.w + 8}px;height:${q.h + 8}px"></div><div class="pbub" style="top:${q.y + q.h + 12}px"><i class="parr" style="left:${q.x + q.w / 2 - 8}px"></i><div class="pbt"><span class="pic">${ic('payoff', 18, 1.9)}</span>New in your quick wheel: Payoff. Hold ${CH.idx.tf} and slide to Payoff to see your breakeven and P&amp;L at any Nifty level and time.</div><div class="pbb"><button data-n="got">Got it</button><button class="pri" data-n="show">Show me</button></div></div></div>`);
+  const el = h(`<div class="ptipn" role="dialog" aria-label="New in your quick wheel"><div class="pdim"></div><div class="pring" style="left:${q.x - 4}px;top:${q.y - 4}px;width:${q.w + 8}px;height:${q.h + 8}px"></div><div class="pbub" style="top:${q.y + q.h + 12}px"><i class="parr" style="left:${q.x + q.w / 2 - 8}px"></i><div class="pbt"><span class="pic">${ic('payoff', 18, 1.9)}</span>${viaBtn ? `New: Payoff. Tap here to see your breakeven and P&amp;L at any Nifty level and time. It is also in your quick wheel: hold ${CH.idx.tf} and slide to Payoff.` : `New in your quick wheel: Payoff. Hold ${CH.idx.tf} and slide to Payoff to see your breakeven and P&amp;L at any Nifty level and time.`}</div><div class="pbb"><button data-n="got">Got it</button><button class="pri" data-n="show">Show me</button></div></div></div>`);
   app.appendChild(el); track('payoff_tip_shown', {});
   const done = (how) => { el.remove(); PM.tipSeen = true; store.set('tipSeen', true); track('payoff_tip_action', { action: how }); };
   el.addEventListener('click', e => { const b = e.target.closest('[data-n]'); if (b) { done(b.dataset.n === 'show' ? 'show_me' : 'got_it'); if (b.dataset.n === 'show') setPayoff(true, { source: 'tip' }); return; } if (e.target.classList.contains('pdim')) done('outside'); });
@@ -3058,6 +3202,7 @@ function bindPayoff() {
   if (!$('#b1')) app.appendChild(h('<div class="b1" id="b1" role="dialog" aria-label="Payoff at a point" hidden></div>'));
   if (!$('#opanel')) app.appendChild(h('<div class="opanel" id="opanel" hidden></div>'));
   $('.pclose', ic_).addEventListener('click', () => setPayoff(false, { source: 'close_button' }));
+  $('.pobtn', ic_).addEventListener('click', () => setPayoff(!PM.on, { source: 'header_button', chart: 'idx' }));
   $('.pchips', ic_).addEventListener('click', e => { const b = e.target.closest('[data-chip]'); if (!b) return; fitTo(+b.dataset.t, b.dataset.chip); });
   const rd = $('.pread', ic_);
   rd.addEventListener('click', e => { if (e.target.closest('[data-tip]')) { showTip(e.target.closest('[data-tip]'), TIPS.model); return; } openB1('readout'); });
@@ -3073,6 +3218,7 @@ function bindPayoff() {
     const row = e.target.closest('[data-leg]'); if (!row) return;
     const id = +row.dataset.leg; PM.strike = PM.strike === id ? null : id; track('payoff_row_tap', {}); renderPayoffUI(); redraw('idx');
   });
+  bindSellerPanel();
   const b1 = $('#b1');
   let rep = 0, repT = 0;
   const stopRep = () => { clearTimeout(rep); clearInterval(repT); PM.stepBig = false; };
@@ -3106,6 +3252,200 @@ function bindPayoff() {
     if (PM.on) { setPayoff(false, { source: 'back' }); e.preventDefault(); }
   });
   setInterval(liveTick, 1000);
+}
+
+/* =========================================================================
+   Seller-panel look (from the Option Seller panel screenshots, 11 Nov 2026)
+   - payBoxHTML: the payoff box, worded and styled like the seller panel's payoff-graph tooltip
+   - renderSellerPanel: several positions (S3) in the seller panel's structure:
+     title, Positions | Analyse tabs, leg cards, Max Loss / Max Profit / POP bar,
+     Summary (premium, Greeks, breakeven) and Payoff graph (the point's time and Expiry date)
+   Used when the improved Payoff is on (uxB); ?ux=a keeps the first Payoff list and readout.
+   ========================================================================= */
+const kfmt = n => { const a = Math.abs(n), s = Math.round(n) > 0 ? '+' : Math.round(n) < 0 ? '−' : ''; return `${s}₹${a >= 1e5 ? (a / 1e5).toFixed(2) + 'L' : a >= 1000 ? (a / 1000).toFixed(2) + 'K' : Math.round(a)}`; };
+const pctTxt = p => `${p > 0.004 ? '+' : p < -0.004 ? '−' : ''}${Math.abs(p).toFixed(2)}%`;
+const pctCls = p => p > 0.004 ? 'up' : p < -0.004 ? 'dn' : '';
+// the expiry the "Expiry date" values use: the first one still ahead; none for an intraday-only book
+function payExpT(b) {
+  if (!b.legs.length || (!b.pretrade && b.legs.every(l => l.product === 'INTRADAY'))) return null;
+  const now = MK.nowT(), xs = b.legs.filter(l => l.c.type !== 'FUT' && l.product !== 'INTRADAY' && l.c.expT > now).map(l => l.c.expT);
+  const fx = b.legs.filter(l => l.c.type === 'FUT' && l.c.expT > now).map(l => l.c.expT);
+  return xs.length ? Math.min(...xs) : fx.length ? Math.min(...fx) : null;
+}
+function boxWhen(T) { const { di, mod } = E.split(T); return di === E.TODAY ? `Today, ${E.clock(mod)}` : `${E.DAYS[di].label}, ${E.clock(mod)}`; }
+// rows of the payoff box: the point's time, then the expiry date (one row when the point is at or past it)
+function payRows(b, v) {
+  const TE = payExpT(b);
+  if (TE == null || v.T > TE + 1e-6) return [[boxWhen(v.T), v.pnl]];
+  if (v.T >= TE - 1e-6) return [['Expiry date', v.pnl]];
+  return [[boxWhen(v.T), v.pnl], ['Expiry date', PF.pnl(b, v.S, TE)]];
+}
+function payBoxHTML(b, v, extra = '') {
+  const pct = (v.S - b.S0) / b.S0 * 100;
+  return `<div class="bx1">When price is at</div><div class="bx2"><b>${v.S.toFixed(2)}</b> <span class="${pctCls(pct)}">${pctTxt(pct)}</span></div><div class="bx3">Expected P&amp;L on</div>${payRows(b, v).map(([k, n]) => `<div class="bx4">${k}: <b class="${pnlCls(n)}">${kfmt(n)}</b></div>`).join('')}${extra}`;
+}
+
+/* ---------- numbers for the Summary ---------- */
+const ncdf = x => { const t = 1 / (1 + .2316419 * Math.abs(x)), d = .3989423 * Math.exp(-x * x / 2), p = d * t * (.3193815 + t * (-.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return x > 0 ? 1 - p : p; };
+function panelStats(b) {
+  const now = MK.nowT(), S0 = b.S0, key = `${PM.ver}|${Math.round(now)}|${Math.round(S0)}`;
+  if (PM.statC && PM.statC.key === key) return PM.statC;
+  const TE = payExpT(b) ?? PF.axisEnd(b), f = S => PF.pnl(b, S, TE), o = { key, TE };
+  // max profit and max loss at the expiry: open-ended when the payoff still slopes far above the market
+  const strikes = b.legs.filter(l => l.c.type !== 'FUT').map(l => l.c.strike), pts = [1, ...strikes, 2 * S0];
+  for (let S = S0 * .7; S <= S0 * 1.3; S += 25) pts.push(S);
+  const vals = pts.map(f), slope = f(2 * S0) - f(2 * S0 - 100);
+  // a payoff that still slopes far below the market (a sold or bought put on its own) counts as open-ended too
+  const low = f(S0 * .5) - f(S0 * .5 + 100);
+  o.maxP = slope > 1 || low > 1 ? Infinity : Math.max(...vals); o.maxL = slope < -1 || low < -1 ? -Infinity : Math.min(...vals);
+  // POP: the chance the book is in profit at that expiry, on a lognormal spread at the at-the-money IV
+  const tau = E.tauOf(TE, now), sd = E.baseIv() * Math.sqrt(tau);
+  if (sd < 1e-6) o.pop = f(S0) > 0 ? 100 : 0;
+  else { const cdf = x => ncdf((Math.log(x / S0) + sd * sd / 2) / sd); let p = 0, x0 = S0 * .5, c0 = cdf(x0); if (f(x0) > 0) p += c0; for (let x = x0 + 10; x <= S0 * 1.5; x += 10) { const c1 = cdf(x); if (f(x - 5) > 0) p += c1 - c0; c0 = c1; } if (f(S0 * 1.5) > 0) p += 1 - c0; o.pop = Math.round(p * 100); }
+  // position Greeks now: per index point, per session, per IV point
+  let dl = 0, th = 0, ga = 0, ve = 0;
+  for (const l of b.legs) {
+    const q = l.side * l.qty, c = l.c;
+    if (c.type === 'FUT') { dl += q; continue; }
+    if (c.expT <= now || (l.product === 'INTRADAY' && now >= PF.SQ_T)) continue;
+    const p0 = E.price(c, S0, now), up = E.price(c, S0 + 1, now), dn = E.price(c, S0 - 1, now);
+    dl += q * (up - dn) / 2; ga += q * (up - 2 * p0 + dn); th += q * (E.price(c, S0, Math.min(c.expT, now + E.SESSION)) - p0); ve += q * (E.price(c, S0, now, .01) - p0);
+  }
+  Object.assign(o, { delta: dl, theta: th, gamma: ga, vega: ve });
+  const opts = b.legs.filter(l => l.c.type !== 'FUT');
+  o.net = opts.reduce((a, l) => a + l.side * l.qty * l.avg, 0); o.unit = opts.length ? o.net / Math.max(...opts.map(l => l.qty)) : 0;
+  o.pnlNow = PF.pnl(b, S0, now);
+  PM.cache.delete(TE); o.be = slotRoots(b, TE).roots.slice();
+  return PM.statC = o;
+}
+const statBar = st => `<div class="spstat"><span><i>Max Loss</i><b class="dn">${st.maxL === -Infinity ? 'Unlimited' : E.rupees(Math.round(Math.abs(Math.min(0, st.maxL))))}</b></span><span><i>Max Profit</i><b class="up">${st.maxP === Infinity ? 'Unlimited' : E.rupees(Math.round(Math.max(0, st.maxP)))}</b></span><span><i>POP</i><b>${st.pop}%</b></span></div>`;
+const beTxt = (st, b) => st.be.length ? st.be.map(x => `${x.toFixed(2)} (${pctTxt((x - b.S0) / b.S0 * 100)})`).join('  ·  ') : 'None in range';
+const SP_IC = { min: '<path d="M14.5 3.5v6h6M9.5 20.5v-6h-6"/>', max: '<path d="M20.5 9.5v-6h-6M3.5 14.5v6h6"/>', ok: '<path d="m5 12.5 4.5 4.5L19 7.5"/>' };
+const spIc = (k, s = 16, w = 2) => `<svg class="ico" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SP_IC[k]}</svg>`;
+
+/* ---------- the panel ---------- */
+function renderSellerPanel(b, v) {
+  const el = $('#plist'), r = L.cards.opt, top = PM.pexp ? L.cards.idx.y : r.y;
+  el.style.top = top + 'px'; el.style.height = (r.y + r.h - top) + 'px'; el.classList.add('sp');
+  const tab = PM.tab || 'pos', sub = PM.sub || 'sum', n = positionCount();
+  const T = PM.pt ? PM.pt.T : MK.nowT(), S = PM.pt ? PM.pt.S : b.S0;
+  let body = '', foot = '';
+  if (!v) body = `<p class="spn">Payoff can't load prices. Values are hidden until prices load.</p>`;
+  else if (tab === 'pos') {
+    const rows = [...b.legs.map(l => ({ l, d: PF.legDetail(l, S, T, b) })), ...b.settled.map(l => { const val = E.intrinsic(l.c, E.settleS(l.c)); return { l, d: { value: val, pnl: PF.legPnl(l, val), status: 'Settled' } }; })];
+    rows.sort((a, c) => a.l.c.expT - c.l.c.expT || (a.l.c.strike || 0) - (c.l.c.strike || 0));
+    const cards = rows.map(({ l, d }) => {
+      const fut = l.c.type === 'FUT', sq = d.status === 'Squared off', e = l.c.exp, lots = l.qty / E.LOT;
+      const ltp = fut ? b.S0 : d.status === 'Settled' || d.status === 'Expired' ? d.value : MK.optLtp(l.c);
+      const st = d.status === 'Live' ? '' : `<i class="stc ${d.status.toLowerCase().replace(/ /g, '')}">${d.status}</i>`;
+      const name = fut ? `${e.info.short} FUT` : `${e.info.short} ${l.c.strike} ${l.c.type}`;
+      return `<button class="lrow spc${PM.strike === l.id ? ' sel' : ''}${sq ? ' sq' : ''}" data-leg="${l.id}" aria-label="${l.side > 0 ? 'Buy' : 'Sell'} ${l.qty}, ${name}, average ${E.prem(l.avg)}, P&L at the point ${sgn(d.pnl)}, ${d.status}"><span class="c1"><b class="sd ${l.side > 0 ? 'b' : 's'}">${l.side > 0 ? 'Buy' : 'Sell'}</b><span class="ex">${e.info.short}</span>${st}<span class="ltp">LTP :<b>${fut ? lvl(ltp) : ltp.toFixed(2)}</b></span></span><span class="c2"><span class="ty">${fut ? 'Future' : l.c.type === 'CE' ? 'Call' : 'Put'}</span>${fut ? '' : `<span class="pill">${l.c.strike}</span>`}<span class="pill q"><b>${l.qty}</b><small>${lots} lot${lots === 1 ? '' : 's'}</small></span><span class="lv"><b class="${sq ? '' : pnlCls(d.pnl)}"${sq ? ' data-tip="sq"' : ''}>${sgn(d.pnl)}</b><small>avg ${E.prem(l.avg)}</small></span></span></button>`;
+    }).join('');
+    const others = PM.others.length ? `<button class="ochip" data-tip="others">${PM.others.length} on other charts</button>` : '';
+    body = `<div class="spr"><button class="ltitle" data-a="b1">P&amp;L at ${lvl(S)} · ${boxWhen(T)}${ic('chevR', 14, 2)}</button>${others}</div><div class="lrows">${cards}</div>${PM.pexp ? statBar(panelStats(b)) : ''}`;
+    foot = `<div class="spf"><div class="spfl"><span>Total open P&amp;L</span>${PM.realised ? `<small>Realised today <b class="${pnlCls(PM.realised)}">${sgn(PM.realised)}</b></small>` : ''}<small class="mi" data-tip="model">Model estimate, not a forecast ${ic('info', 12, 2)}</small></div><b class="tot ${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div>`;
+  } else {
+    const st = panelStats(b), paid = st.net >= 0;
+    const chips = `<div class="spchips" role="group" aria-label="Analyse"><button data-sub="sum" class="${sub === 'sum' ? 'on' : ''}" aria-pressed="${sub === 'sum'}">Summary${sub === 'sum' ? spIc('ok', 14, 2.4) : ''}</button><button data-sub="graph" class="${sub === 'graph' ? 'on' : ''}" aria-pressed="${sub === 'graph'}">Payoff graph${sub === 'graph' ? spIc('ok', 14, 2.4) : ''}</button></div>`;
+    const view = `<button class="spv" data-tab="pos">View positions (${n})${ic('chevR', 16, 2)}</button>`;
+    if (sub === 'sum') {
+      body = `${view}${chips}<div class="spsum">${statBar(st)}
+        <div class="spg g3"><div><i>${paid ? 'You paid' : 'You received'}</i><b>${E.rupees(Math.round(Math.abs(st.net)))}</b></div><div><i>Open P&amp;L</i><b class="${pnlCls(st.pnlNow)}">${sgn(st.pnlNow)}</b></div><div><i>Strategy Price</i><b>${paid ? 'Paid' : 'Got'} ${E.prem(Math.abs(st.unit))}</b></div></div>
+        <div class="spg g4"><div><i>Delta</i><b>${st.delta.toFixed(2)}</b></div><div><i>Theta</i><b>${st.theta.toFixed(2).replace('-', '−')}</b></div><div><i>Gamma</i><b>${st.gamma.toFixed(4).replace('-', '−')}</b></div><div><i>Vega</i><b>${st.vega.toFixed(2).replace('-', '−')}</b></div></div>
+        <div class="spbe"><i>Breakeven</i><b>${beTxt(st, b)}</b></div></div>`;
+    } else {
+      const TE = payExpT(b), two = TE != null && T < TE - 1e-6;
+      body = `${view}${chips}<div class="spleg">${two || TE == null ? `<span><i class="l1"></i>${boxWhen(T)}</span>` : ''}${TE != null ? `<span><i class="l2"></i>Expiry date</span>` : ''}</div><div class="spgw" role="img" aria-label="Payoff graph: profit and loss against the ${idxName()} level"><canvas class="spcv"></canvas><div class="pbox spgt" hidden></div></div><div class="spbe one"><i>Breakeven</i><b>${beTxt(st, b)}</b></div>`;
+    }
+  }
+  const html = `<div class="sph"><b>NIFTY50 positions</b><button class="spx" data-a="exp" aria-label="${PM.pexp ? 'Make the panel smaller' : 'Make the panel larger'}">${spIc(PM.pexp ? 'min' : 'max', 18, 1.8)}</button></div>
+    <div class="spt" role="tablist"><button role="tab" data-tab="pos" aria-selected="${tab === 'pos'}" class="${tab === 'pos' ? 'on' : ''}">Positions</button><button role="tab" data-tab="ana" aria-selected="${tab === 'ana'}" class="${tab === 'ana' ? 'on' : ''}">Analyse</button></div>
+    <div class="spb ${tab}">${body}</div>${foot}`;
+  if (el._h !== html) { const sc = $('.lrows', el) ? $('.lrows', el).scrollTop : 0; el.innerHTML = html; el._h = html; if ($('.lrows', el)) $('.lrows', el).scrollTop = sc; }
+  if (v && tab === 'ana' && sub === 'graph') drawPayGraph(el, b, v);
+}
+
+/* ---------- Payoff graph: P&L against the index level, at the point's time and at the expiry ---------- */
+function niceStep(span, n) { const raw = span / n, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; }
+const axK = v => Math.abs(v) < 1e-9 ? '0' : `${v > 0 ? '+' : '−'}${Math.abs(v) >= 1000 ? +(Math.abs(v) / 1000).toFixed(1) + 'K' : Math.round(Math.abs(v))}`;
+function graphRange(b, st) {
+  const S0 = b.S0, xs = [S0 * .978, S0 * 1.022, ...st.be, ...b.legs.filter(l => l.c.type !== 'FUT').map(l => l.c.strike)].filter(x => x > S0 * .92 && x < S0 * 1.08);
+  let lo = Math.min(...xs), hi = Math.max(...xs); const pad = (hi - lo) * .06; return [lo - pad, hi + pad];
+}
+function drawPayGraph(el, b, v) {
+  const wrap = $('.spgw', el), cv = $('.spcv', el); if (!wrap || !cv) return;
+  const W = wrap.clientWidth, H = wrap.clientHeight; if (W < 40 || H < 40) return;
+  const dpr = window.devicePixelRatio || 1; if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  const st = panelStats(b), TE = payExpT(b), Tp = v.T, two = TE != null && Tp < TE - 1e-6, fs = Math.min(S.fs || 1, 1.3);
+  const [lo, hi] = graphRange(b, st), N = 96;
+  const key = `${st.key}|${Tp}|${TE}|${lo}|${hi}`;
+  if (!PM.gC || PM.gC.key !== key) { const a = [], e = []; for (let i = 0; i <= N; i++) { const S = lo + (hi - lo) * i / N; a.push(PF.pnl(b, S, Tp)); e.push(TE != null ? PF.pnl(b, S, Math.max(TE, Tp)) : null); } PM.gC = { key, a, e }; }
+  const { a, e } = PM.gC, main = TE != null ? e : a;   // the filled line: the expiry, or the point's time for an intraday-only book
+  const all = two ? [...a, ...e] : main; let y0 = Math.min(0, ...all), y1 = Math.max(0, ...all); const yp = (y1 - y0) || 100; y0 -= yp * .24; y1 += yp * .26;
+  const mL = 44 * fs, mR = 8, mT = 28, mB = 22, pw = W - mL - mR, ph = H - mT - mB;
+  const X = S => mL + (S - lo) / (hi - lo) * pw, Y = p => mT + (y1 - p) / (y1 - y0) * ph, zy = Y(0);
+  PM.gGeo = { lo, hi, mL, pw };
+  ctx.font = `400 ${10.5 * fs}px InterQW, Inter, sans-serif`; ctx.textBaseline = 'middle';
+  // y axis
+  const step = niceStep(y1 - y0, 6); ctx.textAlign = 'right'; ctx.fillStyle = '#e6e6e6';
+  for (let t = Math.ceil(y0 / step) * step; t <= y1; t += step) { const y = Y(t); if (y < mT + 4 || y > H - mB - 2) continue; ctx.fillText(axK(t), mL - 6, y); }
+  ctx.save(); ctx.translate(9, mT + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.fillStyle = '#e6e6e6'; ctx.fillText('Profit/Loss', 0, 0); ctx.restore();
+  // x axis
+  const xs = niceStep(hi - lo, 4); ctx.textAlign = 'center'; ctx.fillStyle = '#e6e6e6';
+  for (let t = Math.ceil(lo / xs) * xs; t <= hi; t += xs) { const x = X(t); if (x < mL + 14 || x > W - mR - 14) continue; ctx.fillText(String(Math.round(t)), x, H - mB / 2 + 2); }
+  // the filled line: green above zero, red below
+  const path = new Path2D(); main.forEach((p, i) => { const x = mL + pw * i / N, y = Y(p); i ? path.lineTo(x, y) : path.moveTo(x, y); });
+  const area = new Path2D(path); area.lineTo(mL + pw, zy); area.lineTo(mL, zy); area.closePath();
+  for (const [top, hgt, fill, stroke] of [[mT, zy - mT, 'rgba(8,153,129,.30)', '#3fd297'], [zy, mT + ph - zy, 'rgba(242,54,69,.20)', '#f08379']]) {
+    ctx.save(); ctx.beginPath(); ctx.rect(mL, top, pw, Math.max(0, hgt)); ctx.clip(); ctx.fillStyle = fill; ctx.fill(area); ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.strokeStyle = stroke; ctx.stroke(path); ctx.restore();
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(mL, Math.round(zy) + .5); ctx.lineTo(mL + pw, Math.round(zy) + .5); ctx.stroke();
+  // the point's time
+  if (two) { ctx.save(); ctx.beginPath(); ctx.rect(mL, mT, pw, ph); ctx.clip(); ctx.beginPath(); a.forEach((p, i) => { const x = mL + pw * i / N, y = Y(p); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.strokeStyle = '#b3186d'; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.stroke(); ctx.restore(); }
+  // LTP
+  const tag = (txt, x, y, parts) => { ctx.font = `500 ${10.5 * fs}px InterQW, Inter, sans-serif`; const w = ctx.measureText(txt).width + 14, h = 19 * fs; x = clamp(x, 2, W - w - 2); ctx.fillStyle = '#171717'; ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(Math.round(x) + .5, Math.round(y) + .5, w, h, 9); ctx.fill(); ctx.stroke(); ctx.textAlign = 'left'; let cx = x + 7; for (const [t, col] of parts) { ctx.fillStyle = col; ctx.fillText(t, cx, y + h / 2 + 1); cx += ctx.measureText(t).width; } };
+  const lx = X(b.S0); ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.moveTo(Math.round(lx) + .5, mT - 4); ctx.lineTo(Math.round(lx) + .5, mT + ph); ctx.stroke(); ctx.restore();
+  const lt = `LTP ${b.S0.toFixed(2)}`; ctx.font = `500 ${10.5 * fs}px InterQW, Inter, sans-serif`; tag(lt, lx - (ctx.measureText(lt).width + 14) / 2, 2, [[lt, '#fff']]);
+  // max profit and max loss
+  const mp = st.maxP === Infinity ? 'Unlimited' : E.rupees(Math.round(Math.max(0, st.maxP))), ml = st.maxL === -Infinity ? 'Unlimited' : E.rupees(Math.round(Math.abs(Math.min(0, st.maxL))));
+  const iMax = main.indexOf(Math.max(...main)), iMin = main.indexOf(Math.min(...main));
+  ctx.font = `500 ${10.5 * fs}px InterQW, Inter, sans-serif`;
+  const wP = ctx.measureText(`Max profit: ${mp}`).width + 14, wL = ctx.measureText(`Max loss: ${ml}`).width + 14;
+  tag(`Max profit: ${mp}`, iMax >= N / 2 ? mL + pw - wP : mL + 2, mT + 2, [['Max profit: ', '#fff'], [mp, '#3fd297']]);
+  tag(`Max loss: ${ml}`, iMin > N / 2 ? mL + pw - wL : mL + 2, mT + ph - 19 * fs - 2, [['Max loss: ', '#fff'], [ml, '#f08379']]);
+  // the Payoff point: dashed line, a ring on the filled line, and the payoff box beside it
+  const tip = $('.spgt', el), inR = v.S >= lo && v.S <= hi;
+  tip.hidden = !inR || !PM.pexp;
+  if (inR) {
+    const px = X(v.S), py = Y(TE != null ? PF.pnl(b, v.S, Math.max(TE, Tp)) : v.pnl);
+    ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.moveTo(Math.round(px) + .5, mT); ctx.lineTo(Math.round(px) + .5, mT + ph); ctx.stroke(); ctx.restore();
+    ctx.beginPath(); ctx.arc(px, py, 5.5, 0, 7); ctx.fillStyle = '#171717'; ctx.fill(); ctx.lineWidth = 2.2; ctx.strokeStyle = '#fff'; ctx.stroke();
+    if (PM.pexp) { const bh = payBoxHTML(b, v); if (tip._h !== bh) { tip.innerHTML = bh; tip._h = bh; }
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let tx = px - tw - 12; if (tx < mL + 2) tx = px + 12; tx = clamp(tx, 2, W - tw - 2);
+    let ty = py - th - 12; if (ty < mT + 2) ty = Math.min(py + 12, H - mB - th - 2); ty = clamp(ty, 2, H - th - 2);
+    tip.style.left = tx + 'px'; tip.style.top = ty + 'px'; }
+  }
+}
+// touching the graph moves the point's level; its time stays
+function graphPointAt(e) {
+  const wrap = $('#plist .spgw'), g = PM.gGeo; if (!wrap || !g || !PM.pt) return;
+  const r = wrap.getBoundingClientRect(), k = r.width / wrap.clientWidth || 1, x = (e.clientX - r.left) / k;
+  const S = snap5(clamp(g.lo + (x - g.mL) / g.pw * (g.hi - g.lo), g.lo, g.hi)); if (S === PM.pt.S) return;
+  setPoint({ T: PM.pt.T, S }, 'drag');
+}
+function bindSellerPanel() {
+  const list = $('#plist'); let drag = null;
+  list.addEventListener('click', e => {
+    const t = e.target.closest('[data-tab]'); if (t) { PM.tab = t.dataset.tab; track('payoff_panel_tab', { tab: PM.tab }); renderPayoffUI(); return; }
+    const s = e.target.closest('[data-sub]'); if (s) { PM.sub = s.dataset.sub; track('payoff_panel_view', { view: PM.sub }); renderPayoffUI(); return; }
+    if (e.target.closest('[data-a="exp"]')) { PM.pexp = !PM.pexp; track('payoff_panel_size', { large: PM.pexp }); renderPayoffUI(); }
+  });
+  list.addEventListener('pointerdown', e => { if (!e.target.closest('.spgw')) return; drag = e.pointerId; try { e.target.closest('.spgw').setPointerCapture(e.pointerId); } catch {} graphPointAt(e); e.preventDefault(); });
+  list.addEventListener('pointermove', e => { if (drag === e.pointerId) graphPointAt(e); });
+  const end = e => { if (drag === e.pointerId) { drag = null; track('payoff_point_move', { method: 'graph' }); } };
+  list.addEventListener('pointerup', end); list.addEventListener('pointercancel', end);
 }
 
 /* =========================================================================
@@ -3210,6 +3550,7 @@ function bindCard(id) {
     if (mode === 'ptpend' && e.type === 'pointerup') openB1('point');
     if (mode === 'pending' && e.type === 'pointerup' && !moved) {
       if (c.draft && c.g) { const q = cardPt(p); placePoint(id, { t: xToTime(c.g, q.x), p: c.g.y2p(q.y) }); }
+      else if (id === 'idx' && PM.on && poPriced() && beEdgeHit(cardPt(p))) { fitPrice(true); Haptic.fire('open'); track('payoff_fit_breakeven', {}); redraw('idx'); renderPayoffUI(); }
       else if (id === 'idx' && PM.on && poPriced() && inFuture(cardPt(p))) { const pt = pointFromXY(cardPt(p)); if (pt) setPoint(pt, 'tap'); }
       else if (id === 'opt' && !(PM.on && PM.s3)) { if (S.order) closeOrderPanel(); else openOrderPanel(); }
     }
@@ -3566,6 +3907,7 @@ async function init() {
   if (SCEN[q.get('pos')]) PM.scenario = q.get('pos');
   if (q.get('product') === 'intraday') PM.product = 'INTRADAY';
   if (q.get('later') === '1') PM.later = true;
+  S.ux = q.get('ux') === 'a' ? 'a' : 'b';   // b: the improved Payoff (UX-01, UX-02, UX-05); a: PRD v1.0 as first built
   const qc = q.get('clock'); if (qc) { const m = /^(\d{1,2}):?(\d{2})$/.exec(qc); if (m) MK.mod = clamp(+m[1] * 60 + +m[2], 555, 960); }
   E.calibrate(MK.nowT());
   buildCards(); bindChrome(); bindPayoff(); buildDev();
@@ -3596,6 +3938,7 @@ function payoffDevHTML() {
     <label class="pdl">Clock<select data-pd="clock">${CLOCKS.map(([m, n]) => `<option value="${m}">${n}</option>`).join('')}</select></label>
     <div class="seg pseg" data-pd="pricing"><button data-v="live">Live</button><button data-v="delayed">Delayed</button><button data-v="offline">Offline</button><button data-v="unavailable">Unavailable</button></div>
     <div class="pdrow"><button class="dbtn pri" data-pa="toggle">Payoff on</button><button class="dbtn" data-pa="tip">Show the tip</button><button class="dbtn" data-pa="order">Order panel</button></div>
+    <label class="dt pdt">Improved Payoff: breakevens in view, plain readout, header button<input type="checkbox" data-pt="ux"></label>
     <label class="dt pdt">Later release: order actions in the point sheet<input type="checkbox" data-pt="later"></label>
     <label class="dt pdt">Orders fail (Later release)<input type="checkbox" data-pt="fail"></label>
     <div class="pnote">Real 1-minute Kite data for NIFTY 50 and the 19 Oct 22500 Call and Put up to 12:59 pm on Wed 14 Oct 2026; later times simulated, other contracts modelled.</div>`;
@@ -3607,6 +3950,7 @@ function syncPayoffDev() {
   $$('[data-pd="pricing"] button').forEach(b => b.classList.toggle('on', b.dataset.v === MK.pricing));
   $$('[data-pa="toggle"]').forEach(b => b.textContent = PM.on ? 'Payoff off' : 'Payoff on');
   $$('[data-pt="later"]').forEach(c => c.checked = PM.later);
+  $$('[data-pt="ux"]').forEach(c => c.checked = S.ux !== 'a');
   $$('[data-pt="fail"]').forEach(c => c.checked = PM.orderFail);
 }
 function bindPayoffDev(root, closeMenu) {
@@ -3616,6 +3960,7 @@ function bindPayoffDev(root, closeMenu) {
     else if (k === 'clock') { setClock(+e.target.value); track('demo_clock', { clock: +e.target.value }); }
     else if (tk === 'later') { PM.later = e.target.checked; store.set('later', PM.later); renderPayoffUI(); }
     else if (tk === 'fail') PM.orderFail = e.target.checked;
+    else if (tk === 'ux') { const on = PM.on; if (on) setPayoff(false, { source: 'demo' }); S.ux = e.target.checked ? 'b' : 'a'; renderPayoffUI(); if (on) setPayoff(true, { source: 'demo' }); track('demo_ux', { ux: S.ux }); }
     else return;
     syncPayoffDev();
   });
