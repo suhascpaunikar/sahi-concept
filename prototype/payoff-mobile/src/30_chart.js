@@ -43,12 +43,15 @@ function computeLayout() {
     app.style.setProperty('--sat', f.sat + 'px'); app.style.setProperty('--sab', f.sab + 'px');
   }
   const ordH = S.order ? 128 + Math.max(0, L.sab - 4) : 0;
-  const top = L.sat + 8 + 32 + 12.6, gap = 16.5, avail = L.H - top - gap - ordH;
+  // the improved Payoff puts its controls in a strip between the charts (UX-04); the old bar above the index chart goes
+  const strip = typeof PM !== 'undefined' && PM.on && typeof uxB === 'function' && uxB() ? 46 : 0;
+  const top = L.sat + 8 + 32 + 12.6, gap = 16.5, avail = L.H - top - gap - ordH - strip;
   L.ordH = ordH;
   const h1 = Math.round(avail * S.split * 10) / 10, h2 = avail - h1;
   L.cards.idx = { x: 4, y: top, w: L.W - 8, h: h1, padB: 0 };
   L.divY = top + h1; L.gap = gap;
-  L.cards.opt = { x: 4, y: top + h1 + gap, w: L.W - 8, h: h2, padB: S.order ? 0 : Math.max(0, L.sab - .7) };
+  L.strip = strip; L.stripY = top + h1 + gap - 3;
+  L.cards.opt = { x: 4, y: top + h1 + gap + strip, w: L.W - 8, h: h2, padB: S.order ? 0 : Math.max(0, L.sab - .7) };
   for (const id of CHART_IDS) { const c = L.cards[id]; c.paneT = 52 + (id === 'idx' && typeof PM !== 'undefined' && PM.on ? pbarH() : 0); c.paneB = c.h - 24 - c.padB; }
 }
 

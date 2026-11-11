@@ -530,6 +530,23 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
 .sp .spcv { position: absolute; inset: 0; width: 100%; height: 100%; }
 .sp .spgt { position: absolute; pointer-events: none; z-index: 2; }
 
+/* Payoff strip between the charts: names the mode, closes it, and holds the time rail (UX-03, UX-04) */
+.pstrip { position: absolute; left: 8px; right: 20px; height: 46px; z-index: 2; display: flex; align-items: center; gap: 12px; }
+.pspill { flex: none; position: relative; height: 34px; padding: 0 5px 0 13px; border-radius: 17px; background: #2a2a2e; color: #fff; display: flex; align-items: center; gap: 8px; font-size: calc(13px * min(var(--fs), 1.3)); font-weight: 600; }
+.pspill::after { content: ""; position: absolute; inset: -7px -4px; }
+.pspill span { width: 24px; height: 24px; border-radius: 12px; background: #3a3a3e; display: grid; place-items: center; }
+.prail { flex: 1; min-width: 0; position: relative; height: 46px; touch-action: none; cursor: pointer; outline: none; }
+.prail .trk, .prail .fill { position: absolute; left: 0; top: 13px; height: 4px; border-radius: 2px; }
+.prail .trk { right: 0; background: #3a3a3e; } .prail .fill { background: #7f9bff; }
+.prail .tks { position: absolute; inset: 0; }
+.prail .tk { position: absolute; top: 10px; width: 2px; height: 10px; margin-left: -1px; border-radius: 1px; background: #8d8d93; }
+.prail .tk.h { top: 12px; height: 6px; background: #6b6b70; } .prail .tk.exp { background: #f0b93a; height: 12px; top: 9px; } .prail .tk.day, .prail .tk.now { background: #c9c9ce; }
+.prail .lb { position: absolute; top: 26px; text-align: center; white-space: nowrap; font-size: calc(10.5px * min(var(--fs), 1.3)); color: #b9b9be; }
+.prail .lb.exp { color: #f0b93a; } .prail .lb.now { text-align: left; } .prail .lb:last-child { }
+.prail .th { position: absolute; top: 4px; width: 22px; height: 22px; margin-left: -11px; border-radius: 11px; background: #fff; box-shadow: 0 0 0 4px rgba(127,155,255,.32), 0 2px 6px rgba(0,0,0,.5); }
+.prail.drag .th, .prail:focus-visible .th { box-shadow: 0 0 0 7px rgba(127,155,255,.4), 0 2px 6px rgba(0,0,0,.5); }
+.pcard .rf2.ml { color: #d4d4d8; }
+
 </style>
 </head>
 <body>
@@ -1277,12 +1294,15 @@ function computeLayout() {
     app.style.setProperty('--sat', f.sat + 'px'); app.style.setProperty('--sab', f.sab + 'px');
   }
   const ordH = S.order ? 128 + Math.max(0, L.sab - 4) : 0;
-  const top = L.sat + 8 + 32 + 12.6, gap = 16.5, avail = L.H - top - gap - ordH;
+  // the improved Payoff puts its controls in a strip between the charts (UX-04); the old bar above the index chart goes
+  const strip = typeof PM !== 'undefined' && PM.on && typeof uxB === 'function' && uxB() ? 46 : 0;
+  const top = L.sat + 8 + 32 + 12.6, gap = 16.5, avail = L.H - top - gap - ordH - strip;
   L.ordH = ordH;
   const h1 = Math.round(avail * S.split * 10) / 10, h2 = avail - h1;
   L.cards.idx = { x: 4, y: top, w: L.W - 8, h: h1, padB: 0 };
   L.divY = top + h1; L.gap = gap;
-  L.cards.opt = { x: 4, y: top + h1 + gap, w: L.W - 8, h: h2, padB: S.order ? 0 : Math.max(0, L.sab - .7) };
+  L.strip = strip; L.stripY = top + h1 + gap - 3;
+  L.cards.opt = { x: 4, y: top + h1 + gap + strip, w: L.W - 8, h: h2, padB: S.order ? 0 : Math.max(0, L.sab - .7) };
   for (const id of CHART_IDS) { const c = L.cards[id]; c.paneT = 52 + (id === 'idx' && typeof PM !== 'undefined' && PM.on ? pbarH() : 0); c.paneB = c.h - 24 - c.padB; }
 }
 
@@ -2274,7 +2294,7 @@ function syncFocus() { $$('.card').forEach(c => c.classList.toggle('focus', S.v 
    IV moving down 2.5 or up 3 points (BR-09, open item).
    ========================================================================= */
 // The Payoff bar grows a little with the phone's text size (BR-35)
-const pbarH = () => Math.round(34 * Math.min(S.fs || 1, 1.3));
+const pbarH = () => S.ux !== 'a' ? 0 : Math.round(34 * Math.min(S.fs || 1, 1.3));   // the improved Payoff has no bar: see the strip in 76_rail.js
 const PM = {
   on: false, s3: false, pt: null, chip: null, strike: null, ver: 0, cache: new Map(), optCache: null,
   scenario: store.get('scenario', 'single'), product: 'CARRY', legs: [], others: [], realised: 0, lots: 1, preAvg: null,
@@ -2718,6 +2738,7 @@ function openView() {
   const xn1T = fNow * gi.paneR - nowOff, endX = xn1T + endOff;
   let T = Tend;
   if (endX > gi.paneR - 1) { const iMax = gi.n - 1 + Math.floor((gi.paneR - gi.s / 2 - xn1T) / gi.s); const sl = gi.slotAt(Math.min(iMax, gi.N - 1)); T = sl ? sl.T1 : Tend; }
+  const Th = horizonT(b, gi); if (Th != null) T = Th;   // UX-19
   PM.pt = b.legs.length && poPriced() ? { T, S: snap5(b.S0) } : null;
   // UX-01: fit the price scale for the view the chart is scrolling to, and ease into it
   if (uxB()) { const ro0 = CH.idx.ro; CH.idx.ro = tgt.idx.ro; const s = priceFit(); CH.idx.ro = ro0; if (s) tgt.idx.ys = s; }
@@ -2879,6 +2900,7 @@ function renderPayoffUI() {
   app.classList.toggle('po-grey', PM.on && (MK.pricing === 'delayed' || MK.pricing === 'offline'));
   const bar = $('.pbar', ic_), rd = $('.pread', ic_), edge = $('.pedge', ic_), hint = $('.phint', ic_), empty = $('.pempty', ic_);
   const chip = $('.pchip', oc), card = $('.pcard', oc), list = $('#plist');
+  renderRail();
   const hideAll = () => { [bar, rd, edge, hint, empty, chip, card].forEach(e => e.hidden = true); list.hidden = true; $('.pban', ic_).hidden = true; };
   // UX-05: a visible way in, in the index chart's header. It carries its name while a position is held
   const pb = $('.pobtn', ic_);
@@ -2887,7 +2909,7 @@ function renderPayoffUI() {
   if (!PM.on) { hideAll(); renderB1(); return; }
   const b = book(), g = CH.idx.g, fs = S.fs || 1;
   const r = L.cards.idx;
-  bar.hidden = false; bar.style.top = '52px'; bar.style.height = pbarH() + 'px'; bar.style.width = (g ? g.paneR : r.w - 60) + 'px'; app.style.setProperty('--pbh', pbarH() + 'px');
+  bar.hidden = uxB(); bar.style.top = '52px'; bar.style.height = pbarH() + 'px'; bar.style.width = (g ? g.paneR : r.w - 60) + 'px'; app.style.setProperty('--pbh', pbarH() + 'px');
   const lgs = $$('.legend .lg', ic_); lgs.forEach((x, k) => { if (!k) x.dataset.more = lgs.length > 1 ? ` +${lgs.length - 1}` : ''; });
   const chips = chipsOf(b);
   const chipsHTML = poEmpty(b) && !b.pretrade ? '' : chips.map(c => `<button data-chip="${c.k}" data-t="${c.T}" class="${PM.chip === c.k ? 'on' : ''}" aria-pressed="${PM.chip === c.k}">${c.t}</button>`).join('');
@@ -2932,7 +2954,7 @@ function renderPayoffUI() {
   // first-run hint
   hint.hidden = !(PM.hint && v && g);
   if (!hint.hidden) {
-    hint.textContent = 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
+    hint.textContent = uxB() ? 'Drag the ring up or down, or tap the shaded area, to see P&L at any level. Slide the bar below the chart to change the time.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
     const nowX = xAtT(g, MK.nowT()), zw = Math.max(150, g.paneR - nowX - 12); hint.style.width = Math.min(zw, 230) + 'px';
     const hw = Math.min(zw, 230), hh = hint.offsetHeight, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     const hl = clamp(nowX + 6, 6, g.paneR - hw - 6);
@@ -2955,9 +2977,10 @@ function renderPayoffUI() {
   if (!card.hidden) {
     const go = CH.opt.g, others = PM.others.length ? `<div class="rf2">${PM.others.length} position${PM.others.length > 1 ? 's' : ''} on other charts</div>` : '';
     const prem = v.prem != null ? `${E.prem(v.prem)}` : '';
+    const ml = uxB() ? `<div class="rf2 ml">${maxLossTxt(b, true)}</div>` : '';
     const ch = b.pretrade
-      ? `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>Premium</span><b>${prem}</b></div><div class="rr">${v.uncertain ? 'Too uncertain to price' : `${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${others}`
-      : `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>P&amp;L</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div><div class="rr">Premium ${prem}${v.atExpiry || v.uncertain ? '' : ` · ${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${others}`;
+      ? `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>Premium</span><b>${prem}</b></div><div class="rr">${v.uncertain ? 'Too uncertain to price' : `${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`
+      : `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>P&amp;L</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div><div class="rr">Premium ${prem}${v.atExpiry || v.uncertain ? '' : ` · ${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`;
     if (card._h !== ch) { card.innerHTML = ch; card._h = ch; }
     if (go) {
       const w = card.offsetWidth, h = card.offsetHeight; let left = 8, top = go.pT + 6;
@@ -3065,7 +3088,7 @@ function renderB1() {
   const html = `<div class="b1grab"></div><div class="b1hd"><b class="b1t" tabindex="-1">Payoff at a point</b><button class="b1x" aria-label="Close">${ic('x', 18, 1.8)}</button></div>
     <div class="b1st"><span>${idxName()} level</span><button data-s="lv-" aria-label="Lower level 5 points">${ic('minus', 18, 2.2)}</button><b>${lvl(v.S)}</b><button data-s="lv+" aria-label="Raise level 5 points">${ic('plus', 18, 2.2)}</button></div>
     <div class="b1st"><span>Time</span><button data-s="t-" aria-label="One candle earlier"${atFirst ? ' disabled' : ''}>${ic('chevL', 18, 2.2)}</button><b>${ptTime(v.T)}</b><button data-s="t+" aria-label="One candle later"${atLast ? ' disabled' : ''}>${ic('chevR', 18, 2.2)}</button></div>
-    <div class="b1v" aria-live="polite">${px ? `<div class="b1r b1q">${px.head}</div>` : ''}${lead}${extra}${rng}${prem}${flat}</div>
+    <div class="b1v" aria-live="polite">${px ? `<div class="b1r b1q">${px.head}</div>` : ''}${lead}${extra}${rng}${prem}${flat}${px ? `<div class="b1r">${maxLossTxt(b)}</div>` : ''}</div>
     <div class="b1m"><span class="mi" data-tip="model">Model estimate, not a forecast ${ic('info', 12, 2)}</span></div>${pre}<div class="b1a${live ? '' : ' off'}">${acts}</div>${!live && acts ? '<p class="b1h">Prices aren’t live</p>' : ''}`;
   if (el._h !== html) { el.innerHTML = html; el._h = html; }
   const top = L.cards.opt.y - 6;
@@ -3085,7 +3108,7 @@ function stepPoint(kind) {
   if (lv > g.y2p(g.pT + 6) || lv < g.y2p(g.pB - 6)) { const hi = Math.max(g.y2p(g.pT), lv + span * .08), lo = Math.min(g.y2p(g.pB), lv - span * .08); CH.idx.ys = { hi, lo }; }
   setPoint({ T, S: lv }, 'stepper');
   // keep the point in view horizontally
-  const x = g.xOf(i); if (x > g.paneR - 6) { CH.idx.ro -= (x - (g.paneR - 6)) / g.s + .5; } else if (x < 6) CH.idx.ro += (6 - x) / g.s + .5;
+  const x = g.xOf(i); if (x > g.paneR - 6) { CH.idx.ro += (x - (g.paneR - 6)) / g.s + .5; } else if (x < 6) CH.idx.ro -= (6 - x) / g.s + .5;
   redraw('idx'); return true;
 }
 
@@ -3218,7 +3241,7 @@ function bindPayoff() {
     const row = e.target.closest('[data-leg]'); if (!row) return;
     const id = +row.dataset.leg; PM.strike = PM.strike === id ? null : id; track('payoff_row_tap', {}); renderPayoffUI(); redraw('idx');
   });
-  bindSellerPanel();
+  bindSellerPanel(); bindRail();
   const b1 = $('#b1');
   let rep = 0, repT = 0;
   const stopRep = () => { clearTimeout(rep); clearInterval(repT); PM.stepBig = false; };
@@ -3449,6 +3472,118 @@ function bindSellerPanel() {
 }
 
 /* =========================================================================
+   Time rail (UX-03) in a strip between the charts (UX-04), and the most a
+   position can lose (UX-20). Used when the improved Payoff is on (uxB).
+   - The strip names the mode, closes it, and holds the rail.
+   - The rail sets the point's time: Now to the end of the future zone. Today's
+     session takes a third of it and each later session an equal share. It stops
+     at each hour, the 3:20 pm square-off, session ends and expiries.
+   - Dragging the point on the chart then sets only its level.
+   ========================================================================= */
+function railModel(b) {
+  const now = MK.nowT(), end = poAxisEnd(b);
+  if (end == null || end <= now + 1e-6 || !PM.pt) return null;
+  const key = `${PM.ver}|${Math.round(now)}|${end}`;
+  if (PM.railM && PM.railM.key === key) return PM.railM;
+  const SS = E.SESSION, di0 = Math.floor(now / SS + 1e-9), c0 = (di0 + 1) * SS, segs = [];
+  if (end <= c0 + 1e-6) segs.push({ a: now, z: end, x0: 0, x1: 1 });
+  else {
+    const rest = []; for (let a = c0; a < end - 1e-6; a += SS) rest.push([a, Math.min(end, a + SS)]);
+    const w0 = c0 - now > 1 ? 1 / 3 : 0, w = (1 - w0) / rest.length;
+    if (w0) segs.push({ a: now, z: c0, x0: 0, x1: w0 });
+    rest.forEach(([a, z], k) => segs.push({ a, z, x0: w0 + k * w, x1: w0 + (k + 1) * w }));
+  }
+  const f = T => { T = clamp(T, now, end); const s = segs.find(q => T <= q.z + 1e-9) || segs[segs.length - 1]; return s.x0 + (T - s.a) / (s.z - s.a) * (s.x1 - s.x0); };
+  const inv = x => { x = clamp(x, 0, 1); const s = segs.find(q => x <= q.x1 + 1e-9) || segs[segs.length - 1]; return s.a + (x - s.x0) / (s.x1 - s.x0) * (s.z - s.a); };
+  const map = new Map(), add = (T, t, kind, pri) => { if (T < now - 1e-6 || T > end + 1e-6) return; const k = Math.round(T * 100), o = map.get(k); if (!o || pri > o.pri) map.set(k, { T, t, kind, pri }); };
+  add(now, 'Now', 'now', 5);
+  for (let h = 10; h <= 15; h++) { const T = E.tOf(di0, h * 60); if (T > now + 10 && T < Math.min(c0, end) - 10) add(T, `${h > 12 ? h - 12 : h} ${h >= 12 ? 'pm' : 'am'}`, 'h', 1); }
+  if (!b.pretrade && b.legs.some(l => l.product === 'INTRADAY')) add(PF.SQ_T, '3:20', 'sq', 3);
+  for (let c = c0, k = 0; c <= end + 1e-6; c += SS, k++) { const d = E.DAYS[Math.round(c / SS) - 1]; add(c, k === 0 && di0 === E.TODAY ? '3:30' : d ? d.label.split(' ')[0] : '', 'day', k === 0 ? 4 : 2); }
+  for (const l of b.legs) if (l.c.expT > now && (l.product === 'CARRY' || b.pretrade)) add(l.c.expT, l.c.exp.info.short, 'exp', 6);
+  return PM.railM = { key, now, end, f, inv, stops: [...map.values()].sort((p, q) => p.T - q.T) };
+}
+function renderRail() {
+  const st = $('#pstrip'); if (!st) return;
+  const show = PM.on && uxB(); st.hidden = !show; if (!show) return;
+  st.style.top = L.stripY + 'px';
+  const b = book(), m = poPriced() ? railModel(b) : null, rail = $('.prail', st);
+  rail.hidden = !m; if (!m) return;
+  const W = rail.clientWidth, fs = Math.min(S.fs || 1, 1.3), k = `${m.key}|${W}|${fs}`;
+  if (rail._k !== k) {
+    // ticks at every stop; labels by priority, dropped when they would overlap
+    const placed = [], lab = [];
+    for (const s of m.stops.slice().sort((p, q) => q.pri - p.pri)) {
+      if (!s.t) continue; const x = m.f(s.T) * W, w = (s.t.length * 6.1 + 6) * fs, l = clamp(x - w / 2, 0, W - w);
+      if (placed.some(p => l < p[1] + 4 && l + w > p[0] - 4)) continue;
+      placed.push([l, l + w]); lab.push(`<span class="lb ${s.kind}" style="left:${l.toFixed(1)}px;width:${w.toFixed(1)}px">${s.t}</span>`);
+    }
+    $('.tks', rail).innerHTML = m.stops.map(s => `<i class="tk ${s.kind}" style="left:${(m.f(s.T) * W).toFixed(1)}px"></i>`).join('') + lab.join('');
+    rail._k = k;
+  }
+  const x = m.f(PM.pt.T) * W; $('.th', rail).style.left = x + 'px'; $('.fill', rail).style.width = x + 'px';
+  rail.setAttribute('aria-valuetext', ptTime(PM.pt.T));
+}
+// keep the point in view while the rail moves it; on release, bring Now back into view if it scrolled away
+function railView(done) {
+  const T = PM.pt.T, now = MK.nowT();
+  for (const id of PM.s3 ? ['idx'] : ['idx', 'opt']) {
+    const g = geomOf(id), x = xAtT(g, T), m = id === 'idx' ? 14 : 24;
+    if (x > g.paneR - m) CH[id].ro += (x - (g.paneR - m)) / g.s; else if (x < m) CH[id].ro -= (m - x) / g.s;
+  }
+  if (done) {
+    const g = geomOf('idx');
+    if (xAtT(g, now) < 0) { fitTo(Math.max(T, sessionEndT(book())), 'rail'); return; }
+    fitPrice();
+  }
+  redraw(); renderPayoffUI();
+}
+function railAt(e, done) {
+  const rail = $('#pstrip .prail'), m = PM.railM; if (!rail || !m || !PM.pt) return;
+  const r = rail.getBoundingClientRect(), W = rail.clientWidth, sc = r.width / W || 1, x = clamp((e.clientX - r.left) / sc, 0, W);
+  let T = m.inv(x / W), hit = null;
+  for (const s of m.stops) { const d = Math.abs(m.f(s.T) * W - x); if (d < 8 && (!hit || d < hit.d)) hit = { s, d }; }
+  if (hit) T = hit.s.T;
+  const g = geomOf('idx'), rg = ptRange(g); if (!rg) return;
+  const Ts = g.slotAt(clamp(slotOfT(g, T), rg[0], rg[1])).T1;
+  if (hit && hit.s.kind !== 'now' && PM.railStop !== hit.s.T) Haptic.fire('select');
+  PM.railStop = hit ? hit.s.T : null;
+  if (Ts !== PM.pt.T) setPoint({ T: Ts, S: PM.pt.S }, 'drag', { quiet: true });
+  railView(done);
+}
+function bindRail() {
+  if (!$('#pstrip')) app.appendChild(h(`<div class="pstrip" id="pstrip" hidden><button class="pspill" aria-label="Close payoff">Payoff<span>${ic('x', 13, 2.4)}</span></button><div class="prail" role="slider" tabindex="0" aria-label="Time of the Payoff point"><i class="trk"></i><i class="fill"></i><div class="tks"></div><i class="th"></i></div></div>`));
+  const st = $('#pstrip'), rail = $('.prail', st); let drag = null;
+  $('.pspill', st).addEventListener('click', () => setPayoff(false, { source: 'strip' }));
+  rail.addEventListener('pointerdown', e => { drag = e.pointerId; try { rail.setPointerCapture(e.pointerId); } catch {} rail.classList.add('drag'); PM.railStop = null; railAt(e, false); e.preventDefault(); });
+  rail.addEventListener('pointermove', e => { if (drag === e.pointerId) railAt(e, false); });
+  const end = e => { if (drag !== e.pointerId) return; drag = null; rail.classList.remove('drag'); railAt(e, true); track('payoff_point_move', { method: 'rail', sessions_ahead: +((PM.pt.T - MK.nowT()) / E.SESSION).toFixed(2) }); };
+  rail.addEventListener('pointerup', end); rail.addEventListener('pointercancel', end);
+  rail.addEventListener('keydown', e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); stepPoint(e.key === 'ArrowRight' ? 't+' : 't-'); railView(true); } });
+}
+
+/* ---------- UX-19: open the point at the trader's horizon ---------- */
+// 30 minutes ahead when every position is intraday or expires today; null keeps the session end
+function horizonT(b, g) {
+  if (!uxB() || !b.legs.length || MK.closed()) return null;
+  const now = MK.nowT(), today = l => l.product === 'INTRADAY' || (l.c.type !== 'FUT' && E.dayOfT(l.c.expT - 1e-6) === E.TODAY);
+  if (!b.legs.every(today)) return null;
+  const rg = ptRange(g); if (!rg) return null;
+  return g.slotAt(clamp(slotOfT(g, Math.min(now + 30, sessionEndT(b))), rg[0], rg[1])).T1;
+}
+
+/* ---------- UX-20: the most the position can lose ---------- */
+// short: one line for the option chart's point card; the point sheet gives the reason too
+function maxLossTxt(b, short) {
+  if (!b.legs.length) return '';
+  if (b.legs.length > 1) { const st = panelStats(b); return st.maxL === -Infinity ? 'Loss isn’t capped' : `Most you can lose: ${E.rupees(Math.round(Math.abs(Math.min(0, st.maxL))))}${short ? '' : ' at expiry'}`; }
+  const l = b.legs[0], c = l.c, at = short ? '' : ' at expiry';
+  if (c.type === 'FUT') return `Loss isn’t capped ${l.side > 0 ? 'below' : 'above'} ${lvl(l.avg)}`;
+  if (l.side > 0) return `Most you can lose: ${E.rupees(Math.round(l.avg * l.qty))}${short ? '' : `, the premium${b.pretrade ? '' : ' paid'}`}`;
+  return c.type === 'PE' ? `Loss isn’t capped below ${lvl(c.strike - l.avg)}${at}` : `Loss isn’t capped above ${lvl(c.strike + l.avg)}${at}`;
+}
+
+/* =========================================================================
    Chart gestures: pan, pinch, crosshair (long-press), axis scale, split
    ========================================================================= */
 function startDrag(e, el, drag) {
@@ -3533,7 +3668,7 @@ function bindCard(id) {
     }
     const p = appPt(e); P0.set(e.pointerId, p);
     if (mode === 'ptpend' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'ptdrag'; moved = true; }
-    if (mode === 'ptdrag') { const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'drag'); return; }
+    if (mode === 'ptdrag') { const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && uxB()) pt.T = PM.pt.T; if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'drag'); return; }
     if (mode === 'pending' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'pan'; moved = true; if (id === 'idx' && PM.on && PM.chip) { PM.chip = null; renderPayoffUI(); } }
     if (mode === 'pan') { c.ro = ro0 + (p.x - start.x) / c.spacing; redraw(id); }
     else if (mode === 'cross') {

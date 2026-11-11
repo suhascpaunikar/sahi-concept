@@ -83,7 +83,7 @@ function bindCard(id) {
     }
     const p = appPt(e); P0.set(e.pointerId, p);
     if (mode === 'ptpend' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'ptdrag'; moved = true; }
-    if (mode === 'ptdrag') { const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'drag'); return; }
+    if (mode === 'ptdrag') { const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && uxB()) pt.T = PM.pt.T; if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'drag'); return; }
     if (mode === 'pending' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'pan'; moved = true; if (id === 'idx' && PM.on && PM.chip) { PM.chip = null; renderPayoffUI(); } }
     if (mode === 'pan') { c.ro = ro0 + (p.x - start.x) / c.spacing; redraw(id); }
     else if (mode === 'cross') {

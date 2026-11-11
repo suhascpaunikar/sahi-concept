@@ -210,3 +210,20 @@
 .sp .spgw { flex: 1; min-height: 150px; position: relative; touch-action: none; cursor: crosshair; }
 .sp .spcv { position: absolute; inset: 0; width: 100%; height: 100%; }
 .sp .spgt { position: absolute; pointer-events: none; z-index: 2; }
+
+/* Payoff strip between the charts: names the mode, closes it, and holds the time rail (UX-03, UX-04) */
+.pstrip { position: absolute; left: 8px; right: 20px; height: 46px; z-index: 2; display: flex; align-items: center; gap: 12px; }
+.pspill { flex: none; position: relative; height: 34px; padding: 0 5px 0 13px; border-radius: 17px; background: #2a2a2e; color: #fff; display: flex; align-items: center; gap: 8px; font-size: calc(13px * min(var(--fs), 1.3)); font-weight: 600; }
+.pspill::after { content: ""; position: absolute; inset: -7px -4px; }
+.pspill span { width: 24px; height: 24px; border-radius: 12px; background: #3a3a3e; display: grid; place-items: center; }
+.prail { flex: 1; min-width: 0; position: relative; height: 46px; touch-action: none; cursor: pointer; outline: none; }
+.prail .trk, .prail .fill { position: absolute; left: 0; top: 13px; height: 4px; border-radius: 2px; }
+.prail .trk { right: 0; background: #3a3a3e; } .prail .fill { background: #7f9bff; }
+.prail .tks { position: absolute; inset: 0; }
+.prail .tk { position: absolute; top: 10px; width: 2px; height: 10px; margin-left: -1px; border-radius: 1px; background: #8d8d93; }
+.prail .tk.h { top: 12px; height: 6px; background: #6b6b70; } .prail .tk.exp { background: #f0b93a; height: 12px; top: 9px; } .prail .tk.day, .prail .tk.now { background: #c9c9ce; }
+.prail .lb { position: absolute; top: 26px; text-align: center; white-space: nowrap; font-size: calc(10.5px * min(var(--fs), 1.3)); color: #b9b9be; }
+.prail .lb.exp { color: #f0b93a; } .prail .lb.now { text-align: left; } .prail .lb:last-child { }
+.prail .th { position: absolute; top: 4px; width: 22px; height: 22px; margin-left: -11px; border-radius: 11px; background: #fff; box-shadow: 0 0 0 4px rgba(127,155,255,.32), 0 2px 6px rgba(0,0,0,.5); }
+.prail.drag .th, .prail:focus-visible .th { box-shadow: 0 0 0 7px rgba(127,155,255,.4), 0 2px 6px rgba(0,0,0,.5); }
+.pcard .rf2.ml { color: #d4d4d8; }

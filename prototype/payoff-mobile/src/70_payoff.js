@@ -8,7 +8,7 @@
    IV moving down 2.5 or up 3 points (BR-09, open item).
    ========================================================================= */
 // The Payoff bar grows a little with the phone's text size (BR-35)
-const pbarH = () => Math.round(34 * Math.min(S.fs || 1, 1.3));
+const pbarH = () => S.ux !== 'a' ? 0 : Math.round(34 * Math.min(S.fs || 1, 1.3));   // the improved Payoff has no bar: see the strip in 76_rail.js
 const PM = {
   on: false, s3: false, pt: null, chip: null, strike: null, ver: 0, cache: new Map(), optCache: null,
   scenario: store.get('scenario', 'single'), product: 'CARRY', legs: [], others: [], realised: 0, lots: 1, preAvg: null,
@@ -452,6 +452,7 @@ function openView() {
   const xn1T = fNow * gi.paneR - nowOff, endX = xn1T + endOff;
   let T = Tend;
   if (endX > gi.paneR - 1) { const iMax = gi.n - 1 + Math.floor((gi.paneR - gi.s / 2 - xn1T) / gi.s); const sl = gi.slotAt(Math.min(iMax, gi.N - 1)); T = sl ? sl.T1 : Tend; }
+  const Th = horizonT(b, gi); if (Th != null) T = Th;   // UX-19
   PM.pt = b.legs.length && poPriced() ? { T, S: snap5(b.S0) } : null;
   // UX-01: fit the price scale for the view the chart is scrolling to, and ease into it
   if (uxB()) { const ro0 = CH.idx.ro; CH.idx.ro = tgt.idx.ro; const s = priceFit(); CH.idx.ro = ro0; if (s) tgt.idx.ys = s; }
@@ -613,6 +614,7 @@ function renderPayoffUI() {
   app.classList.toggle('po-grey', PM.on && (MK.pricing === 'delayed' || MK.pricing === 'offline'));
   const bar = $('.pbar', ic_), rd = $('.pread', ic_), edge = $('.pedge', ic_), hint = $('.phint', ic_), empty = $('.pempty', ic_);
   const chip = $('.pchip', oc), card = $('.pcard', oc), list = $('#plist');
+  renderRail();
   const hideAll = () => { [bar, rd, edge, hint, empty, chip, card].forEach(e => e.hidden = true); list.hidden = true; $('.pban', ic_).hidden = true; };
   // UX-05: a visible way in, in the index chart's header. It carries its name while a position is held
   const pb = $('.pobtn', ic_);
@@ -621,7 +623,7 @@ function renderPayoffUI() {
   if (!PM.on) { hideAll(); renderB1(); return; }
   const b = book(), g = CH.idx.g, fs = S.fs || 1;
   const r = L.cards.idx;
-  bar.hidden = false; bar.style.top = '52px'; bar.style.height = pbarH() + 'px'; bar.style.width = (g ? g.paneR : r.w - 60) + 'px'; app.style.setProperty('--pbh', pbarH() + 'px');
+  bar.hidden = uxB(); bar.style.top = '52px'; bar.style.height = pbarH() + 'px'; bar.style.width = (g ? g.paneR : r.w - 60) + 'px'; app.style.setProperty('--pbh', pbarH() + 'px');
   const lgs = $$('.legend .lg', ic_); lgs.forEach((x, k) => { if (!k) x.dataset.more = lgs.length > 1 ? ` +${lgs.length - 1}` : ''; });
   const chips = chipsOf(b);
   const chipsHTML = poEmpty(b) && !b.pretrade ? '' : chips.map(c => `<button data-chip="${c.k}" data-t="${c.T}" class="${PM.chip === c.k ? 'on' : ''}" aria-pressed="${PM.chip === c.k}">${c.t}</button>`).join('');
@@ -666,7 +668,7 @@ function renderPayoffUI() {
   // first-run hint
   hint.hidden = !(PM.hint && v && g);
   if (!hint.hidden) {
-    hint.textContent = 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
+    hint.textContent = uxB() ? 'Drag the ring up or down, or tap the shaded area, to see P&L at any level. Slide the bar below the chart to change the time.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
     const nowX = xAtT(g, MK.nowT()), zw = Math.max(150, g.paneR - nowX - 12); hint.style.width = Math.min(zw, 230) + 'px';
     const hw = Math.min(zw, 230), hh = hint.offsetHeight, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     const hl = clamp(nowX + 6, 6, g.paneR - hw - 6);
@@ -689,9 +691,10 @@ function renderPayoffUI() {
   if (!card.hidden) {
     const go = CH.opt.g, others = PM.others.length ? `<div class="rf2">${PM.others.length} position${PM.others.length > 1 ? 's' : ''} on other charts</div>` : '';
     const prem = v.prem != null ? `${E.prem(v.prem)}` : '';
+    const ml = uxB() ? `<div class="rf2 ml">${maxLossTxt(b, true)}</div>` : '';
     const ch = b.pretrade
-      ? `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>Premium</span><b>${prem}</b></div><div class="rr">${v.uncertain ? 'Too uncertain to price' : `${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${others}`
-      : `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>P&amp;L</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div><div class="rr">Premium ${prem}${v.atExpiry || v.uncertain ? '' : ` · ${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${others}`;
+      ? `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>Premium</span><b>${prem}</b></div><div class="rr">${v.uncertain ? 'Too uncertain to price' : `${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`
+      : `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>P&amp;L</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div><div class="rr">Premium ${prem}${v.atExpiry || v.uncertain ? '' : ` · ${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`;
     if (card._h !== ch) { card.innerHTML = ch; card._h = ch; }
     if (go) {
       const w = card.offsetWidth, h = card.offsetHeight; let left = 8, top = go.pT + 6;
@@ -799,7 +802,7 @@ function renderB1() {
   const html = `<div class="b1grab"></div><div class="b1hd"><b class="b1t" tabindex="-1">Payoff at a point</b><button class="b1x" aria-label="Close">${ic('x', 18, 1.8)}</button></div>
     <div class="b1st"><span>${idxName()} level</span><button data-s="lv-" aria-label="Lower level 5 points">${ic('minus', 18, 2.2)}</button><b>${lvl(v.S)}</b><button data-s="lv+" aria-label="Raise level 5 points">${ic('plus', 18, 2.2)}</button></div>
     <div class="b1st"><span>Time</span><button data-s="t-" aria-label="One candle earlier"${atFirst ? ' disabled' : ''}>${ic('chevL', 18, 2.2)}</button><b>${ptTime(v.T)}</b><button data-s="t+" aria-label="One candle later"${atLast ? ' disabled' : ''}>${ic('chevR', 18, 2.2)}</button></div>
-    <div class="b1v" aria-live="polite">${px ? `<div class="b1r b1q">${px.head}</div>` : ''}${lead}${extra}${rng}${prem}${flat}</div>
+    <div class="b1v" aria-live="polite">${px ? `<div class="b1r b1q">${px.head}</div>` : ''}${lead}${extra}${rng}${prem}${flat}${px ? `<div class="b1r">${maxLossTxt(b)}</div>` : ''}</div>
     <div class="b1m"><span class="mi" data-tip="model">Model estimate, not a forecast ${ic('info', 12, 2)}</span></div>${pre}<div class="b1a${live ? '' : ' off'}">${acts}</div>${!live && acts ? '<p class="b1h">Prices aren’t live</p>' : ''}`;
   if (el._h !== html) { el.innerHTML = html; el._h = html; }
   const top = L.cards.opt.y - 6;
@@ -819,7 +822,7 @@ function stepPoint(kind) {
   if (lv > g.y2p(g.pT + 6) || lv < g.y2p(g.pB - 6)) { const hi = Math.max(g.y2p(g.pT), lv + span * .08), lo = Math.min(g.y2p(g.pB), lv - span * .08); CH.idx.ys = { hi, lo }; }
   setPoint({ T, S: lv }, 'stepper');
   // keep the point in view horizontally
-  const x = g.xOf(i); if (x > g.paneR - 6) { CH.idx.ro -= (x - (g.paneR - 6)) / g.s + .5; } else if (x < 6) CH.idx.ro += (6 - x) / g.s + .5;
+  const x = g.xOf(i); if (x > g.paneR - 6) { CH.idx.ro += (x - (g.paneR - 6)) / g.s + .5; } else if (x < 6) CH.idx.ro -= (6 - x) / g.s + .5;
   redraw('idx'); return true;
 }
 
@@ -952,7 +955,7 @@ function bindPayoff() {
     const row = e.target.closest('[data-leg]'); if (!row) return;
     const id = +row.dataset.leg; PM.strike = PM.strike === id ? null : id; track('payoff_row_tap', {}); renderPayoffUI(); redraw('idx');
   });
-  bindSellerPanel();
+  bindSellerPanel(); bindRail();
   const b1 = $('#b1');
   let rep = 0, repT = 0;
   const stopRep = () => { clearTimeout(rep); clearInterval(repT); PM.stepBig = false; };
