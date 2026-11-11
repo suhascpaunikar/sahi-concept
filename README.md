@@ -122,6 +122,16 @@ Two parts follow Sahi's Option Seller panel on mobile (screenshots shared on 11 
 - **The option chart's point card** names its range: "Premium ₹251.40", then "If IV moves: ₹231.17 to ₹277.33". The bar on the chart is that range, the premium if IV falls 2.5 points or rises 3; the dot is the premium with IV held.
 - **Several positions** open in a panel with the seller panel's structure: "NIFTY50 positions", **Positions | Analyse** tabs, leg cards (side, expiry, LTP, type, strike, quantity, P&L at the point), and under Analyse a **Summary** (Max Loss, Max Profit, POP, premium, Greeks, breakeven) and a **Payoff graph** with the point's time and the expiry date. Dragging on the graph moves the point's level, and the button in the panel's header makes it full height. Margin is not modelled, so the Summary shows Open P&L in that place.
 
+**Quick view** lets the trader choose what the wheel (the quick view panel) holds. Slot 7 stays Payoff.
+
+- **Two timeframes:** a "Quick view" section below Day in the chart menu (tap 5m) has two dropdowns, Timeframe 1 and Timeframe 2. Picking the other slot's timeframe swaps the two.
+- **Two drawings:** the Drawing tile opens a Drawing Tools sheet (toggles, then the drawings list, as in the Sahi app) with a flash icon on the right of each drawing.
+- **Two indicators or templates:** Add indicators has a flash icon left of the star, and My Templates has one left of the delete icon. A template takes one of the two indicator slots.
+- **Limit of two per group:** when a group is full the other flash icons are dimmed, and tapping one shows "Quick view already has 2 drawings. Remove one to add another." Removing a pick leaves an "Empty" slot in the wheel until another is added.
+- Picks are saved on the device. The prototype draws Trend Line, Horizontal Line, Rectangle and Fibonacci Retracement, and the EMA, SMA, VWAP, Bollinger Bands and Key Levels indicators; any other pick sits in the wheel and says it is not drawn here.
+
+The button beside Payoff in the index chart's header is the Sahi app's option chain button; the chain is not part of this prototype.
+
 Open `prototype/payoff-mobile/index.html`. On a desktop you get the 412 × 915 phone with a panel beside it; on a phone the app fills the screen and the ⋮ button opens the same controls.
 
 - **Hold** the "5m" button on either chart, **slide** to Payoff and **release**. Hold again and release on Payoff (now "On") to turn it off, or tap the Payoff button in the index chart's header. Esc stands in for Android back.

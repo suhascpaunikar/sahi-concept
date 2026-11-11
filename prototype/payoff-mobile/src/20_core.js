@@ -53,6 +53,7 @@ const P = {
   payoff: '<path d="M2.5 17h8.2L21.5 6.2"/><path d="M2.5 13.9c4.4 0 7.6-.9 10.6-3S18.4 6.5 21.5 4.6" stroke-dasharray="2.3 2.1"/>',
   minus: '<path d="M5 12h14"/>',
   chevL: '<path d="m15 18-6-6 6-6"/>',
+  flash: '<path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2z"/>',
   chevR: '<path d="m9 18 6-6-6-6"/>',
   info: '<circle cx="12" cy="12" r="9.2"/><path d="M12 16.2v-4.6"/><path d="M12 8.1h.01"/>',
   pin: '<path d="M12 17v5"/><path d="M9 10.8V5h6v5.8l2.4 3.2H6.6z"/>',

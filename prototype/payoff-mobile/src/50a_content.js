@@ -26,12 +26,14 @@ const LABELSETS = {
     trend: ['Trend line', 'Trend', 'Trend line'], fib: ['Fibonacci retracement', 'Fib', 'Fibonacci retracement'], vwap: ['Volume Weighted Average Price (VWAP)', 'VWAP', 'Volume Weighted Average Price (VWAP)'], ema: ['Exponential Moving Average (EMA) 200', 'EMA 200', 'Exponential Moving Average (EMA) 200'], payoff: ['Payoff', 'Payoff', 'Payoff: breakeven and P&L'] } },
 };
 let LS = LABELSETS.default;
-const act = id => { const [label, short, name] = LS.a[id]; return { label, short, name }; };
+// a slot the trader picked carries its own names (lab); the default slots take theirs from the label set
+const act = id => { const s = SLOTS.find(x => x.id === id), [label, short, name] = s && s.lab ? s.lab : LS.a[id]; return { label, short, name }; };
 const escH = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 // tool names read mid-sentence in lower case ("Draw trend line"), except Fib and acronyms
 const midS = s => /^(Fib|[A-Z]{2})/.test(s) ? s : s[0].toLowerCase() + s.slice(1);
 function describe(slot, id) {
   const c = CH[id];
+  if (slot.kind === 'empty') return { label: 'Empty', short: 'Empty', name: 'Empty slot', icon: 'flash', cap: '', status: 'na', verb: `Add a ${slot.what}`, action: `Empty slot. Tap the flash icon beside ${slot.what === 'drawing' ? 'a drawing' : 'an indicator or a template'} to add it here` };
   // While the Payoff list covers the option chart (S3), that chart's actions are unavailable, except Payoff (FR-28)
   if (id === 'opt' && slot.kind !== 'payoff' && PM.on && PM.s3) {
     const a = slot.kind === 'tf' ? { label: slot.tf, short: slot.tf, name: 'Timeframe ' + slot.tf } : act(slot.id);
@@ -46,6 +48,7 @@ function describe(slot, id) {
     const armed = c.draft && c.draft.tool === slot.tool;
     return { label: a.label, short: a.short, name: a.name, icon: slot.icon, cap: armed ? 'Armed' : '', status: 'ok', verb: `Draw ${midS(a.name)}`, action: `Draw a ${midS(a.name)} on ${c.short}` };
   }
+  if (slot.kind === 'tpl') return { label: a.label, short: a.short, name: a.name, icon: slot.icon, cap: '', status: 'ok', verb: `Apply ${midS(a.name)}`, action: `Apply ${midS(a.name)} to ${c.short}` };
   if (slot.kind === 'ind') {
     const on = !!c.ind[slot.ind], nm = a.name;
     return { label: a.label, short: a.short, name: nm, icon: slot.icon, cap: on ? 'On' : 'Off', capOn: on, status: 'ok', verb: `Turn ${on ? 'off' : 'on'} ${nm}`, action: `Turn ${on ? 'off' : 'on'} ${nm} · ${c.short}` };
@@ -59,8 +62,9 @@ function applySlot(i, id, meta = {}) {
   const slot = SLOTS[i], c = CH[id], d = describe(slot, id);
   if (d.status === 'current' || d.status === 'na') return false;
   if (slot.kind === 'tf') setTimeframe(id, slot.tf, { route: meta.route });
-  else if (slot.kind === 'tool') armTool(id, slot.tool, meta);
-  else if (slot.kind === 'ind') toggleIndicator(id, slot.ind, meta);
+  else if (slot.kind === 'tool') { if (DRAWABLE.has(slot.tool)) armTool(id, slot.tool, meta); else toast(`${d.name} is not drawn in this prototype`); }
+  else if (slot.kind === 'ind') { if (slot.ind) toggleIndicator(id, slot.ind, meta); else toast(`${d.name} is not drawn in this prototype`); }
+  else if (slot.kind === 'tpl') applyTemplate(id, slot.tpl);
   else setPayoff(!PM.on, { source: meta.route === 'q1' ? 'quick_actions' : 'wheel', chart: id });
   return true;
 }

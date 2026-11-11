@@ -317,6 +317,36 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
 .seg2 button { height: 30px; padding: 0 12px; border-radius: 15px; background: #262626; color: #e6e6e6; font-size: 13px; }
 .seg2 button.on { background: #fff; color: #000; font-weight: 500; }
 
+/* Quick view: flash icon, the chart menu's two timeframe dropdowns, Drawing Tools and My Templates sheets */
+.flb { flex: none; width: 36px; height: 40px; display: grid; place-items: center; color: #fff; -webkit-tap-highlight-color: transparent; }
+.flb.on { color: #f5c24b; } .flb.on .ico { fill: #f5c24b; }
+.flb.dis { opacity: .28; }
+.irow .flb { margin-right: 4px; }
+.sech.qvh span { display: flex; align-items: center; gap: 6px; } .sech.qvh .ico { color: #f5c24b; fill: #f5c24b; }
+.qvdd { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.qvdd label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #9e9e9e; }
+.qvdd select { height: 36px; border-radius: 18px; border: 1px solid #2f2f2f; background: #171717 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23b0b0b0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 4.5 3 3 3-3'/%3E%3C/svg%3E") no-repeat right 12px center; color: #fff; font: inherit; font-size: 14px; font-weight: 500; padding: 0 30px 0 14px; -webkit-appearance: none; appearance: none; }
+.qvn { margin-top: 10px; font-size: 12px; line-height: 1.4; color: #8a8a8a; }
+.dhr { flex: none; height: 1px; border: 0; margin: 16px 16px 0; background: #2c2c2c; }
+.dsheet .dlist, .tsheet .tlist { flex: 1; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: none; }
+.dsheet .dlist::-webkit-scrollbar, .tsheet .tlist::-webkit-scrollbar { display: none; }
+.dsheet .dlist .dhr { margin: 8px 16px 0; }
+.dsec { margin: 18px 16px 6px; font-size: 13px; color: #8a8a8a; }
+.drow { display: flex; align-items: center; width: 100%; min-height: 52px; padding: 0 12px 0 16px; box-sizing: border-box; font-size: 14px; font-weight: 500; text-align: left; }
+.drow .dtap { flex: 1; min-width: 0; min-height: 52px; display: flex; align-items: center; text-align: left; font: inherit; color: inherit; }
+.drow .di { flex: none; width: 22px; display: grid; place-items: center; margin-right: 14px; }
+.drow .dnm { flex: 1; }
+.drow .tog { margin-right: 4px; }
+.tsheet .th { flex: none; display: flex; align-items: center; gap: 6px; margin: 18px 12px 0; }
+.tsheet .th h3 { margin: 0; font-size: 18px; font-weight: 600; line-height: 24px; }
+.tback { width: 36px; height: 36px; display: grid; place-items: center; }
+.trow { display: flex; align-items: center; min-height: 60px; padding: 4px 10px 4px 16px; }
+.trow .ttap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; font-size: 14px; }
+.trow .ttap b { font-weight: 600; } .trow .ttap small { font-size: 12px; color: #aeaeae; }
+.tdel { flex: none; width: 36px; height: 40px; display: grid; place-items: center; }
+.tnone { margin: 24px 16px; font-size: 13px; color: #8a8a8a; line-height: 1.4; }
+.tsave { flex: none; margin: 8px 16px calc(22px + var(--sab)); font-size: 14px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+
 /* =========================================================================
    Payoff on mobile (Payoff mobile PRD v1.0)
    ========================================================================= */
@@ -1030,6 +1060,7 @@ const P = {
   payoff: '<path d="M2.5 17h8.2L21.5 6.2"/><path d="M2.5 13.9c4.4 0 7.6-.9 10.6-3S18.4 6.5 21.5 4.6" stroke-dasharray="2.3 2.1"/>',
   minus: '<path d="M5 12h14"/>',
   chevL: '<path d="m15 18-6-6 6-6"/>',
+  flash: '<path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2z"/>',
   chevR: '<path d="m9 18 6-6-6-6"/>',
   info: '<circle cx="12" cy="12" r="9.2"/><path d="M12 16.2v-4.6"/><path d="M12 8.1h.01"/>',
   pin: '<path d="M12 17v5"/><path d="M9 10.8V5h6v5.8l2.4 3.2H6.6z"/>',
@@ -1484,7 +1515,7 @@ function drawChart(id) {
       });
       const val = ser[0] && ser[0][Math.min(g.i1, raw.length - 1)]; const lb = $(`.legend [data-ind="${k}"]`, c.el); if (lb && val != null) lb.textContent = val.toFixed(2);
     }
-    for (const d of c.draws) drawShape(ctx, g, d, false);
+    if (!(S.draw && S.draw.hide)) for (const d of c.draws) drawShape(ctx, g, d, false);
   }
   if (c.draft && c.draft.pts.length) drawShape(ctx, g, { tool: c.draft.tool, a: c.draft.pts[0], b: c.draft.hover || c.draft.pts[0] }, true);
   if (typeof payoffOver === 'function') payoffOver(id, ctx, g);
@@ -1624,8 +1655,9 @@ function openPopover(id) {
       <button class="tile" data-t="draw">${ic('pen', 16, 2)}<span>Drawing</span></button>
       <button class="tile" data-t="set">${ic('gear', 16, 2)}<span>Settings</span></button>
     </div><hr>
-    <div class="scroll">${TF_GROUPS.map(([g, list], k) => `<div class="sech${k ? '' : ' btn'}"><span>${g}</span>${k ? '' : `<button class="addi">${ic('plus', 18, 1.75)}Add interval</button>`}</div><div class="chips">${tfChips(list)}</div>`).join('')}<div style="height:24px"></div></div>
+    <div class="scroll">${TF_GROUPS.map(([g, list], k) => `<div class="sech${k ? '' : ' btn'}"><span>${g}</span>${k ? '' : `<button class="addi">${ic('plus', 18, 1.75)}Add interval</button>`}</div><div class="chips">${tfChips(list)}</div>`).join('')}${quickTfHTML()}<div style="height:24px"></div></div>
   </div>`);
+  bindQuickTf(pop);
   tfb.classList.add('active');
   const layer = openLayer(pop, { label: 'Chart menu', onClose: () => tfb.classList.remove('active') });
   pop.addEventListener('click', e => {
@@ -1668,7 +1700,8 @@ function openSettings(id, tab = 0) {
 
 /* ---- Add indicators sheet (screenshot 3) ---- */
 const IND_LIST = [
-  { k: 'kl', n: 'Key Levels', only: true, cat: 'main' }, { n: 'Lite Zones & 34 EMA Band', by: 'Animesh Kumar', cat: 'main' }, { n: 'Pushkar Premium Trend', by: 'Pushkar Raj Thakur', cat: 'main' }, { n: 'RizeX Lite', by: 'Animesh Kumar', cat: 'main' },
+  { n: 'Expected Move', only: true, cat: 'main' }, { k: 'kl', n: 'Key Levels', only: true, cat: 'main' }, { n: 'Max Pain', only: true, cat: 'main' }, { n: 'OI Profile', only: true, cat: 'main' }, { n: 'OI Resistance', only: true, cat: 'main' }, { n: 'OI Support', only: true, cat: 'main' },
+  { n: 'Lite Zones & 34 EMA Band', by: 'Animesh Kumar', cat: 'main' }, { n: 'Pushkar Premium Trend', by: 'Pushkar Raj Thakur', cat: 'main' }, { n: 'RizeX Lite', by: 'Animesh Kumar', cat: 'main' }, { n: '52 Week High/Low (52W H/L)', cat: 'main' },
   { n: 'Accumulation/Distribution', cat: 'sub' }, { n: 'Adaptive SuperTrend (AS)', cat: 'main' }, { n: 'Advance/Decline Ratio', cat: 'sub' }, { n: 'Arnaud Legoux Moving Average (ALMA)', cat: 'main' }, { n: 'Aroon', cat: 'sub' },
   { n: 'Auto Fib Extension', cat: 'main' }, { n: 'Average Directional Index (ADX)', cat: 'sub' }, { n: 'Average True Range (ATR)', cat: 'sub' }, { n: 'Awesome Oscillator (AO)', cat: 'sub' }, { n: 'Balance of Power (BOP)', cat: 'sub' },
   { k: 'bb', n: 'Bollinger Bands (BB)', cat: 'main' }, { n: 'Bollinger Bands %B', cat: 'sub' }, { n: 'Chaikin Money Flow (CMF)', cat: 'sub' }, { n: 'Commodity Channel Index (CCI)', cat: 'sub' }, { n: 'Donchian Channels (DC)', cat: 'main' },
@@ -1681,7 +1714,7 @@ function openIndicators(id) {
   const sh = h(`<div class="sheet" style="top:${L.sat + 16}px">
     <div class="ih"><h3>Add indicators</h3><button class="tpl">${ic('grid', 16, 1.9)}My Templates</button><i class="vs"></i><button class="sh-x" aria-label="Close">${ic('x', 18, 1.7)}</button></div>
     <label class="srch">${ic('search', 18, 1.6)}<input type="search" placeholder="Search" aria-label="Search indicators"></label>
-    <div class="itabs" role="tablist"><button class="tab on" data-cat="all">All · 142</button><button class="tab" data-cat="main">Main chart · 65</button><button class="tab" data-cat="sub">Sub chart · 56</button><button class="tab" data-cat="ai">AI based · 21</button></div>
+    <div class="itabs" role="tablist"><button class="tab on" data-cat="all">All · 147</button><button class="tab" data-cat="main">Main chart · 66</button><button class="tab" data-cat="sub">Sub chart · 55</button><button class="tab" data-cat="ai">AI based · 21</button></div>
     <div class="ilist" role="list"></div>
   </div>`);
   let cat = 'all', q = '';
@@ -1690,7 +1723,7 @@ function openIndicators(id) {
     const rows = IND_LIST.filter(x => (cat === 'all' || x.cat === cat) && x.n.toLowerCase().includes(q));
     $('.ilist', sh).innerHTML = (cat === 'ai' ? '<div class="secl" style="margin:24px 16px">AI-based indicators are not part of this prototype.</div>' : '') + rows.map(x => {
       const on = x.k && c.ind[x.k];
-      return `<div class="irow${x.by ? ' two' : ''}${on ? ' on' : ''}" role="listitem"><button class="add" data-n="${x.n}" aria-label="${on ? 'Remove' : 'Add'} ${x.n}">${on ? ic('check', 9, 3.4) : ic('plus', 9, 3.4)}</button><div class="nm"><div class="t1">${x.n}${x.only ? '<span class="only">Only on SAHI</span>' : ''}</div>${x.by ? `<div class="t2">By ${x.by}</div>` : ''}</div>${on ? '<span class="onlbl">On chart</span>' : ''}<button class="stb" data-s="${x.n}" aria-label="Favourite ${x.n}"><svg class="ico st${stars[x.n] ? ' on' : ''}" width="16" height="16" viewBox="0 0 24 24" stroke-width="1.9">${P.star}</svg></button></div>`;
+      return `<div class="irow${x.by ? ' two' : ''}${on ? ' on' : ''}" role="listitem"><button class="add" data-n="${x.n}" aria-label="${on ? 'Remove' : 'Add'} ${x.n}">${on ? ic('check', 9, 3.4) : ic('plus', 9, 3.4)}</button><div class="nm"><div class="t1">${x.n}${x.only ? '<span class="only">Only on SAHI</span>' : ''}</div>${x.by ? `<div class="t2">By ${x.by}</div>` : ''}</div>${on ? '<span class="onlbl">On chart</span>' : ''}${flashBtn('inds', indKey(x), x.n)}<button class="stb" data-s="${x.n}" aria-label="Favourite ${x.n}"><svg class="ico st${stars[x.n] ? ' on' : ''}" width="16" height="16" viewBox="0 0 24 24" stroke-width="1.9">${P.star}</svg></button></div>`;
     }).join('');
   };
   render();
@@ -1698,7 +1731,8 @@ function openIndicators(id) {
   $('input', sh).addEventListener('input', e => { q = e.target.value.trim().toLowerCase(); render(); });
   sh.addEventListener('click', e => {
     if (e.target.closest('.sh-x')) return layer.close('close');
-    if (e.target.closest('.tpl')) return toast('Templates are not part of this prototype');
+    if (e.target.closest('.tpl')) return openTemplates(id);
+    if (flashClick(e, render)) return;
     const t = e.target.closest('.itabs .tab'); if (t) { cat = t.dataset.cat; $$('.itabs .tab', sh).forEach(x => x.classList.toggle('on', x === t)); render(); return; }
     const s = e.target.closest('.stb'); if (s) { stars[s.dataset.s] = !stars[s.dataset.s]; sstore.set('stars', stars); render(); return; }
     const a = e.target.closest('.add'); if (a) {
@@ -1724,14 +1758,14 @@ function openRange(id) {
   });
 }
 const TOOLS = [['trend', 'trend', 'Trend line'], ['hline', 'hline', 'Horizontal line'], ['fib', 'fib', 'Fib retracement'], ['rect', 'rect', 'Rectangle']];
-function openDrawing(id) {
+function openDrawToolbar(id) {
   const c = CH[id], el = c.el;
   $$('.dtool').forEach(x => x.remove());
   const bar = h(`<div class="dtool" style="top:${L.cards[id].y + 56}px">${TOOLS.map(([k, icn, n]) => `<button data-tool="${k}" aria-label="${n}" class="${c.draft && c.draft.tool === k ? 'on' : ''}">${ic(icn, 20, 1.8)}</button>`).join('')}<button data-tool="clear" aria-label="Remove drawings">${ic('trash', 19, 1.8)}</button><span class="dsp"></span><button data-tool="close" aria-label="Close drawing tools">${ic('x', 18, 2)}</button></div>`);
   app.appendChild(bar);
   bar.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return; const t = b.dataset.tool;
-    if (t === 'close') { bar.remove(); disarm(id); return; }
+    if (t === 'close') { bar.remove(); disarm(id); if (S.draw) S.draw.toolbar = false; return; }
     if (t === 'clear') { c.draws = []; redraw(id); toast(`Drawings removed from ${c.short}`); return; }
     armTool(id, t, { route: 'toolbar' }); $$('button', bar).forEach(x => x.classList.toggle('on', x === b));
   });
@@ -1755,7 +1789,7 @@ function toggleIndicator(id, k, meta = {}) {
 function armTool(id, tool, meta = {}) {
   for (const k of CHART_IDS) if (k !== id && CH[k].draft) disarm(k);
   CH[id].draft = { tool, pts: [], hover: null }; updateHeaders(); redraw(id);
-  if (meta.route !== 'toolbar') toast(`${tool === 'fib' ? 'Fib retracement' : 'Trend line'}: tap two points on ${CH[id].short}`, true);
+  if (meta.route !== 'toolbar') toast(tool === 'hline' ? `Horizontal line: tap a level on ${CH[id].short}` : `${tool === 'fib' ? 'Fib retracement' : tool === 'rect' ? 'Rectangle' : 'Trend line'}: tap two points on ${CH[id].short}`, true);
 }
 function disarm(id) { const c = CH[id]; if (!c.draft) return; c.draft = null; updateHeaders(); redraw(id); }
 function placePoint(id, p) {
@@ -1809,12 +1843,14 @@ const LABELSETS = {
     trend: ['Trend line', 'Trend', 'Trend line'], fib: ['Fibonacci retracement', 'Fib', 'Fibonacci retracement'], vwap: ['Volume Weighted Average Price (VWAP)', 'VWAP', 'Volume Weighted Average Price (VWAP)'], ema: ['Exponential Moving Average (EMA) 200', 'EMA 200', 'Exponential Moving Average (EMA) 200'], payoff: ['Payoff', 'Payoff', 'Payoff: breakeven and P&L'] } },
 };
 let LS = LABELSETS.default;
-const act = id => { const [label, short, name] = LS.a[id]; return { label, short, name }; };
+// a slot the trader picked carries its own names (lab); the default slots take theirs from the label set
+const act = id => { const s = SLOTS.find(x => x.id === id), [label, short, name] = s && s.lab ? s.lab : LS.a[id]; return { label, short, name }; };
 const escH = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 // tool names read mid-sentence in lower case ("Draw trend line"), except Fib and acronyms
 const midS = s => /^(Fib|[A-Z]{2})/.test(s) ? s : s[0].toLowerCase() + s.slice(1);
 function describe(slot, id) {
   const c = CH[id];
+  if (slot.kind === 'empty') return { label: 'Empty', short: 'Empty', name: 'Empty slot', icon: 'flash', cap: '', status: 'na', verb: `Add a ${slot.what}`, action: `Empty slot. Tap the flash icon beside ${slot.what === 'drawing' ? 'a drawing' : 'an indicator or a template'} to add it here` };
   // While the Payoff list covers the option chart (S3), that chart's actions are unavailable, except Payoff (FR-28)
   if (id === 'opt' && slot.kind !== 'payoff' && PM.on && PM.s3) {
     const a = slot.kind === 'tf' ? { label: slot.tf, short: slot.tf, name: 'Timeframe ' + slot.tf } : act(slot.id);
@@ -1829,6 +1865,7 @@ function describe(slot, id) {
     const armed = c.draft && c.draft.tool === slot.tool;
     return { label: a.label, short: a.short, name: a.name, icon: slot.icon, cap: armed ? 'Armed' : '', status: 'ok', verb: `Draw ${midS(a.name)}`, action: `Draw a ${midS(a.name)} on ${c.short}` };
   }
+  if (slot.kind === 'tpl') return { label: a.label, short: a.short, name: a.name, icon: slot.icon, cap: '', status: 'ok', verb: `Apply ${midS(a.name)}`, action: `Apply ${midS(a.name)} to ${c.short}` };
   if (slot.kind === 'ind') {
     const on = !!c.ind[slot.ind], nm = a.name;
     return { label: a.label, short: a.short, name: nm, icon: slot.icon, cap: on ? 'On' : 'Off', capOn: on, status: 'ok', verb: `Turn ${on ? 'off' : 'on'} ${nm}`, action: `Turn ${on ? 'off' : 'on'} ${nm} · ${c.short}` };
@@ -1842,8 +1879,9 @@ function applySlot(i, id, meta = {}) {
   const slot = SLOTS[i], c = CH[id], d = describe(slot, id);
   if (d.status === 'current' || d.status === 'na') return false;
   if (slot.kind === 'tf') setTimeframe(id, slot.tf, { route: meta.route });
-  else if (slot.kind === 'tool') armTool(id, slot.tool, meta);
-  else if (slot.kind === 'ind') toggleIndicator(id, slot.ind, meta);
+  else if (slot.kind === 'tool') { if (DRAWABLE.has(slot.tool)) armTool(id, slot.tool, meta); else toast(`${d.name} is not drawn in this prototype`); }
+  else if (slot.kind === 'ind') { if (slot.ind) toggleIndicator(id, slot.ind, meta); else toast(`${d.name} is not drawn in this prototype`); }
+  else if (slot.kind === 'tpl') applyTemplate(id, slot.tpl);
   else setPayoff(!PM.on, { source: meta.route === 'q1' ? 'quick_actions' : 'wheel', chart: id });
   return true;
 }
@@ -2026,7 +2064,7 @@ function withLabels(geo) {
   if (S.fit !== false) {
     // one structure per group in each wheel: both timeframes keep or drop their caption together,
     // the three on/off slots likewise, and icons go from every slot or from none
-    const grp = s => SLOTS[s.i].kind === 'tf' ? 'tf' : SLOTS[s.i].kind === 'tool' ? 'tool' : 'state';
+    const grp = s => { const k = SLOTS[s.i].kind; return k === 'tf' ? 'tf' : k === 'tool' || k === 'tpl' || k === 'empty' ? 'tool' : 'state'; };
     for (const chart of [...new Set(geo.sectors.map(s => s.chart))]) {
       const secs = geo.sectors.filter(s => s.chart === chart && s.lay), noCap = {}, noIcon = secs.some(s => s.lay.noIcon);
       for (const s of secs) if (s.lay.noCap) noCap[grp(s)] = true;
@@ -2281,6 +2319,158 @@ function openQ1(id, from = 'a11y') {
   });
 }
 function syncFocus() { $$('.card').forEach(c => c.classList.toggle('focus', S.v === 'v5' && c.dataset.chart === S.focus)); const t = $('#dock .dt'); if (t) t.textContent = CH[S.focus].short; }
+
+/* =========================================================================
+   Quick view: what the wheel (the quick view panel) holds, picked by the trader.
+   - Two timeframes, from the two dropdowns under "Quick view" in the chart menu.
+   - Two drawings, from the flash icon on each row of the Drawing Tools sheet.
+   - Two indicators or templates (they share the two slots), from the flash icon
+     on each row of Add indicators and of My Templates.
+   A group holds two picks. When it is full the other flash icons are dimmed, and
+   tapping one says to remove a pick first. A group with fewer than two picks
+   leaves an "Empty" slot in the wheel. Slot 7 stays Payoff.
+   The Drawing Tools and My Templates sheets follow the Sahi app's screens
+   (screenshots shared on 11 Nov 2026).
+   ========================================================================= */
+// [key, icon, name in the sheet, short label for the wheel]. The prototype draws the first four it had: the rest only arm a toast.
+const DRAW_TOOLS = [
+  ['trend', 'trend', 'Trend Line', 'Trend'], ['hline', 'hline', 'Horizontal Line', 'H line'], ['hray', 'hline', 'Horizontal Ray', 'H ray'], ['rect', 'rect', 'Rectangle', 'Rect'],
+  ['fib', 'fib', 'Fibonacci Retracement', 'Fib'], ['channel', 'trend', 'Parallel Channel', 'Channel'], ['long', 'fib', 'Long Position', 'Long'], ['short', 'fib', 'Short Position', 'Short'],
+  ['fibext', 'fib', 'Trend-Based Fib Extension', 'Fib ext'], ['text', 'pen', 'Text', 'Text'], ['ray', 'trend', 'Ray', 'Ray'], ['extline', 'trend', 'Extended Line', 'Ext line'],
+  ['brush', 'pen', 'Brush', 'Brush'], ['circle', 'pen', 'Circle', 'Circle'], ['arrow', 'trend', 'Arrow', 'Arrow'], ['arrowup', 'pen', 'Arrow Up', 'Arrow up'],
+  ['arrowdn', 'pen', 'Arrow Down', 'Arrow dn'], ['measure', 'ruler', 'Measure', 'Measure'], ['vline', 'hline', 'Vertical Line', 'V line'], ['prange', 'moveH', 'Price Range', 'Range'],
+];
+const DRAWABLE = new Set(['trend', 'hline', 'fib', 'rect']);
+const toolOf = k => DRAW_TOOLS.find(t => t[0] === k);
+const IND_SHORT = { 'Accumulation/Distribution': 'A/D', 'Advance/Decline Ratio': 'A/D ratio', 'Lite Zones & 34 EMA Band': 'Lite Zones', 'Pushkar Premium Trend': 'Pushkar', 'Auto Fib Extension': 'Auto Fib', 'Bollinger Bands %B': 'BB %B', 'Pivot Points Standard': 'Pivots', 'Stochastic RSI': 'Stoch RSI', 'Stochastic': 'Stoch', 'Parabolic SAR': 'PSAR', 'Ichimoku Cloud': 'Ichimoku', 'Expected Move': 'Exp Move', 'OI Resistance': 'OI Resist', 'Williams %R': '%R', 'Adaptive SuperTrend (AS)': 'Adapt ST', '52 Week High/Low (52W H/L)': '52W H/L' };
+const indKey = x => x.k || x.n;
+const indOf = key => IND_LIST.find(x => indKey(x) === key);
+function indShort(x) {
+  if (x.k) return IND[x.k].name;
+  if (IND_SHORT[x.n]) return IND_SHORT[x.n];
+  const m = /\(([^)]+)\)\s*$/.exec(x.n); if (m) return m[1];
+  return x.n.length <= 10 ? x.n : x.n.split(' ')[0].slice(0, 9);
+}
+
+const QV_DEF = { tf: ['1m', '15m'], tools: ['trend', 'fib'], inds: ['vwap', 'ema'] };
+const QV = (() => { const s = store.get('quick', null), ok = s && Array.isArray(s.tf) && s.tf.length === 2 && s.tf.every(t => TF[t]) && Array.isArray(s.tools) && Array.isArray(s.inds); return ok ? s : JSON.parse(JSON.stringify(QV_DEF)); })();
+const TPLS = store.get('tpls', [{ id: 1, name: '1', inds: ['RSI Bars', 'OI Profile'] }]);
+const tplOf = id => TPLS.find(t => t.id === id);
+const BASE_SLOTS = SLOTS.slice();
+const QGROUP = { tools: 'drawings', inds: 'indicators or templates' };
+
+function rebuildSlots() {
+  QV.tools = QV.tools.filter(toolOf).slice(0, 2);
+  QV.inds = QV.inds.filter(k => String(k).startsWith('tpl:') ? tplOf(+k.slice(4)) : indOf(k)).slice(0, 2);
+  const tf = S.labels && S.labels !== 'default' ? LS.tf : QV.tf, out = [{ id: 'tfA', kind: 'tf', tf: tf[0] }, { id: 'tfB', kind: 'tf', tf: tf[1] }];
+  for (let k = 0; k < 2; k++) {
+    const key = QV.tools[k], t = key && toolOf(key);
+    if (!t) out.push({ id: 'empty-tool' + k, kind: 'empty', what: 'drawing', icon: 'flash' });
+    else if (key === 'trend' || key === 'fib') out.push(BASE_SLOTS[key === 'trend' ? 2 : 3]);
+    else out.push({ id: 'tool:' + key, kind: 'tool', tool: key, icon: t[1], lab: [t[3], t[3], t[2]] });
+  }
+  for (let k = 0; k < 2; k++) {
+    const key = QV.inds[k];
+    if (!key) { out.push({ id: 'empty-ind' + k, kind: 'empty', what: 'indicator or template', icon: 'flash' }); continue; }
+    if (key === 'vwap' || key === 'ema') { out.push(BASE_SLOTS[key === 'vwap' ? 4 : 5]); continue; }
+    if (key.startsWith('tpl:')) { const t = tplOf(+key.slice(4)); out.push({ id: key, kind: 'tpl', tpl: t.id, icon: 'grid', lab: [`Tpl ${t.name}`, `Tpl ${t.name}`, `Template ${t.name}`] }); continue; }
+    const x = indOf(key), s = indShort(x);
+    out.push({ id: 'ind:' + key, kind: 'ind', ind: x.k || null, nm: x.n, icon: x.k && P[x.k] ? x.k : 'fx', lab: [s, s, x.n] });
+  }
+  out.push(BASE_SLOTS[6]);
+  SLOTS.splice(0, SLOTS.length, ...out);
+}
+function saveQuick() { store.set('quick', QV); store.set('tpls', TPLS); rebuildSlots(); if (typeof syncDevHints === 'function' && CH.idx.g) syncDevHints(); }
+function resetQuick() { Object.assign(QV, JSON.parse(JSON.stringify(QV_DEF))); saveQuick(); }
+
+/* ---- the flash icon ---- */
+function flashBtn(group, key, name) {
+  const on = QV[group].includes(key), dis = !on && QV[group].length >= 2;
+  return `<button class="flb${on ? ' on' : ''}${dis ? ' dis' : ''}" data-fl="${group}" data-key="${escH(key)}" aria-pressed="${on}"${dis ? ' aria-disabled="true"' : ''} aria-label="${on ? 'Remove' : 'Add'} ${escH(name)} ${on ? 'from' : 'to'} Quick view">${ic('flash', 17, 1.8)}</button>`;
+}
+// true when the picks changed
+function quickToggle(group, key, name) {
+  const a = QV[group], i = a.indexOf(key);
+  if (i >= 0) { a.splice(i, 1); saveQuick(); toast(`${name} removed from Quick view`); track('quick_pick', { group, on: false }); return true; }
+  if (a.length >= 2) { Haptic.fire('error'); toast(`Quick view already has 2 ${QGROUP[group]}. Remove one to add another.`); track('quick_pick_full', { group }); return false; }
+  a.push(key); saveQuick(); Haptic.fire('select'); toast(`${name} added to Quick view`, true); track('quick_pick', { group, on: true }); return true;
+}
+function flashClick(e, rerender) {
+  const f = e.target.closest('.flb'); if (!f) return false;
+  const group = f.dataset.fl, key = f.dataset.key, name = group === 'tools' ? toolOf(key)[2] : key.startsWith('tpl:') ? `Template ${tplOf(+key.slice(4)).name}` : indOf(key).n;
+  if (quickToggle(group, key, name)) rerender();
+  return true;
+}
+
+/* ---- Quick view section of the chart menu: the two timeframes ---- */
+function quickTfHTML() {
+  const opts = cur => TF_GROUPS.map(([g, list]) => `<optgroup label="${g}">${list.map(tf => `<option value="${tf}"${tf === cur ? ' selected' : ''}>${tf}</option>`).join('')}</optgroup>`).join('');
+  return `<div class="sech qvh"><span>${ic('flash', 15, 1.9)}Quick view</span></div><div class="qvdd">${[0, 1].map(i => `<label><span>Timeframe ${i + 1}</span><select data-qtf="${i}" aria-label="Quick view timeframe ${i + 1}">${opts(QV.tf[i])}</select></label>`).join('')}</div><div class="qvn">The two timeframes in the quick view panel. Hold the timeframe button to open it.</div>`;
+}
+function bindQuickTf(pop) {
+  pop.addEventListener('change', e => {
+    const i = e.target.dataset.qtf; if (i == null) return;
+    const old = QV.tf[+i], v = e.target.value; QV.tf[+i] = v; if (QV.tf[1 - i] === v) QV.tf[1 - i] = old;   // picking the other slot's timeframe swaps the two
+    saveQuick(); $$('[data-qtf]', pop).forEach(s => { s.value = QV.tf[+s.dataset.qtf]; });
+    toast(`Quick view timeframes: ${QV.tf[0]} and ${QV.tf[1]}`, true); track('quick_tf', { a: QV.tf[0], b: QV.tf[1] });
+  });
+}
+
+/* ---- Drawing Tools sheet ---- */
+const DRAW_OPTS = [['toolbar', 'grid', 'Enable drawing toolbar'], ['magnet', 'pin', 'Enable magnet'], ['hide', 'eye', 'Hide all drawings'], ['lock', 'gear', 'Lock all drawings']];
+function openDrawing(id) {
+  const c = CH[id]; S.draw = S.draw || {}; S.draw.toolbar = !!$('.dtool');
+  const sh = h(`<div class="sheet dsheet" style="top:${L.sat + 16}px"><div class="sh-title">Drawing Tools</div><button class="sh-x" aria-label="Close">${ic('x', 18, 1.7)}</button><hr class="dhr"><div class="dlist"></div></div>`);
+  const render = () => {
+    const el = $('.dlist', sh), sc = el.scrollTop;
+    el.innerHTML = `<div class="dsec">Tools</div>${DRAW_OPTS.map(([k, icn, n]) => `<button class="drow" data-do="${k}" role="switch" aria-checked="${!!S.draw[k]}"><span class="di">${ic(P[icn] ? icn : 'gear', 20, 1.7)}</span><span class="dnm">${n}</span><span class="tog${S.draw[k] ? ' on' : ''}"></span></button>`).join('')}<hr class="dhr"><div class="dsec">Drawings</div>${DRAW_TOOLS.map(([k, icn, n]) => `<div class="drow"><button class="dtap" data-dt="${k}"><span class="di">${ic(P[icn] ? icn : 'pen', 20, 1.7)}</span><span class="dnm">${n}</span></button>${flashBtn('tools', k, n)}</div>`).join('')}<div style="height:calc(20px + var(--sab))"></div>`;
+    el.scrollTop = sc;
+  };
+  render();
+  const layer = openLayer(sh, { label: 'Drawing Tools' });
+  sh.addEventListener('click', e => {
+    if (e.target.closest('.sh-x')) return layer.close('close');
+    if (flashClick(e, render)) return;
+    const o = e.target.closest('[data-do]'); if (o) {
+      const k = o.dataset.do; S.draw[k] = !S.draw[k];
+      if (k === 'toolbar') { if (S.draw.toolbar) openDrawToolbar(id); else { $$('.dtool').forEach(x => x.remove()); } }
+      if (k === 'hide') redraw();
+      render(); return;
+    }
+    const t = e.target.closest('[data-dt]'); if (!t) return;
+    const k = t.dataset.dt; if (!DRAWABLE.has(k)) return toast(`${toolOf(k)[2]} is not drawn in this prototype`);
+    layer.close('picked'); armTool(id, k, {});
+  });
+}
+
+/* ---- My Templates sheet ---- */
+function applyTemplate(id, tid) {
+  const t = tplOf(tid), c = CH[id]; if (!t) return;
+  const drawn = t.inds.map(n => IND_LIST.find(x => x.n === n)).filter(x => x && x.k), miss = t.inds.length - drawn.length;
+  c.ind = {}; drawn.forEach(x => { c.ind[x.k] = true; }); updateHeaders(); redraw(id);
+  toast(`Template ${t.name} applied to ${c.short}${miss ? ` · ${miss} of its indicators ${miss > 1 ? 'are' : 'is'} not drawn in this prototype` : ''}`, true);
+  track('template_apply', { chart: id });
+}
+function openTemplates(id) {
+  const c = CH[id];
+  const sh = h(`<div class="sheet tsheet" style="height:${Math.round(L.H * .62)}px"><div class="th"><button class="tback" aria-label="Back">${ic('chevL', 18, 2)}</button><h3></h3></div><hr class="dhr"><div class="tlist"></div><button class="tsave">Save current indicators as template</button></div>`);
+  const render = () => {
+    $('h3', sh).textContent = `My Templates (${TPLS.length})`;
+    $('.tlist', sh).innerHTML = TPLS.length ? TPLS.map(t => `<div class="trow"><button class="ttap" data-tp="${t.id}"><b>${escH(t.name)}</b><small>${escH(t.inds.join(', '))}</small></button>${flashBtn('inds', 'tpl:' + t.id, 'Template ' + t.name)}<button class="tdel" data-td="${t.id}" aria-label="Delete template ${escH(t.name)}">${ic('trash', 18, 1.7)}</button></div>`).join('') : '<div class="tnone">No templates yet. Add indicators to the chart, then save them here.</div>';
+  };
+  render();
+  const layer = openLayer(sh, { label: 'My Templates' });
+  sh.addEventListener('click', e => {
+    if (e.target.closest('.tback')) return layer.close('back');
+    if (flashClick(e, render)) return;
+    const d = e.target.closest('[data-td]'); if (d) { const i = TPLS.findIndex(t => t.id === +d.dataset.td), nm = TPLS[i].name; TPLS.splice(i, 1); saveQuick(); render(); return toast(`Template ${nm} deleted`); }
+    const a = e.target.closest('[data-tp]'); if (a) { layer.close('picked'); return applyTemplate(id, +a.dataset.tp); }
+    if (e.target.closest('.tsave')) {
+      const on = Object.keys(c.ind).filter(k => c.ind[k]); if (!on.length) return toast(`Add an indicator to ${c.short} first`);
+      const nid = Math.max(0, ...TPLS.map(t => t.id)) + 1; TPLS.push({ id: nid, name: String(nid), inds: on.map(k => IND[k].full) }); saveQuick(); render(); toast(`Template ${nid} saved`, true);
+    }
+  });
+}
 
 /* =========================================================================
    Payoff on mobile (Payoff mobile PRD v1.0)
@@ -3722,7 +3912,7 @@ function setLabels(id, { silent = false } = {}) {
   cancelGesture('invalid_context');
   if (!ORIG) ORIG = Object.fromEntries(CHART_IDS.map(c => [c, { sym: CH[c].sym, short: CH[c].short }]));
   S.labels = id; LS = LABELSETS[id];
-  SLOTS[0].tf = LS.tf[0]; SLOTS[1].tf = LS.tf[1];
+  rebuildSlots();   // a label set other than Default brings its own two timeframes
   for (const c of CHART_IDS) { const nm = LS.chart && LS.chart[c]; CH[c].sym = nm ? nm[0] : ORIG[c].sym; CH[c].short = nm ? nm[1] : ORIG[c].short; const n = $('.sym .nm', CH[c].el); if (n) n.textContent = CH[c].sym; }
   syncFocus(); syncLabelTag(); syncDev(); syncDevHints();
   if (!silent) track('labels', { to: id });
@@ -3807,7 +3997,7 @@ const Study = (() => {
   const bar = () => $('#study');
   function show(html) { const b = bar(); b.innerHTML = html; b.classList.add('on'); }
   function start() {
-    closeAllLayers('system'); resetCharts(); if (S.labels !== 'default') setLabels('default'); if (S.fs !== 1) setTextSize(1); S.fit = true; syncLabelTag();
+    closeAllLayers('system'); resetCharts(); resetQuick(); if (S.labels !== 'default') setLabels('default'); if (S.fs !== 1) setTextSize(1); S.fit = true; syncLabelTag();
     const order = TASKS.map((t, i) => [Math.random(), t]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
     st = { v: S.v, frame: S.frame, hand: S.hand, order, k: -1, rows: [], running: false };
     show(`<div class="sq">Timed tasks · ${VAR[S.v].n} ${VAR[S.v].name}<small>8 tasks. Use the wheel only. The clock starts when each task appears.</small></div><button class="ghost" data-s="quit">Quit</button><button data-s="go">Start</button>`);

@@ -74,7 +74,7 @@ function withLabels(geo) {
   if (S.fit !== false) {
     // one structure per group in each wheel: both timeframes keep or drop their caption together,
     // the three on/off slots likewise, and icons go from every slot or from none
-    const grp = s => SLOTS[s.i].kind === 'tf' ? 'tf' : SLOTS[s.i].kind === 'tool' ? 'tool' : 'state';
+    const grp = s => { const k = SLOTS[s.i].kind; return k === 'tf' ? 'tf' : k === 'tool' || k === 'tpl' || k === 'empty' ? 'tool' : 'state'; };
     for (const chart of [...new Set(geo.sectors.map(s => s.chart))]) {
       const secs = geo.sectors.filter(s => s.chart === chart && s.lay), noCap = {}, noIcon = secs.some(s => s.lay.noIcon);
       for (const s of secs) if (s.lay.noCap) noCap[grp(s)] = true;

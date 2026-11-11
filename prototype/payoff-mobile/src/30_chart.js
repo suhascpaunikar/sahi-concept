@@ -235,7 +235,7 @@ function drawChart(id) {
       });
       const val = ser[0] && ser[0][Math.min(g.i1, raw.length - 1)]; const lb = $(`.legend [data-ind="${k}"]`, c.el); if (lb && val != null) lb.textContent = val.toFixed(2);
     }
-    for (const d of c.draws) drawShape(ctx, g, d, false);
+    if (!(S.draw && S.draw.hide)) for (const d of c.draws) drawShape(ctx, g, d, false);
   }
   if (c.draft && c.draft.pts.length) drawShape(ctx, g, { tool: c.draft.tool, a: c.draft.pts[0], b: c.draft.hover || c.draft.pts[0] }, true);
   if (typeof payoffOver === 'function') payoffOver(id, ctx, g);

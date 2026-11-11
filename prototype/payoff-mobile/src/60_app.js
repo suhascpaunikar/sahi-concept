@@ -196,7 +196,7 @@ function setLabels(id, { silent = false } = {}) {
   cancelGesture('invalid_context');
   if (!ORIG) ORIG = Object.fromEntries(CHART_IDS.map(c => [c, { sym: CH[c].sym, short: CH[c].short }]));
   S.labels = id; LS = LABELSETS[id];
-  SLOTS[0].tf = LS.tf[0]; SLOTS[1].tf = LS.tf[1];
+  rebuildSlots();   // a label set other than Default brings its own two timeframes
   for (const c of CHART_IDS) { const nm = LS.chart && LS.chart[c]; CH[c].sym = nm ? nm[0] : ORIG[c].sym; CH[c].short = nm ? nm[1] : ORIG[c].short; const n = $('.sym .nm', CH[c].el); if (n) n.textContent = CH[c].sym; }
   syncFocus(); syncLabelTag(); syncDev(); syncDevHints();
   if (!silent) track('labels', { to: id });
@@ -281,7 +281,7 @@ const Study = (() => {
   const bar = () => $('#study');
   function show(html) { const b = bar(); b.innerHTML = html; b.classList.add('on'); }
   function start() {
-    closeAllLayers('system'); resetCharts(); if (S.labels !== 'default') setLabels('default'); if (S.fs !== 1) setTextSize(1); S.fit = true; syncLabelTag();
+    closeAllLayers('system'); resetCharts(); resetQuick(); if (S.labels !== 'default') setLabels('default'); if (S.fs !== 1) setTextSize(1); S.fit = true; syncLabelTag();
     const order = TASKS.map((t, i) => [Math.random(), t]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
     st = { v: S.v, frame: S.frame, hand: S.hand, order, k: -1, rows: [], running: false };
     show(`<div class="sq">Timed tasks · ${VAR[S.v].n} ${VAR[S.v].name}<small>8 tasks. Use the wheel only. The clock starts when each task appears.</small></div><button class="ghost" data-s="quit">Quit</button><button data-s="go">Start</button>`);
