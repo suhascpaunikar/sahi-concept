@@ -39,7 +39,7 @@ function bindCard(id) {
   });
   tfb.addEventListener('click', e => { if (e.detail === 0) openPopover(id); });
   $('.sym', el).addEventListener('click', () => toast('Symbol search is not part of this prototype'));
-  const lk = $('.lnk', el); if (lk) lk.addEventListener('click', () => { S.linked = !S.linked; updateHeaders(); syncDev(); toast(S.linked ? 'Timeframes linked: changes apply to both charts' : 'Timeframes unlinked'); track('link', { on: S.linked }); });
+  const lk = $('.lnk', el); if (lk) lk.addEventListener('click', () => { toast('The option chain is not part of this prototype'); track('option_chain', {}); });   // in the Sahi app this button opens the option chain
   $('.banner button', el).addEventListener('click', () => { disarm(id); $$('.dtool').forEach(x => x.remove()); });
   // canvas regions
   const P0 = new Map(); let mode = null, lp = 0, start = null, ro0 = 0, sp0 = 0, d0 = 0, moved = false;
