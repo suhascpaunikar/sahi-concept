@@ -8,7 +8,7 @@
    IV moving down 2.5 or up 3 points (BR-09, open item).
    ========================================================================= */
 // The Payoff bar grows a little with the phone's text size (BR-35)
-const pbarH = () => S.ux !== 'a' ? 0 : Math.round(34 * Math.min(S.fs || 1, 1.3));   // the improved Payoff has no bar: see the strip in 76_rail.js
+const pbarH = () => S.ux !== 'a' ? 0 : Math.round(34 * Math.min(S.fs || 1, 1.3));   // the improved Payoff has no bar: the header's Payoff button closes it, and the point is moved on the chart
 const PM = {
   on: false, s3: false, pt: null, chip: null, strike: null, ver: 0, cache: new Map(), optCache: null,
   scenario: store.get('scenario', 'single'), product: 'CARRY', legs: [], others: [], realised: 0, lots: 1, preAvg: null,
@@ -498,7 +498,14 @@ function setPoint(pt, how, opts = {}) {
   if (how === 'tap' || how === 'chip' || how === 'stepper') { PM.pulseAt = performance.now(); if (how !== 'chip') Haptic.fire('open'); }
   if (PM.hint && how !== 'chip') { PM.hint = false; PM.hintSeen = true; store.set('hintSeen', true); }
   const t = now(); if (t - PM.lastMoveLog > 2500 && !opts.quiet) { PM.lastMoveLog = t; track('payoff_point_move', { method: how, sessions_to_expiry: +(((poAxisEnd(b) || pt.T) - pt.T) / E.SESSION).toFixed(1), distance: Math.round(pt.S - b.S0), crossed_breakeven: !!PM.crossed }); PM.crossed = false; }
+  if (how !== 'chip') followOpt();
   renderPayoffUI(); redraw('idx'); if (!PM.s3) redraw('opt');
+}
+// the option chart scrolls with the point's time, so its marker stays in view
+function followOpt() {
+  if (PM.s3 || !PM.pt || !CH.opt.g) return;
+  const g = geomOf('opt'), x = xAtT(g, PM.pt.T), m = 24;
+  if (x > g.paneR - m) CH.opt.ro += (x - (g.paneR - m)) / g.s; else if (x < m) CH.opt.ro -= (m - x) / g.s;
 }
 // card coordinates → a snapped point inside the future zone, or null
 function pointFromXY(q, clampToZone = true) {
@@ -508,7 +515,8 @@ function pointFromXY(q, clampToZone = true) {
   if (!clampToZone && (i < r[0] - 1 || i > r[1] + 1)) return null;
   i = clamp(i, r[0], r[1]);
   const y = clamp(q.y, g.pT + 2, g.pB - 2);
-  return { T: g.slotAt(i).T1, S: snap5(g.y2p(y)) };
+  // 5 Nifty points a step; 1 point when the scale is so fine that 5 points would jump more than 6 px under the finger
+  const lv = g.y2p(y); return { T: g.slotAt(i).T1, S: g.p2y(0) - g.p2y(5) > 6 ? Math.round(lv) : snap5(lv) };
 }
 function inFuture(q) {
   const g = CH.idx.g; if (!g || q.y < g.pT || q.y > g.pB || q.x > g.paneR) return false;
@@ -614,7 +622,6 @@ function renderPayoffUI() {
   app.classList.toggle('po-grey', PM.on && (MK.pricing === 'delayed' || MK.pricing === 'offline'));
   const bar = $('.pbar', ic_), rd = $('.pread', ic_), edge = $('.pedge', ic_), hint = $('.phint', ic_), empty = $('.pempty', ic_);
   const chip = $('.pchip', oc), card = $('.pcard', oc), list = $('#plist');
-  renderRail();
   const hideAll = () => { [bar, rd, edge, hint, empty, chip, card].forEach(e => e.hidden = true); list.hidden = true; $('.pban', ic_).hidden = true; };
   // UX-05: a visible way in, in the index chart's header. It carries its name while a position is held
   const pb = $('.pobtn', ic_);
@@ -652,10 +659,10 @@ function renderPayoffUI() {
     const px = uxB() ? plain(b, v) : null;
     if (px && rng.startsWith('Range')) rng = px.iv;
     html = `<div class="rt">${px ? px.head : `${idxName()} ${lvl(v.S)} · ${ptTime(v.T)}`}</div><div class="rp"><span>${lead}</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div>${px && px.vs ? `<div class="rr">${px.vs}</div>` : ''}${px && px.needs ? `<div class="rr rn">${px.needs}</div>` : ''}${rng ? `<div class="rr${px ? ' ri' : ''}">${rng}</div>` : ''}<div class="rf"><span class="mi" data-tip="model">Model estimate ${ic('info', 12, 2)}</span>${asOf}<span class="chev">${ic('chevR', 14, 2)}</span></div>`;
-    if (uxB()) html = payBoxHTML(b, v, asOf ? `<div class="bx5">${asOf}</div>` : '');
+    if (uxB()) html = (S.box === '0' ? payBoxHTML : payBoxV)(b, v, asOf ? `<div class="bx5">${asOf}</div>` : '');
   } else if (b.legs.length && !PM.pt) html = `<div class="rt">Pricing your position…</div><div class="rp"><span>P&amp;L</span><b class="sk"></b></div>`;
   if (html && rd._h !== html) { rd.innerHTML = html; rd._h = html; }
-  rd.hidden = !html; rd.classList.toggle('pbox', uxB() && !!v && !expiredBook(b));
+  rd.hidden = !html; rd.classList.toggle('pbox', uxB() && !!v && !expiredBook(b)); rd.dataset.box = rd.classList.contains('pbox') ? S.box : '';
   if (!rd.hidden && g) {
     rd.style.maxWidth = Math.round(Math.min(g.paneR - 16, Math.max((uxB() ? 236 : 220) * fs, g.paneR * (fs > 1.5 ? .7 : .62)))) + 'px';
     const w = rd.offsetWidth, h = rd.offsetHeight;
@@ -663,12 +670,18 @@ function renderPayoffUI() {
     const i = PM.pt ? ptSlot(g) : null, px = i != null ? g.xOf(i) : g.paneR, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     if (px < g.paneR / 2) { left = g.paneR - w - 8; top += 34 * Math.min(S.fs || 1, 1.45); }
     if (px > left - 14 && px < left + w + 14 && py > top - 14 && py < top + h + 14) top = g.pB - h - 6;
+    // take c: the box is a tag beside the point, up and to the left of it, clear of the finger and of the labels at the right edge
+    if (rd.dataset.box === 'c' && i != null && px > 0 && px < g.paneR && py > g.pT && py < g.pB) {
+      left = px - w - 20; if (left < 4) left = px + 20;
+      top = py - h - 20; if (top < g.pT + 4 + bannerH) top = py + 24;
+      left = clamp(left, 4, g.paneR - w - 4); top = clamp(top, g.pT + 4, g.pB - h - 4);
+    }
     rd.style.left = left + 'px'; rd.style.top = top + 'px';
   }
   // first-run hint
   hint.hidden = !(PM.hint && v && g);
   if (!hint.hidden) {
-    hint.textContent = uxB() ? 'Drag the ring up or down, or tap the shaded area, to see P&L at any level. Slide the bar below the chart to change the time.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
+    hint.textContent = uxB() ? 'Drag the ring, or tap the shaded area, to see P&L at any level and time. Hold it at the right edge to look further ahead.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
     const nowX = xAtT(g, MK.nowT()), zw = Math.max(150, g.paneR - nowX - 12); hint.style.width = Math.min(zw, 230) + 'px';
     const hw = Math.min(zw, 230), hh = hint.offsetHeight, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     const hl = clamp(nowX + 6, 6, g.paneR - hw - 6);
@@ -693,8 +706,8 @@ function renderPayoffUI() {
     const prem = v.prem != null ? `${E.prem(v.prem)}` : '';
     const ml = uxB() ? `<div class="rf2 ml">${maxLossTxt(b, true)}</div>` : '';
     const ch = b.pretrade
-      ? `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>Premium</span><b>${prem}</b></div><div class="rr">${v.uncertain ? 'Too uncertain to price' : `${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`
-      : `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>P&amp;L</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div><div class="rr">Premium ${prem}${v.atExpiry || v.uncertain ? '' : ` · ${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`;
+      ? `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>Premium</span><b>${prem}</b></div><div class="rr">${v.uncertain ? 'Too uncertain to price' : `${uxB() ? 'If IV moves: ' : ''}${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`
+      : `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>P&amp;L</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div><div class="rr">Premium ${prem}${v.atExpiry || v.uncertain ? '' : uxB() ? `</div><div class="rr ri">If IV moves: ${E.prem(v.premLo)} to ${E.prem(v.premHi)}` : ` · ${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`;
     if (card._h !== ch) { card.innerHTML = ch; card._h = ch; }
     if (go) {
       const w = card.offsetWidth, h = card.offsetHeight; let left = 8, top = go.pT + 6;
@@ -955,7 +968,7 @@ function bindPayoff() {
     const row = e.target.closest('[data-leg]'); if (!row) return;
     const id = +row.dataset.leg; PM.strike = PM.strike === id ? null : id; track('payoff_row_tap', {}); renderPayoffUI(); redraw('idx');
   });
-  bindSellerPanel(); bindRail();
+  bindSellerPanel();
   const b1 = $('#b1');
   let rep = 0, repT = 0;
   const stopRep = () => { clearTimeout(rep); clearInterval(repT); PM.stepBig = false; };

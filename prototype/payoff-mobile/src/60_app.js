@@ -44,6 +44,20 @@ function bindCard(id) {
   // canvas regions
   const P0 = new Map(); let mode = null, lp = 0, start = null, ro0 = 0, sp0 = 0, d0 = 0, moved = false;
   const cardPt = p => ({ x: p.x - L.cards[id].x, y: p.y - L.cards[id].y });
+  // Payoff: holding the point near a side edge of the index chart scrolls the chart under it, so later sessions and
+  // the expiry are reached in the same drag. It stops when the end of the future zone, or Now, is in view.
+  let edgeQ = null, edgeRAF = 0;
+  const edgeStep = () => {
+    edgeRAF = 0; const g = c.g;
+    if (id !== 'idx' || !PM.on || !edgeQ || !g || (mode !== 'ptdrag' && mode !== 'cross')) { edgeQ = null; return; }
+    const m = 34, end = poAxisEnd(), over = edgeQ.x > g.paneR - m ? edgeQ.x - (g.paneR - m) : edgeQ.x < m ? edgeQ.x - m : 0;
+    const room = over > 0 ? end != null && xAtT(g, end) > g.paneR - m : over < 0 && xAtT(g, MK.nowT()) < m;
+    if (!room) { edgeQ = null; return; }
+    c.ro += clamp(over / m, -1, 1) * 7 / g.s; c.g = geomOf('idx');
+    const pt = pointFromXY(edgeQ); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'drag', { quiet: true });
+    redraw('idx'); edgeRAF = requestAnimationFrame(edgeStep);
+  };
+  const edgeFrom = q => { edgeQ = q; if (!edgeRAF) edgeRAF = requestAnimationFrame(edgeStep); };
   cv.addEventListener('pointerdown', e => {
     if (e.button !== 0 || LAYERS.length) return;
     const p = appPt(e), reg = regionAt(id, p);
@@ -83,18 +97,18 @@ function bindCard(id) {
     }
     const p = appPt(e); P0.set(e.pointerId, p);
     if (mode === 'ptpend' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'ptdrag'; moved = true; }
-    if (mode === 'ptdrag') { const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && uxB()) pt.T = PM.pt.T; if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'drag'); return; }
+    if (mode === 'ptdrag') { const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'drag'); edgeFrom(cardPt(p)); return; }
     if (mode === 'pending' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'pan'; moved = true; if (id === 'idx' && PM.on && PM.chip) { PM.chip = null; renderPayoffUI(); } }
-    if (mode === 'pan') { c.ro = ro0 + (p.x - start.x) / c.spacing; redraw(id); }
+    if (mode === 'pan') { c.ro = ro0 - (p.x - start.x) / c.spacing; redraw(id); }   // the candles follow the finger
     else if (mode === 'cross') {
-      if (id === 'idx' && PM.on && !c.draft && poPriced() && inFuture(cardPt(p))) { if (c.cross) { c.cross = null; setOhlc(id, null); } const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'longpress'); redraw(id); }
+      if (id === 'idx' && PM.on && !c.draft && poPriced() && inFuture(cardPt(p))) { if (c.cross) { c.cross = null; setOhlc(id, null); } const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'longpress'); redraw(id); edgeFrom(cardPt(p)); }
       else { setCross(id, cardPt(p)); if (c.draft && c.draft.pts.length) { c.draft.hover = { t: xToTime(c.g, c.cross.x), p: c.g.y2p(c.cross.y) }; } }
     }
     else if (mode === 'pinch' && P0.size >= 2) { const [a, b] = [...P0.values()]; const d = hyp(a.x - b.x, a.y - b.y); c.spacing = clamp(sp0 * d / d0, 1.2, 48); redraw(id); }
   });
   const end = e => {
     if (!P0.has(e.pointerId)) return;
-    P0.delete(e.pointerId); clearTimeout(lp);
+    P0.delete(e.pointerId); clearTimeout(lp); edgeQ = null;
     if (P0.size) return;
     const p = appPt(e);
     if (mode === 'ptpend' && e.type === 'pointerup') openB1('point');
@@ -357,7 +371,6 @@ function buildDev() {
       <label class="dt">Left-handed (mirrors V2 and V5)<input type="checkbox" data-t="hand"></label>
       <label class="dt">Show touch zones and system gesture areas<input type="checkbox" data-t="zones"></label>
       <label class="dt">Show touches<input type="checkbox" data-t="touches"></label>
-      <label class="dt">Linked timeframes<input type="checkbox" data-t="linked"></label>
       <label class="dt">Haptics (vibration, iOS tick, pulses)<input type="checkbox" data-t="haptics"></label>
       <label class="dt">Sound ticks (desktop stand-in for haptics)<input type="checkbox" data-t="sound"></label>
       <div class="hmeter" style="margin-top:6px"><i id="hDot"></i><span id="hTxt">${Haptic.canVibrate ? 'Vibration API available' : 'No Vibration API here: pulses and optional sound stand in'}</span></div></div>
@@ -457,6 +470,7 @@ async function init() {
   if (SCEN[q.get('pos')]) PM.scenario = q.get('pos');
   if (q.get('product') === 'intraday') PM.product = 'INTRADAY';
   if (q.get('later') === '1') PM.later = true;
+  S.box = ['a', 'b', 'c', '0'].includes(q.get('box')) ? q.get('box') : store.get('box', 'a');   // which payoff box: three takes, or 0 for the one before
   S.ux = q.get('ux') === 'a' ? 'a' : 'b';   // b: the improved Payoff (UX-01, UX-02, UX-05); a: PRD v1.0 as first built
   const qc = q.get('clock'); if (qc) { const m = /^(\d{1,2}):?(\d{2})$/.exec(qc); if (m) MK.mod = clamp(+m[1] * 60 + +m[2], 555, 960); }
   E.calibrate(MK.nowT());
@@ -489,6 +503,7 @@ function payoffDevHTML() {
     <div class="seg pseg" data-pd="pricing"><button data-v="live">Live</button><button data-v="delayed">Delayed</button><button data-v="offline">Offline</button><button data-v="unavailable">Unavailable</button></div>
     <div class="pdrow"><button class="dbtn pri" data-pa="toggle">Payoff on</button><button class="dbtn" data-pa="tip">Show the tip</button><button class="dbtn" data-pa="order">Order panel</button></div>
     <label class="dt pdt">Improved Payoff: breakevens in view, plain readout, header button<input type="checkbox" data-pt="ux"></label>
+    <div class="pdl pdb">Payoff box</div><div class="seg pseg" data-pd="box"><button data-v="a">P&amp;L first</button><button data-v="b">Two rows</button><button data-v="c">At the point</button><button data-v="0">Before</button></div>
     <label class="dt pdt">Later release: order actions in the point sheet<input type="checkbox" data-pt="later"></label>
     <label class="dt pdt">Orders fail (Later release)<input type="checkbox" data-pt="fail"></label>
     <div class="pnote">Real 1-minute Kite data for NIFTY 50 and the 19 Oct 22500 Call and Put up to 12:59 pm on Wed 14 Oct 2026; later times simulated, other contracts modelled.</div>`;
@@ -499,6 +514,7 @@ function syncPayoffDev() {
   $$('[data-pd="product"] button').forEach(b => { b.classList.toggle('on', b.dataset.v === PM.product); b.disabled = !SCEN[PM.scenario].product; });
   $$('[data-pd="pricing"] button').forEach(b => b.classList.toggle('on', b.dataset.v === MK.pricing));
   $$('[data-pa="toggle"]').forEach(b => b.textContent = PM.on ? 'Payoff off' : 'Payoff on');
+  $$('[data-pd="box"] button').forEach(b => { b.classList.toggle('on', b.dataset.v === S.box); b.disabled = !uxB(); });
   $$('[data-pt="later"]').forEach(c => c.checked = PM.later);
   $$('[data-pt="ux"]').forEach(c => c.checked = S.ux !== 'a');
   $$('[data-pt="fail"]').forEach(c => c.checked = PM.orderFail);
@@ -519,6 +535,7 @@ function bindPayoffDev(root, closeMenu) {
       const k = sb.closest('[data-pd]').dataset.pd;
       if (k === 'product') { PM.product = sb.dataset.v; applyScenario(PM.scenario); }
       if (k === 'pricing') setPricing(sb.dataset.v);
+      if (k === 'box') { S.box = sb.dataset.v; store.set('box', S.box); renderPayoffUI(); track('demo_box', { box: S.box }); }
       syncPayoffDev(); return;
     }
     const a = e.target.closest('[data-pa]'); if (!a) return;

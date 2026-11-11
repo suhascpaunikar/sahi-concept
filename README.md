@@ -100,9 +100,9 @@ Example values in the PRD come from the desktop research model (Nifty 25,000, IV
 
 ### Run the mobile Payoff prototype
 
-The prototype now includes six suggestions from the research note. Add `&ux=a` to a link, or untick "Improved Payoff" in the demo controls, to see PRD v1.0 as first built.
+The prototype now includes five suggestions from the research note. Add `&ux=a` to a link, or untick "Improved Payoff" in the demo controls, to see PRD v1.0 as first built.
 
-- **Time slider in a strip between the charts (UX-03, UX-04):** the strip holds a "Payoff ✕" pill, which names the mode and closes it, and a slider from Now to the end of the future zone. Today's session takes a third of the slider and each later session an equal share; it stops at each hour, the 3:20 pm square-off, session ends and expiries. It replaces the date chips and the bar above the index chart. Dragging the point on the chart now changes only its level; a tap in the shaded zone still moves both.
+- **The point is set on the chart, with no slider:** dragging the ring sets its level and its time together. Holding it at the right edge of the index chart scrolls on to later sessions and stops at the expiry; the left edge scrolls back to Now. The option chart scrolls with it. The level moves in 1-point steps when 5 points would jump more than 6 px. The time slider strip (UX-03, UX-04) was tried and removed after a phone review: it took a row between the charts, and dragging on the chart felt smoother. The header's Payoff button closes Payoff.
 - **The point opens at the trader's horizon (UX-19):** 30 minutes ahead when every position is intraday or expires today, and at the session end otherwise.
 - **The most the position can lose (UX-20):** the option chart's point card and the point sheet say "Most you can lose: ₹13,572, the premium paid", or "Loss isn't capped below 22,285 at expiry" for a sold option.
 
@@ -112,18 +112,25 @@ The prototype now includes six suggestions from the research note. Add `&ux=a` t
 
 Two parts follow Sahi's Option Seller panel on mobile (screenshots shared on 11 Nov 2026):
 
-- **The payoff box** on the index chart uses the wording and style of the seller panel's payoff-graph tooltip: "When price is at 22665.00 0.00%", then "Expected P&L on", the point's time ("Today, 3:30 pm: +₹1.50K") and "Expiry date: −₹2.85K". Tapping it still opens the point sheet, which holds the plain-wording lines and the model label.
+- **The payoff box** on the index chart comes in three takes that lead with the expected P&L, because the crosshair already shows the level on the price axis and the time on the time axis. Pick one under "Payoff box" in the demo controls, or by link:
+  - `&box=a` **P&L first** (default): "Expected P&L", the amount as a headline, "At expiry −₹1,092", then "Nifty +26 pts (+0.12%)".
+  - `&box=b` **Two rows:** the point's time and the expiry as two aligned rows, then the same last line.
+  - `&box=c` **At the point:** a small tag beside the ring with the amount and the expiry amount; nothing is docked in the corner.
+  - `&box=0` **Before:** the seller panel's payoff-graph tooltip wording ("When price is at 22665.00 0.00%", "Expected P&L on", "Today, 3:30 pm: +₹1.50K", "Expiry date: −₹2.85K").
+
+  Tapping the box (or the ring, for take c) still opens the point sheet, which holds the plain-wording lines and the model label.
+- **The option chart's point card** names its range: "Premium ₹251.40", then "If IV moves: ₹231.17 to ₹277.33". The bar on the chart is that range, the premium if IV falls 2.5 points or rises 3; the dot is the premium with IV held.
 - **Several positions** open in a panel with the seller panel's structure: "NIFTY50 positions", **Positions | Analyse** tabs, leg cards (side, expiry, LTP, type, strike, quantity, P&L at the point), and under Analyse a **Summary** (Max Loss, Max Profit, POP, premium, Greeks, breakeven) and a **Payoff graph** with the point's time and the expiry date. Dragging on the graph moves the point's level, and the button in the panel's header makes it full height. Margin is not modelled, so the Summary shows Open P&L in that place.
 
 Open `prototype/payoff-mobile/index.html`. On a desktop you get the 412 × 915 phone with a panel beside it; on a phone the app fills the screen and the ⋮ button opens the same controls.
 
-- **Hold** the "5m" button on either chart, **slide** to Payoff and **release**. Hold again and release on Payoff (now "On") to turn it off, or tap × in the Payoff bar. Esc stands in for Android back.
-- **Move the point:** tap the shaded zone, drag the ring, or long-press anywhere and slide into the zone. Pan and pinch work as before; the point keeps its level and time, and an edge pill brings it back.
+- **Hold** the "5m" button on either chart, **slide** to Payoff and **release**. Hold again and release on Payoff (now "On") to turn it off, or tap the Payoff button in the index chart's header. Esc stands in for Android back.
+- **Move the point:** tap the shaded zone, drag the ring, or long-press anywhere and slide into the zone. Hold the ring at the right edge to reach later days. Pan and pinch work as before (the candles follow the finger); the point keeps its level and time, and an edge pill brings it back.
 - **Tap the readout** for B1: steppers move the level 5 points and the time one candle. Hold a stepper to repeat.
-- **Date chips** fit the view to today or to an expiry; "19 Oct" shows the holiday shift ("moved from Tue 20 Oct").
+- **Date chips** (only with `&ux=a`) fit the view to today or to an expiry; "19 Oct" shows the holiday shift ("moved from Tue 20 Oct").
 - **Tap the option chart** for the order panel; buying while Payoff is on switches pre-trade to the held position, and a second position switches to the Payoff list.
 - **Demo controls:** 12 sample position sets (one position, pre-trade, no contract, weekly + monthly book, iron condor, straddles, calendar, futures + put, intraday + carry-forward), carry-forward or intraday, the clock (9:30 am, 11:15 am, 12:59 pm latest data, 3:05 pm simulated, 3:45 pm closed), live, delayed, offline or unavailable prices, the Later release (order actions, B2, N3), failing orders, and the N1 tip again.
-- **Links:** `?payoff=1` opens with Payoff on; `&pos=book|condor|pretrade|empty|mixed|…`, `&product=intraday`, `&clock=15:45`, `&pricing=delayed|offline|unavailable`, `&later=1`, `&v=1` to `&v=6` for the placement, `&frame=small|iphone|max`, `&text=130|200`, `&coach=0&tip=0` to skip the first-run marks.
+- **Links:** `?payoff=1` opens with Payoff on; `&pos=book|condor|pretrade|empty|mixed|…`, `&product=intraday`, `&clock=15:45`, `&pricing=delayed|offline|unavailable`, `&later=1`, `&box=a|b|c|0` for the payoff box, `&v=1` to `&v=6` for the placement, `&frame=small|iphone|max`, `&text=130|200`, `&coach=0&tip=0` to skip the first-run marks.
 
 NIFTY 50 and the NIFTY 19 Oct 22500 Call and Put run on the desktop prototype's real 1-minute Kite data, up to 12:59 pm on Wed 14 Oct 2026; later times are simulated and other contracts are modelled. Values come from the same engine as desktop (Black-Scholes on trading time, IV held).
 

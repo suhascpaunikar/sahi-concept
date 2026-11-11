@@ -15,7 +15,7 @@ shell = rd(SRC, '00_shell.html')
 css = rd(SRC, '10_css.css') + '\n' + rd(SRC, '15_payoff.css')
 engine = '\n'.join(rd(ENGINE, f) for f in ['data.js', 'engine.js', 'payoff.js'])
 # the engine files end with a CommonJS export for Node tests; harmless in the browser
-js = '\n'.join(rd(SRC, f) for f in ['20_core.js', '30_chart.js', '40_ui.js', '50a_content.js', '50b_geo.js', '50c_render.js', '70_payoff.js', '75_panel.js', '76_rail.js', '60_app.js'])
+js = '\n'.join(rd(SRC, f) for f in ['20_core.js', '30_chart.js', '40_ui.js', '50a_content.js', '50b_geo.js', '50c_render.js', '70_payoff.js', '75_panel.js', '76_horizon.js', '60_app.js'])
 # font family names that cannot collide with a system copy
 css = css.replace('Inter, system-ui', 'InterQW, Inter, system-ui')
 js = js.replace('Roboto, "Roboto Fallback", Arial', 'RobotoQW, Roboto, Arial').replace('Roboto, Arial', 'RobotoQW, Roboto, Arial').replace('Inter, sans-serif', 'InterQW, Inter, sans-serif')

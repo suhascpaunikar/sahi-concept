@@ -7,6 +7,9 @@ function openLayer(inner, { onClose, label = 'Dialog', scrimClose = true, cls = 
   closeTransient();
   const el = h(`<div class="layer ${cls}" role="dialog" aria-modal="true" aria-label="${label}"><div class="scrim"></div></div>`);
   el.appendChild(inner); app.appendChild(el);
+  // a layer that opens on a touch's release sits under the finger, so the click from that same tap would land on it
+  // (on its scrim, which closes it). Clicks in its first moments are dropped.
+  const t0 = now(); el.addEventListener('click', e => { if (now() - t0 < 350) { e.stopPropagation(); e.preventDefault(); } }, true);
   const layer = { el, close(reason = 'dismissed') { if (layer.closed) return; layer.closed = true; el.classList.remove('in'); const i = LAYERS.indexOf(layer); if (i >= 0) LAYERS.splice(i, 1); setTimeout(() => el.remove(), 260); onClose && onClose(reason); syncDevHints(); } };
   if (scrimClose) $('.scrim', el).addEventListener('click', () => layer.close('scrim'));
   LAYERS.push(layer); requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));

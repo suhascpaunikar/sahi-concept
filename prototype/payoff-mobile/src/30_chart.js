@@ -43,15 +43,12 @@ function computeLayout() {
     app.style.setProperty('--sat', f.sat + 'px'); app.style.setProperty('--sab', f.sab + 'px');
   }
   const ordH = S.order ? 128 + Math.max(0, L.sab - 4) : 0;
-  // the improved Payoff puts its controls in a strip between the charts (UX-04); the old bar above the index chart goes
-  const strip = typeof PM !== 'undefined' && PM.on && typeof uxB === 'function' && uxB() ? 46 : 0;
-  const top = L.sat + 8 + 32 + 12.6, gap = 16.5, avail = L.H - top - gap - ordH - strip;
+  const top = L.sat + 8 + 32 + 12.6, gap = 16.5, avail = L.H - top - gap - ordH;
   L.ordH = ordH;
   const h1 = Math.round(avail * S.split * 10) / 10, h2 = avail - h1;
   L.cards.idx = { x: 4, y: top, w: L.W - 8, h: h1, padB: 0 };
   L.divY = top + h1; L.gap = gap;
-  L.strip = strip; L.stripY = top + h1 + gap - 3;
-  L.cards.opt = { x: 4, y: top + h1 + gap + strip, w: L.W - 8, h: h2, padB: S.order ? 0 : Math.max(0, L.sab - .7) };
+  L.cards.opt = { x: 4, y: top + h1 + gap, w: L.W - 8, h: h2, padB: S.order ? 0 : Math.max(0, L.sab - .7) };
   for (const id of CHART_IDS) { const c = L.cards[id]; c.paneT = 52 + (id === 'idx' && typeof PM !== 'undefined' && PM.on ? pbarH() : 0); c.paneB = c.h - 24 - c.padB; }
 }
 
@@ -63,7 +60,7 @@ function cardMarkup(id) {
   <div class="hd">
     <button class="sym" data-act="symbol"><span class="nm">${c.sym}</span><span class="ty">${c.ty}</span><svg class="ico chv" viewBox="0 0 12 12" stroke-width="1.5">${P.chev}</svg></button>
     <div class="pxl"><span class="ltp">${c.ltp.toFixed(2)}</span><span class="chg"></span></div>
-    <div class="hdr">${id === 'idx' ? `<button class="pobtn" aria-pressed="false" aria-label="Show payoff" hidden>${ic('payoff', 14, 2)}<span>Payoff</span></button><button class="lnk" data-act="link" aria-label="Link timeframes" aria-pressed="false">${ic('link', 14.5, 2.1)}</button>` : ''}<button class="tfb" data-chart="${id}" aria-haspopup="dialog" aria-label="Timeframe ${c.tf}. Tap for chart menu"><span class="tfl">${c.tf}</span><i class="sep"></i><svg class="ico tfi" width="12.8" height="9.2" viewBox="0 0 12.8 9.2" stroke-width="1.15">${P.tfmenu}</svg></button></div>
+    <div class="hdr">${id === 'idx' ? `<button class="pobtn" aria-pressed="false" aria-label="Show payoff" hidden>${ic('payoff', 14, 2)}<span>Payoff</span></button>` : ''}<button class="tfb" data-chart="${id}" aria-haspopup="dialog" aria-label="Timeframe ${c.tf}. Tap for chart menu"><span class="tfl">${c.tf}</span><i class="sep"></i><svg class="ico tfi" width="12.8" height="9.2" viewBox="0 0 12.8 9.2" stroke-width="1.15">${P.tfmenu}</svg></button></div>
   </div>
   <div class="legend"></div>
   ${id === 'idx' ? `<div class="pbar" hidden><div class="pchips" role="group" aria-label="Look ahead to"></div><button class="pclose" aria-label="Close payoff">${ic('x', 16, 2.2)}</button></div><div class="pban" role="status" hidden></div><div class="pread" role="button" tabindex="0" hidden></div><button class="pedge" hidden></button><div class="phint" hidden></div><div class="pempty" hidden>Pick a contract on the option chart to see its payoff</div>` : `<button class="pchip" hidden></button><div class="pcard" hidden></div>`}
@@ -149,7 +146,7 @@ function geomOf(id) {
   const axisW = Math.round((ctx.measureText(c.tag.toFixed(2)).width + 8.9) * 4) / 4;
   const paneR = r.w - axisW, s = c.spacing;
   const fut = futureSlots(c, bars), N = n + fut.length;
-  c.ro = clamp(c.ro, -(n - 3), Math.max(2, fut.length + .5));
+  c.ro = clamp(c.ro, -(n - 3), Math.max(2, fut.length + 9));
   const xOf = i => paneR - (c.ro + (n - 1 - i)) * s;
   const i0 = Math.max(0, Math.floor(n - 1 - (paneR / s - c.ro)) - 1), i1 = Math.min(n - 1, Math.ceil(n - 1 + c.ro + 1)), j1 = Math.min(N - 1, Math.ceil(n - 1 + c.ro + 1));
   const slotAt = i => i < n ? bars[i] : fut[i - n];

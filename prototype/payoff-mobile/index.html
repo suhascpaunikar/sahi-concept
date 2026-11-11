@@ -530,22 +530,20 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
 .sp .spcv { position: absolute; inset: 0; width: 100%; height: 100%; }
 .sp .spgt { position: absolute; pointer-events: none; z-index: 2; }
 
-/* Payoff strip between the charts: names the mode, closes it, and holds the time rail (UX-03, UX-04) */
-.pstrip { position: absolute; left: 8px; right: 20px; height: 46px; z-index: 2; display: flex; align-items: center; gap: 12px; }
-.pspill { flex: none; position: relative; height: 34px; padding: 0 5px 0 13px; border-radius: 17px; background: #2a2a2e; color: #fff; display: flex; align-items: center; gap: 8px; font-size: calc(13px * min(var(--fs), 1.3)); font-weight: 600; }
-.pspill::after { content: ""; position: absolute; inset: -7px -4px; }
-.pspill span { width: 24px; height: 24px; border-radius: 12px; background: #3a3a3e; display: grid; place-items: center; }
-.prail { flex: 1; min-width: 0; position: relative; height: 46px; touch-action: none; cursor: pointer; outline: none; }
-.prail .trk, .prail .fill { position: absolute; left: 0; top: 13px; height: 4px; border-radius: 2px; }
-.prail .trk { right: 0; background: #3a3a3e; } .prail .fill { background: #7f9bff; }
-.prail .tks { position: absolute; inset: 0; }
-.prail .tk { position: absolute; top: 10px; width: 2px; height: 10px; margin-left: -1px; border-radius: 1px; background: #8d8d93; }
-.prail .tk.h { top: 12px; height: 6px; background: #6b6b70; } .prail .tk.exp { background: #f0b93a; height: 12px; top: 9px; } .prail .tk.day, .prail .tk.now { background: #c9c9ce; }
-.prail .lb { position: absolute; top: 26px; text-align: center; white-space: nowrap; font-size: calc(10.5px * min(var(--fs), 1.3)); color: #b9b9be; }
-.prail .lb.exp { color: #f0b93a; } .prail .lb.now { text-align: left; } .prail .lb:last-child { }
-.prail .th { position: absolute; top: 4px; width: 22px; height: 22px; margin-left: -11px; border-radius: 11px; background: #fff; box-shadow: 0 0 0 4px rgba(127,155,255,.32), 0 2px 6px rgba(0,0,0,.5); }
-.prail.drag .th, .prail:focus-visible .th { box-shadow: 0 0 0 7px rgba(127,155,255,.4), 0 2px 6px rgba(0,0,0,.5); }
 .pcard .rf2.ml { color: #d4d4d8; }
+
+/* Payoff box, three takes that lead with the expected P&L (S.box a, b, c): the level and time stay on the axes */
+.pbox .bl { color: #b9b9be; font-size: min(calc(10.5px * var(--fs)), 15.2px); }
+.pbox .bn { font-size: min(calc(19px * var(--fs)), 27.6px); line-height: 1.25; font-weight: 700; letter-spacing: -.3px; }
+.pbox .bs { color: #b9b9be; } .pbox .bs b { font-weight: 600; }
+.pbox .bm { margin-top: 3px; color: #8d8d93; font-size: min(calc(10.5px * var(--fs)), 15.2px); } .pbox .bm b { font-weight: 600; }
+.pbox .bg { display: grid; grid-template-columns: auto auto; column-gap: 16px; align-items: baseline; margin-top: 1px; }
+.pbox .bg span { color: #b9b9be; } .pbox .bg b { text-align: right; font-weight: 600; }
+.pbox .bg .p { font-size: min(calc(14.5px * var(--fs)), 21px); line-height: 1.5; font-weight: 700; } .pbox .bg span.p { color: #fff; font-weight: 600; }
+.pread.pbox[data-box="c"] { pointer-events: none; padding: 5px 9px 6px; border-radius: 10px; }
+.pread.pbox[data-box="c"] .bm { margin-top: 0; }
+.pcard .rr.ri { color: #b9b9be; }
+.pdl.pdb { margin-bottom: 4px; }
 
 </style>
 </head>
@@ -1294,15 +1292,12 @@ function computeLayout() {
     app.style.setProperty('--sat', f.sat + 'px'); app.style.setProperty('--sab', f.sab + 'px');
   }
   const ordH = S.order ? 128 + Math.max(0, L.sab - 4) : 0;
-  // the improved Payoff puts its controls in a strip between the charts (UX-04); the old bar above the index chart goes
-  const strip = typeof PM !== 'undefined' && PM.on && typeof uxB === 'function' && uxB() ? 46 : 0;
-  const top = L.sat + 8 + 32 + 12.6, gap = 16.5, avail = L.H - top - gap - ordH - strip;
+  const top = L.sat + 8 + 32 + 12.6, gap = 16.5, avail = L.H - top - gap - ordH;
   L.ordH = ordH;
   const h1 = Math.round(avail * S.split * 10) / 10, h2 = avail - h1;
   L.cards.idx = { x: 4, y: top, w: L.W - 8, h: h1, padB: 0 };
   L.divY = top + h1; L.gap = gap;
-  L.strip = strip; L.stripY = top + h1 + gap - 3;
-  L.cards.opt = { x: 4, y: top + h1 + gap + strip, w: L.W - 8, h: h2, padB: S.order ? 0 : Math.max(0, L.sab - .7) };
+  L.cards.opt = { x: 4, y: top + h1 + gap, w: L.W - 8, h: h2, padB: S.order ? 0 : Math.max(0, L.sab - .7) };
   for (const id of CHART_IDS) { const c = L.cards[id]; c.paneT = 52 + (id === 'idx' && typeof PM !== 'undefined' && PM.on ? pbarH() : 0); c.paneB = c.h - 24 - c.padB; }
 }
 
@@ -1314,7 +1309,7 @@ function cardMarkup(id) {
   <div class="hd">
     <button class="sym" data-act="symbol"><span class="nm">${c.sym}</span><span class="ty">${c.ty}</span><svg class="ico chv" viewBox="0 0 12 12" stroke-width="1.5">${P.chev}</svg></button>
     <div class="pxl"><span class="ltp">${c.ltp.toFixed(2)}</span><span class="chg"></span></div>
-    <div class="hdr">${id === 'idx' ? `<button class="pobtn" aria-pressed="false" aria-label="Show payoff" hidden>${ic('payoff', 14, 2)}<span>Payoff</span></button><button class="lnk" data-act="link" aria-label="Link timeframes" aria-pressed="false">${ic('link', 14.5, 2.1)}</button>` : ''}<button class="tfb" data-chart="${id}" aria-haspopup="dialog" aria-label="Timeframe ${c.tf}. Tap for chart menu"><span class="tfl">${c.tf}</span><i class="sep"></i><svg class="ico tfi" width="12.8" height="9.2" viewBox="0 0 12.8 9.2" stroke-width="1.15">${P.tfmenu}</svg></button></div>
+    <div class="hdr">${id === 'idx' ? `<button class="pobtn" aria-pressed="false" aria-label="Show payoff" hidden>${ic('payoff', 14, 2)}<span>Payoff</span></button>` : ''}<button class="tfb" data-chart="${id}" aria-haspopup="dialog" aria-label="Timeframe ${c.tf}. Tap for chart menu"><span class="tfl">${c.tf}</span><i class="sep"></i><svg class="ico tfi" width="12.8" height="9.2" viewBox="0 0 12.8 9.2" stroke-width="1.15">${P.tfmenu}</svg></button></div>
   </div>
   <div class="legend"></div>
   ${id === 'idx' ? `<div class="pbar" hidden><div class="pchips" role="group" aria-label="Look ahead to"></div><button class="pclose" aria-label="Close payoff">${ic('x', 16, 2.2)}</button></div><div class="pban" role="status" hidden></div><div class="pread" role="button" tabindex="0" hidden></div><button class="pedge" hidden></button><div class="phint" hidden></div><div class="pempty" hidden>Pick a contract on the option chart to see its payoff</div>` : `<button class="pchip" hidden></button><div class="pcard" hidden></div>`}
@@ -1400,7 +1395,7 @@ function geomOf(id) {
   const axisW = Math.round((ctx.measureText(c.tag.toFixed(2)).width + 8.9) * 4) / 4;
   const paneR = r.w - axisW, s = c.spacing;
   const fut = futureSlots(c, bars), N = n + fut.length;
-  c.ro = clamp(c.ro, -(n - 3), Math.max(2, fut.length + .5));
+  c.ro = clamp(c.ro, -(n - 3), Math.max(2, fut.length + 9));
   const xOf = i => paneR - (c.ro + (n - 1 - i)) * s;
   const i0 = Math.max(0, Math.floor(n - 1 - (paneR / s - c.ro)) - 1), i1 = Math.min(n - 1, Math.ceil(n - 1 + c.ro + 1)), j1 = Math.min(N - 1, Math.ceil(n - 1 + c.ro + 1));
   const slotAt = i => i < n ? bars[i] : fut[i - n];
@@ -1604,6 +1599,9 @@ function openLayer(inner, { onClose, label = 'Dialog', scrimClose = true, cls = 
   closeTransient();
   const el = h(`<div class="layer ${cls}" role="dialog" aria-modal="true" aria-label="${label}"><div class="scrim"></div></div>`);
   el.appendChild(inner); app.appendChild(el);
+  // a layer that opens on a touch's release sits under the finger, so the click from that same tap would land on it
+  // (on its scrim, which closes it). Clicks in its first moments are dropped.
+  const t0 = now(); el.addEventListener('click', e => { if (now() - t0 < 350) { e.stopPropagation(); e.preventDefault(); } }, true);
   const layer = { el, close(reason = 'dismissed') { if (layer.closed) return; layer.closed = true; el.classList.remove('in'); const i = LAYERS.indexOf(layer); if (i >= 0) LAYERS.splice(i, 1); setTimeout(() => el.remove(), 260); onClose && onClose(reason); syncDevHints(); } };
   if (scrimClose) $('.scrim', el).addEventListener('click', () => layer.close('scrim'));
   LAYERS.push(layer); requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));
@@ -2294,7 +2292,7 @@ function syncFocus() { $$('.card').forEach(c => c.classList.toggle('focus', S.v 
    IV moving down 2.5 or up 3 points (BR-09, open item).
    ========================================================================= */
 // The Payoff bar grows a little with the phone's text size (BR-35)
-const pbarH = () => S.ux !== 'a' ? 0 : Math.round(34 * Math.min(S.fs || 1, 1.3));   // the improved Payoff has no bar: see the strip in 76_rail.js
+const pbarH = () => S.ux !== 'a' ? 0 : Math.round(34 * Math.min(S.fs || 1, 1.3));   // the improved Payoff has no bar: the header's Payoff button closes it, and the point is moved on the chart
 const PM = {
   on: false, s3: false, pt: null, chip: null, strike: null, ver: 0, cache: new Map(), optCache: null,
   scenario: store.get('scenario', 'single'), product: 'CARRY', legs: [], others: [], realised: 0, lots: 1, preAvg: null,
@@ -2784,7 +2782,14 @@ function setPoint(pt, how, opts = {}) {
   if (how === 'tap' || how === 'chip' || how === 'stepper') { PM.pulseAt = performance.now(); if (how !== 'chip') Haptic.fire('open'); }
   if (PM.hint && how !== 'chip') { PM.hint = false; PM.hintSeen = true; store.set('hintSeen', true); }
   const t = now(); if (t - PM.lastMoveLog > 2500 && !opts.quiet) { PM.lastMoveLog = t; track('payoff_point_move', { method: how, sessions_to_expiry: +(((poAxisEnd(b) || pt.T) - pt.T) / E.SESSION).toFixed(1), distance: Math.round(pt.S - b.S0), crossed_breakeven: !!PM.crossed }); PM.crossed = false; }
+  if (how !== 'chip') followOpt();
   renderPayoffUI(); redraw('idx'); if (!PM.s3) redraw('opt');
+}
+// the option chart scrolls with the point's time, so its marker stays in view
+function followOpt() {
+  if (PM.s3 || !PM.pt || !CH.opt.g) return;
+  const g = geomOf('opt'), x = xAtT(g, PM.pt.T), m = 24;
+  if (x > g.paneR - m) CH.opt.ro += (x - (g.paneR - m)) / g.s; else if (x < m) CH.opt.ro -= (m - x) / g.s;
 }
 // card coordinates → a snapped point inside the future zone, or null
 function pointFromXY(q, clampToZone = true) {
@@ -2794,7 +2799,8 @@ function pointFromXY(q, clampToZone = true) {
   if (!clampToZone && (i < r[0] - 1 || i > r[1] + 1)) return null;
   i = clamp(i, r[0], r[1]);
   const y = clamp(q.y, g.pT + 2, g.pB - 2);
-  return { T: g.slotAt(i).T1, S: snap5(g.y2p(y)) };
+  // 5 Nifty points a step; 1 point when the scale is so fine that 5 points would jump more than 6 px under the finger
+  const lv = g.y2p(y); return { T: g.slotAt(i).T1, S: g.p2y(0) - g.p2y(5) > 6 ? Math.round(lv) : snap5(lv) };
 }
 function inFuture(q) {
   const g = CH.idx.g; if (!g || q.y < g.pT || q.y > g.pB || q.x > g.paneR) return false;
@@ -2900,7 +2906,6 @@ function renderPayoffUI() {
   app.classList.toggle('po-grey', PM.on && (MK.pricing === 'delayed' || MK.pricing === 'offline'));
   const bar = $('.pbar', ic_), rd = $('.pread', ic_), edge = $('.pedge', ic_), hint = $('.phint', ic_), empty = $('.pempty', ic_);
   const chip = $('.pchip', oc), card = $('.pcard', oc), list = $('#plist');
-  renderRail();
   const hideAll = () => { [bar, rd, edge, hint, empty, chip, card].forEach(e => e.hidden = true); list.hidden = true; $('.pban', ic_).hidden = true; };
   // UX-05: a visible way in, in the index chart's header. It carries its name while a position is held
   const pb = $('.pobtn', ic_);
@@ -2938,10 +2943,10 @@ function renderPayoffUI() {
     const px = uxB() ? plain(b, v) : null;
     if (px && rng.startsWith('Range')) rng = px.iv;
     html = `<div class="rt">${px ? px.head : `${idxName()} ${lvl(v.S)} · ${ptTime(v.T)}`}</div><div class="rp"><span>${lead}</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div>${px && px.vs ? `<div class="rr">${px.vs}</div>` : ''}${px && px.needs ? `<div class="rr rn">${px.needs}</div>` : ''}${rng ? `<div class="rr${px ? ' ri' : ''}">${rng}</div>` : ''}<div class="rf"><span class="mi" data-tip="model">Model estimate ${ic('info', 12, 2)}</span>${asOf}<span class="chev">${ic('chevR', 14, 2)}</span></div>`;
-    if (uxB()) html = payBoxHTML(b, v, asOf ? `<div class="bx5">${asOf}</div>` : '');
+    if (uxB()) html = (S.box === '0' ? payBoxHTML : payBoxV)(b, v, asOf ? `<div class="bx5">${asOf}</div>` : '');
   } else if (b.legs.length && !PM.pt) html = `<div class="rt">Pricing your position…</div><div class="rp"><span>P&amp;L</span><b class="sk"></b></div>`;
   if (html && rd._h !== html) { rd.innerHTML = html; rd._h = html; }
-  rd.hidden = !html; rd.classList.toggle('pbox', uxB() && !!v && !expiredBook(b));
+  rd.hidden = !html; rd.classList.toggle('pbox', uxB() && !!v && !expiredBook(b)); rd.dataset.box = rd.classList.contains('pbox') ? S.box : '';
   if (!rd.hidden && g) {
     rd.style.maxWidth = Math.round(Math.min(g.paneR - 16, Math.max((uxB() ? 236 : 220) * fs, g.paneR * (fs > 1.5 ? .7 : .62)))) + 'px';
     const w = rd.offsetWidth, h = rd.offsetHeight;
@@ -2949,12 +2954,18 @@ function renderPayoffUI() {
     const i = PM.pt ? ptSlot(g) : null, px = i != null ? g.xOf(i) : g.paneR, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     if (px < g.paneR / 2) { left = g.paneR - w - 8; top += 34 * Math.min(S.fs || 1, 1.45); }
     if (px > left - 14 && px < left + w + 14 && py > top - 14 && py < top + h + 14) top = g.pB - h - 6;
+    // take c: the box is a tag beside the point, up and to the left of it, clear of the finger and of the labels at the right edge
+    if (rd.dataset.box === 'c' && i != null && px > 0 && px < g.paneR && py > g.pT && py < g.pB) {
+      left = px - w - 20; if (left < 4) left = px + 20;
+      top = py - h - 20; if (top < g.pT + 4 + bannerH) top = py + 24;
+      left = clamp(left, 4, g.paneR - w - 4); top = clamp(top, g.pT + 4, g.pB - h - 4);
+    }
     rd.style.left = left + 'px'; rd.style.top = top + 'px';
   }
   // first-run hint
   hint.hidden = !(PM.hint && v && g);
   if (!hint.hidden) {
-    hint.textContent = uxB() ? 'Drag the ring up or down, or tap the shaded area, to see P&L at any level. Slide the bar below the chart to change the time.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
+    hint.textContent = uxB() ? 'Drag the ring, or tap the shaded area, to see P&L at any level and time. Hold it at the right edge to look further ahead.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
     const nowX = xAtT(g, MK.nowT()), zw = Math.max(150, g.paneR - nowX - 12); hint.style.width = Math.min(zw, 230) + 'px';
     const hw = Math.min(zw, 230), hh = hint.offsetHeight, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     const hl = clamp(nowX + 6, 6, g.paneR - hw - 6);
@@ -2979,8 +2990,8 @@ function renderPayoffUI() {
     const prem = v.prem != null ? `${E.prem(v.prem)}` : '';
     const ml = uxB() ? `<div class="rf2 ml">${maxLossTxt(b, true)}</div>` : '';
     const ch = b.pretrade
-      ? `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>Premium</span><b>${prem}</b></div><div class="rr">${v.uncertain ? 'Too uncertain to price' : `${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`
-      : `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>P&amp;L</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div><div class="rr">Premium ${prem}${v.atExpiry || v.uncertain ? '' : ` · ${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`;
+      ? `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>Premium</span><b>${prem}</b></div><div class="rr">${v.uncertain ? 'Too uncertain to price' : `${uxB() ? 'If IV moves: ' : ''}${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`
+      : `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>P&amp;L</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div><div class="rr">Premium ${prem}${v.atExpiry || v.uncertain ? '' : uxB() ? `</div><div class="rr ri">If IV moves: ${E.prem(v.premLo)} to ${E.prem(v.premHi)}` : ` · ${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`;
     if (card._h !== ch) { card.innerHTML = ch; card._h = ch; }
     if (go) {
       const w = card.offsetWidth, h = card.offsetHeight; let left = 8, top = go.pT + 6;
@@ -3241,7 +3252,7 @@ function bindPayoff() {
     const row = e.target.closest('[data-leg]'); if (!row) return;
     const id = +row.dataset.leg; PM.strike = PM.strike === id ? null : id; track('payoff_row_tap', {}); renderPayoffUI(); redraw('idx');
   });
-  bindSellerPanel(); bindRail();
+  bindSellerPanel();
   const b1 = $('#b1');
   let rep = 0, repT = 0;
   const stopRep = () => { clearTimeout(rep); clearInterval(repT); PM.stepBig = false; };
@@ -3306,6 +3317,21 @@ function payRows(b, v) {
 function payBoxHTML(b, v, extra = '') {
   const pct = (v.S - b.S0) / b.S0 * 100;
   return `<div class="bx1">When price is at</div><div class="bx2"><b>${v.S.toFixed(2)}</b> <span class="${pctCls(pct)}">${pctTxt(pct)}</span></div><div class="bx3">Expected P&amp;L on</div>${payRows(b, v).map(([k, n]) => `<div class="bx4">${k}: <b class="${pnlCls(n)}">${kfmt(n)}</b></div>`).join('')}${extra}`;
+}
+
+/* Three takes on the payoff box (S.box: a, b or c; 0 keeps the seller-panel box above). The crosshair already
+   shows the level on the price axis and the time on the time axis, so each take leads with the expected P&L
+   and leaves the level and the time to the axes. What stays is what the axes can't say: the same level at
+   expiry, and how far that level is from the market now.
+   a: the P&L as a headline. b: the point's time and the expiry as two aligned rows. c: a tag beside the point. */
+function moveTxt(b, v) { const d = v.S - b.S0; return Math.abs(d) < 2.5 ? `${idxName()} unchanged` : `${idxName()} ${ptsTxt(d)} pts (${pctTxt(d / b.S0 * 100)})`; }
+function payBoxV(b, v, extra = '') {
+  const rows = payRows(b, v), atExp = rows[0][0] === 'Expiry date', exp = rows[1] ? rows[1][1] : null;
+  const num = (n, cls = '') => `<b class="${cls} ${pnlCls(n)}">${sgn(n)}</b>`;
+  if (S.box === 'c') return `<div class="bn ${pnlCls(v.pnl)}">${sgn(v.pnl)}</div>${exp != null ? `<div class="bm">Expiry ${num(exp)}</div>` : atExp ? '<div class="bm">at expiry</div>' : ''}${extra}`;
+  const head = `<div class="bl">Expected P&amp;L${atExp ? ' at expiry' : ''}</div>`, foot = `<div class="bm">${moveTxt(b, v)}</div>${extra}`;
+  if (S.box === 'b') return `${head}<div class="bg"><span class="p">${atExp ? 'Expiry' : ptTimeShort(v.T)}</span>${num(v.pnl, 'p')}${exp != null ? `<span>Expiry</span>${num(exp)}` : ''}</div>${foot}`;
+  return `${head}<div class="bn ${pnlCls(v.pnl)}">${sgn(v.pnl)}</div>${exp != null ? `<div class="bs">At expiry ${num(exp)}</div>` : ''}${foot}`;
 }
 
 /* ---------- numbers for the Summary ---------- */
@@ -3472,96 +3498,11 @@ function bindSellerPanel() {
 }
 
 /* =========================================================================
-   Time rail (UX-03) in a strip between the charts (UX-04), and the most a
-   position can lose (UX-20). Used when the improved Payoff is on (uxB).
-   - The strip names the mode, closes it, and holds the rail.
-   - The rail sets the point's time: Now to the end of the future zone. Today's
-     session takes a third of it and each later session an equal share. It stops
-     at each hour, the 3:20 pm square-off, session ends and expiries.
-   - Dragging the point on the chart then sets only its level.
+   The point's opening time (UX-19) and the most a position can lose (UX-20).
+   Used when the improved Payoff is on (uxB).
+   The time slider strip between the charts (UX-03, UX-04) was removed: the
+   point's level and time are both set by dragging it on the chart.
    ========================================================================= */
-function railModel(b) {
-  const now = MK.nowT(), end = poAxisEnd(b);
-  if (end == null || end <= now + 1e-6 || !PM.pt) return null;
-  const key = `${PM.ver}|${Math.round(now)}|${end}`;
-  if (PM.railM && PM.railM.key === key) return PM.railM;
-  const SS = E.SESSION, di0 = Math.floor(now / SS + 1e-9), c0 = (di0 + 1) * SS, segs = [];
-  if (end <= c0 + 1e-6) segs.push({ a: now, z: end, x0: 0, x1: 1 });
-  else {
-    const rest = []; for (let a = c0; a < end - 1e-6; a += SS) rest.push([a, Math.min(end, a + SS)]);
-    const w0 = c0 - now > 1 ? 1 / 3 : 0, w = (1 - w0) / rest.length;
-    if (w0) segs.push({ a: now, z: c0, x0: 0, x1: w0 });
-    rest.forEach(([a, z], k) => segs.push({ a, z, x0: w0 + k * w, x1: w0 + (k + 1) * w }));
-  }
-  const f = T => { T = clamp(T, now, end); const s = segs.find(q => T <= q.z + 1e-9) || segs[segs.length - 1]; return s.x0 + (T - s.a) / (s.z - s.a) * (s.x1 - s.x0); };
-  const inv = x => { x = clamp(x, 0, 1); const s = segs.find(q => x <= q.x1 + 1e-9) || segs[segs.length - 1]; return s.a + (x - s.x0) / (s.x1 - s.x0) * (s.z - s.a); };
-  const map = new Map(), add = (T, t, kind, pri) => { if (T < now - 1e-6 || T > end + 1e-6) return; const k = Math.round(T * 100), o = map.get(k); if (!o || pri > o.pri) map.set(k, { T, t, kind, pri }); };
-  add(now, 'Now', 'now', 5);
-  for (let h = 10; h <= 15; h++) { const T = E.tOf(di0, h * 60); if (T > now + 10 && T < Math.min(c0, end) - 10) add(T, `${h > 12 ? h - 12 : h} ${h >= 12 ? 'pm' : 'am'}`, 'h', 1); }
-  if (!b.pretrade && b.legs.some(l => l.product === 'INTRADAY')) add(PF.SQ_T, '3:20', 'sq', 3);
-  for (let c = c0, k = 0; c <= end + 1e-6; c += SS, k++) { const d = E.DAYS[Math.round(c / SS) - 1]; add(c, k === 0 && di0 === E.TODAY ? '3:30' : d ? d.label.split(' ')[0] : '', 'day', k === 0 ? 4 : 2); }
-  for (const l of b.legs) if (l.c.expT > now && (l.product === 'CARRY' || b.pretrade)) add(l.c.expT, l.c.exp.info.short, 'exp', 6);
-  return PM.railM = { key, now, end, f, inv, stops: [...map.values()].sort((p, q) => p.T - q.T) };
-}
-function renderRail() {
-  const st = $('#pstrip'); if (!st) return;
-  const show = PM.on && uxB(); st.hidden = !show; if (!show) return;
-  st.style.top = L.stripY + 'px';
-  const b = book(), m = poPriced() ? railModel(b) : null, rail = $('.prail', st);
-  rail.hidden = !m; if (!m) return;
-  const W = rail.clientWidth, fs = Math.min(S.fs || 1, 1.3), k = `${m.key}|${W}|${fs}`;
-  if (rail._k !== k) {
-    // ticks at every stop; labels by priority, dropped when they would overlap
-    const placed = [], lab = [];
-    for (const s of m.stops.slice().sort((p, q) => q.pri - p.pri)) {
-      if (!s.t) continue; const x = m.f(s.T) * W, w = (s.t.length * 6.1 + 6) * fs, l = clamp(x - w / 2, 0, W - w);
-      if (placed.some(p => l < p[1] + 4 && l + w > p[0] - 4)) continue;
-      placed.push([l, l + w]); lab.push(`<span class="lb ${s.kind}" style="left:${l.toFixed(1)}px;width:${w.toFixed(1)}px">${s.t}</span>`);
-    }
-    $('.tks', rail).innerHTML = m.stops.map(s => `<i class="tk ${s.kind}" style="left:${(m.f(s.T) * W).toFixed(1)}px"></i>`).join('') + lab.join('');
-    rail._k = k;
-  }
-  const x = m.f(PM.pt.T) * W; $('.th', rail).style.left = x + 'px'; $('.fill', rail).style.width = x + 'px';
-  rail.setAttribute('aria-valuetext', ptTime(PM.pt.T));
-}
-// keep the point in view while the rail moves it; on release, bring Now back into view if it scrolled away
-function railView(done) {
-  const T = PM.pt.T, now = MK.nowT();
-  for (const id of PM.s3 ? ['idx'] : ['idx', 'opt']) {
-    const g = geomOf(id), x = xAtT(g, T), m = id === 'idx' ? 14 : 24;
-    if (x > g.paneR - m) CH[id].ro += (x - (g.paneR - m)) / g.s; else if (x < m) CH[id].ro -= (m - x) / g.s;
-  }
-  if (done) {
-    const g = geomOf('idx');
-    if (xAtT(g, now) < 0) { fitTo(Math.max(T, sessionEndT(book())), 'rail'); return; }
-    fitPrice();
-  }
-  redraw(); renderPayoffUI();
-}
-function railAt(e, done) {
-  const rail = $('#pstrip .prail'), m = PM.railM; if (!rail || !m || !PM.pt) return;
-  const r = rail.getBoundingClientRect(), W = rail.clientWidth, sc = r.width / W || 1, x = clamp((e.clientX - r.left) / sc, 0, W);
-  let T = m.inv(x / W), hit = null;
-  for (const s of m.stops) { const d = Math.abs(m.f(s.T) * W - x); if (d < 8 && (!hit || d < hit.d)) hit = { s, d }; }
-  if (hit) T = hit.s.T;
-  const g = geomOf('idx'), rg = ptRange(g); if (!rg) return;
-  const Ts = g.slotAt(clamp(slotOfT(g, T), rg[0], rg[1])).T1;
-  if (hit && hit.s.kind !== 'now' && PM.railStop !== hit.s.T) Haptic.fire('select');
-  PM.railStop = hit ? hit.s.T : null;
-  if (Ts !== PM.pt.T) setPoint({ T: Ts, S: PM.pt.S }, 'drag', { quiet: true });
-  railView(done);
-}
-function bindRail() {
-  if (!$('#pstrip')) app.appendChild(h(`<div class="pstrip" id="pstrip" hidden><button class="pspill" aria-label="Close payoff">Payoff<span>${ic('x', 13, 2.4)}</span></button><div class="prail" role="slider" tabindex="0" aria-label="Time of the Payoff point"><i class="trk"></i><i class="fill"></i><div class="tks"></div><i class="th"></i></div></div>`));
-  const st = $('#pstrip'), rail = $('.prail', st); let drag = null;
-  $('.pspill', st).addEventListener('click', () => setPayoff(false, { source: 'strip' }));
-  rail.addEventListener('pointerdown', e => { drag = e.pointerId; try { rail.setPointerCapture(e.pointerId); } catch {} rail.classList.add('drag'); PM.railStop = null; railAt(e, false); e.preventDefault(); });
-  rail.addEventListener('pointermove', e => { if (drag === e.pointerId) railAt(e, false); });
-  const end = e => { if (drag !== e.pointerId) return; drag = null; rail.classList.remove('drag'); railAt(e, true); track('payoff_point_move', { method: 'rail', sessions_ahead: +((PM.pt.T - MK.nowT()) / E.SESSION).toFixed(2) }); };
-  rail.addEventListener('pointerup', end); rail.addEventListener('pointercancel', end);
-  rail.addEventListener('keydown', e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); stepPoint(e.key === 'ArrowRight' ? 't+' : 't-'); railView(true); } });
-}
-
 /* ---------- UX-19: open the point at the trader's horizon ---------- */
 // 30 minutes ahead when every position is intraday or expires today; null keeps the session end
 function horizonT(b, g) {
@@ -3629,6 +3570,20 @@ function bindCard(id) {
   // canvas regions
   const P0 = new Map(); let mode = null, lp = 0, start = null, ro0 = 0, sp0 = 0, d0 = 0, moved = false;
   const cardPt = p => ({ x: p.x - L.cards[id].x, y: p.y - L.cards[id].y });
+  // Payoff: holding the point near a side edge of the index chart scrolls the chart under it, so later sessions and
+  // the expiry are reached in the same drag. It stops when the end of the future zone, or Now, is in view.
+  let edgeQ = null, edgeRAF = 0;
+  const edgeStep = () => {
+    edgeRAF = 0; const g = c.g;
+    if (id !== 'idx' || !PM.on || !edgeQ || !g || (mode !== 'ptdrag' && mode !== 'cross')) { edgeQ = null; return; }
+    const m = 34, end = poAxisEnd(), over = edgeQ.x > g.paneR - m ? edgeQ.x - (g.paneR - m) : edgeQ.x < m ? edgeQ.x - m : 0;
+    const room = over > 0 ? end != null && xAtT(g, end) > g.paneR - m : over < 0 && xAtT(g, MK.nowT()) < m;
+    if (!room) { edgeQ = null; return; }
+    c.ro += clamp(over / m, -1, 1) * 7 / g.s; c.g = geomOf('idx');
+    const pt = pointFromXY(edgeQ); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'drag', { quiet: true });
+    redraw('idx'); edgeRAF = requestAnimationFrame(edgeStep);
+  };
+  const edgeFrom = q => { edgeQ = q; if (!edgeRAF) edgeRAF = requestAnimationFrame(edgeStep); };
   cv.addEventListener('pointerdown', e => {
     if (e.button !== 0 || LAYERS.length) return;
     const p = appPt(e), reg = regionAt(id, p);
@@ -3668,18 +3623,18 @@ function bindCard(id) {
     }
     const p = appPt(e); P0.set(e.pointerId, p);
     if (mode === 'ptpend' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'ptdrag'; moved = true; }
-    if (mode === 'ptdrag') { const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && uxB()) pt.T = PM.pt.T; if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'drag'); return; }
+    if (mode === 'ptdrag') { const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'drag'); edgeFrom(cardPt(p)); return; }
     if (mode === 'pending' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'pan'; moved = true; if (id === 'idx' && PM.on && PM.chip) { PM.chip = null; renderPayoffUI(); } }
-    if (mode === 'pan') { c.ro = ro0 + (p.x - start.x) / c.spacing; redraw(id); }
+    if (mode === 'pan') { c.ro = ro0 - (p.x - start.x) / c.spacing; redraw(id); }   // the candles follow the finger
     else if (mode === 'cross') {
-      if (id === 'idx' && PM.on && !c.draft && poPriced() && inFuture(cardPt(p))) { if (c.cross) { c.cross = null; setOhlc(id, null); } const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'longpress'); redraw(id); }
+      if (id === 'idx' && PM.on && !c.draft && poPriced() && inFuture(cardPt(p))) { if (c.cross) { c.cross = null; setOhlc(id, null); } const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'longpress'); redraw(id); edgeFrom(cardPt(p)); }
       else { setCross(id, cardPt(p)); if (c.draft && c.draft.pts.length) { c.draft.hover = { t: xToTime(c.g, c.cross.x), p: c.g.y2p(c.cross.y) }; } }
     }
     else if (mode === 'pinch' && P0.size >= 2) { const [a, b] = [...P0.values()]; const d = hyp(a.x - b.x, a.y - b.y); c.spacing = clamp(sp0 * d / d0, 1.2, 48); redraw(id); }
   });
   const end = e => {
     if (!P0.has(e.pointerId)) return;
-    P0.delete(e.pointerId); clearTimeout(lp);
+    P0.delete(e.pointerId); clearTimeout(lp); edgeQ = null;
     if (P0.size) return;
     const p = appPt(e);
     if (mode === 'ptpend' && e.type === 'pointerup') openB1('point');
@@ -3942,7 +3897,6 @@ function buildDev() {
       <label class="dt">Left-handed (mirrors V2 and V5)<input type="checkbox" data-t="hand"></label>
       <label class="dt">Show touch zones and system gesture areas<input type="checkbox" data-t="zones"></label>
       <label class="dt">Show touches<input type="checkbox" data-t="touches"></label>
-      <label class="dt">Linked timeframes<input type="checkbox" data-t="linked"></label>
       <label class="dt">Haptics (vibration, iOS tick, pulses)<input type="checkbox" data-t="haptics"></label>
       <label class="dt">Sound ticks (desktop stand-in for haptics)<input type="checkbox" data-t="sound"></label>
       <div class="hmeter" style="margin-top:6px"><i id="hDot"></i><span id="hTxt">${Haptic.canVibrate ? 'Vibration API available' : 'No Vibration API here: pulses and optional sound stand in'}</span></div></div>
@@ -4042,6 +3996,7 @@ async function init() {
   if (SCEN[q.get('pos')]) PM.scenario = q.get('pos');
   if (q.get('product') === 'intraday') PM.product = 'INTRADAY';
   if (q.get('later') === '1') PM.later = true;
+  S.box = ['a', 'b', 'c', '0'].includes(q.get('box')) ? q.get('box') : store.get('box', 'a');   // which payoff box: three takes, or 0 for the one before
   S.ux = q.get('ux') === 'a' ? 'a' : 'b';   // b: the improved Payoff (UX-01, UX-02, UX-05); a: PRD v1.0 as first built
   const qc = q.get('clock'); if (qc) { const m = /^(\d{1,2}):?(\d{2})$/.exec(qc); if (m) MK.mod = clamp(+m[1] * 60 + +m[2], 555, 960); }
   E.calibrate(MK.nowT());
@@ -4074,6 +4029,7 @@ function payoffDevHTML() {
     <div class="seg pseg" data-pd="pricing"><button data-v="live">Live</button><button data-v="delayed">Delayed</button><button data-v="offline">Offline</button><button data-v="unavailable">Unavailable</button></div>
     <div class="pdrow"><button class="dbtn pri" data-pa="toggle">Payoff on</button><button class="dbtn" data-pa="tip">Show the tip</button><button class="dbtn" data-pa="order">Order panel</button></div>
     <label class="dt pdt">Improved Payoff: breakevens in view, plain readout, header button<input type="checkbox" data-pt="ux"></label>
+    <div class="pdl pdb">Payoff box</div><div class="seg pseg" data-pd="box"><button data-v="a">P&amp;L first</button><button data-v="b">Two rows</button><button data-v="c">At the point</button><button data-v="0">Before</button></div>
     <label class="dt pdt">Later release: order actions in the point sheet<input type="checkbox" data-pt="later"></label>
     <label class="dt pdt">Orders fail (Later release)<input type="checkbox" data-pt="fail"></label>
     <div class="pnote">Real 1-minute Kite data for NIFTY 50 and the 19 Oct 22500 Call and Put up to 12:59 pm on Wed 14 Oct 2026; later times simulated, other contracts modelled.</div>`;
@@ -4084,6 +4040,7 @@ function syncPayoffDev() {
   $$('[data-pd="product"] button').forEach(b => { b.classList.toggle('on', b.dataset.v === PM.product); b.disabled = !SCEN[PM.scenario].product; });
   $$('[data-pd="pricing"] button').forEach(b => b.classList.toggle('on', b.dataset.v === MK.pricing));
   $$('[data-pa="toggle"]').forEach(b => b.textContent = PM.on ? 'Payoff off' : 'Payoff on');
+  $$('[data-pd="box"] button').forEach(b => { b.classList.toggle('on', b.dataset.v === S.box); b.disabled = !uxB(); });
   $$('[data-pt="later"]').forEach(c => c.checked = PM.later);
   $$('[data-pt="ux"]').forEach(c => c.checked = S.ux !== 'a');
   $$('[data-pt="fail"]').forEach(c => c.checked = PM.orderFail);
@@ -4104,6 +4061,7 @@ function bindPayoffDev(root, closeMenu) {
       const k = sb.closest('[data-pd]').dataset.pd;
       if (k === 'product') { PM.product = sb.dataset.v; applyScenario(PM.scenario); }
       if (k === 'pricing') setPricing(sb.dataset.v);
+      if (k === 'box') { S.box = sb.dataset.v; store.set('box', S.box); renderPayoffUI(); track('demo_box', { box: S.box }); }
       syncPayoffDev(); return;
     }
     const a = e.target.closest('[data-pa]'); if (!a) return;

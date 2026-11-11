@@ -29,6 +29,21 @@ function payBoxHTML(b, v, extra = '') {
   return `<div class="bx1">When price is at</div><div class="bx2"><b>${v.S.toFixed(2)}</b> <span class="${pctCls(pct)}">${pctTxt(pct)}</span></div><div class="bx3">Expected P&amp;L on</div>${payRows(b, v).map(([k, n]) => `<div class="bx4">${k}: <b class="${pnlCls(n)}">${kfmt(n)}</b></div>`).join('')}${extra}`;
 }
 
+/* Three takes on the payoff box (S.box: a, b or c; 0 keeps the seller-panel box above). The crosshair already
+   shows the level on the price axis and the time on the time axis, so each take leads with the expected P&L
+   and leaves the level and the time to the axes. What stays is what the axes can't say: the same level at
+   expiry, and how far that level is from the market now.
+   a: the P&L as a headline. b: the point's time and the expiry as two aligned rows. c: a tag beside the point. */
+function moveTxt(b, v) { const d = v.S - b.S0; return Math.abs(d) < 2.5 ? `${idxName()} unchanged` : `${idxName()} ${ptsTxt(d)} pts (${pctTxt(d / b.S0 * 100)})`; }
+function payBoxV(b, v, extra = '') {
+  const rows = payRows(b, v), atExp = rows[0][0] === 'Expiry date', exp = rows[1] ? rows[1][1] : null;
+  const num = (n, cls = '') => `<b class="${cls} ${pnlCls(n)}">${sgn(n)}</b>`;
+  if (S.box === 'c') return `<div class="bn ${pnlCls(v.pnl)}">${sgn(v.pnl)}</div>${exp != null ? `<div class="bm">Expiry ${num(exp)}</div>` : atExp ? '<div class="bm">at expiry</div>' : ''}${extra}`;
+  const head = `<div class="bl">Expected P&amp;L${atExp ? ' at expiry' : ''}</div>`, foot = `<div class="bm">${moveTxt(b, v)}</div>${extra}`;
+  if (S.box === 'b') return `${head}<div class="bg"><span class="p">${atExp ? 'Expiry' : ptTimeShort(v.T)}</span>${num(v.pnl, 'p')}${exp != null ? `<span>Expiry</span>${num(exp)}` : ''}</div>${foot}`;
+  return `${head}<div class="bn ${pnlCls(v.pnl)}">${sgn(v.pnl)}</div>${exp != null ? `<div class="bs">At expiry ${num(exp)}</div>` : ''}${foot}`;
+}
+
 /* ---------- numbers for the Summary ---------- */
 const ncdf = x => { const t = 1 / (1 + .2316419 * Math.abs(x)), d = .3989423 * Math.exp(-x * x / 2), p = d * t * (.3193815 + t * (-.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return x > 0 ? 1 - p : p; };
 function panelStats(b) {
