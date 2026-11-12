@@ -128,6 +128,7 @@ Two parts follow Sahi's Option Seller panel on mobile (screenshots shared on 11 
 - **Two drawings:** the Drawing tile opens a Drawing Tools sheet (toggles, then the drawings list, as in the Sahi app) with a flash icon on the right of each drawing.
 - **Two indicators or templates:** Add indicators has a flash icon left of the star, and My Templates has one left of the delete icon. A template takes one of the two indicator slots.
 - **Limit of two per group:** when a group is full the other flash icons are dimmed, and tapping one shows "Quick view already has 2 drawings. Remove one to add another." Removing a pick leaves an "Empty" slot in the wheel until another is added.
+- **Picks come first on the next visit:** the flashed drawings and indicators sit at the top of their lists the next time the sheet opens, in the order they were picked. The row stays where it is while the sheet is open, so it doesn't jump away under the finger.
 - Picks are saved on the device. The prototype draws Trend Line, Horizontal Line, Rectangle and Fibonacci Retracement, and the EMA, SMA, VWAP, Bollinger Bands and Key Levels indicators; any other pick sits in the wheel and says it is not drawn here.
 
 The button beside Payoff in the index chart's header is the Sahi app's option chain button; the chain is not part of this prototype.

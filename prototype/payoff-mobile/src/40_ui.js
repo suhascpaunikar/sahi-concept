@@ -95,9 +95,9 @@ function openIndicators(id) {
     <div class="ilist" role="list"></div>
   </div>`);
   let cat = 'all', q = '';
-  const stars = sstore.get('stars', {});
+  const stars = sstore.get('stars', {}), list = picksFirst(IND_LIST, QV.inds.slice(), indKey);
   const render = () => {
-    const rows = IND_LIST.filter(x => (cat === 'all' || x.cat === cat) && x.n.toLowerCase().includes(q));
+    const rows = list.filter(x => (cat === 'all' || x.cat === cat) && x.n.toLowerCase().includes(q));
     $('.ilist', sh).innerHTML = (cat === 'ai' ? '<div class="secl" style="margin:24px 16px">AI-based indicators are not part of this prototype.</div>' : '') + rows.map(x => {
       const on = x.k && c.ind[x.k];
       return `<div class="irow${x.by ? ' two' : ''}${on ? ' on' : ''}" role="listitem"><button class="add" data-n="${x.n}" aria-label="${on ? 'Remove' : 'Add'} ${x.n}">${on ? ic('check', 9, 3.4) : ic('plus', 9, 3.4)}</button><div class="nm"><div class="t1">${x.n}${x.only ? '<span class="only">Only on SAHI</span>' : ''}</div>${x.by ? `<div class="t2">By ${x.by}</div>` : ''}</div>${on ? '<span class="onlbl">On chart</span>' : ''}${flashBtn('inds', indKey(x), x.n)}<button class="stb" data-s="${x.n}" aria-label="Favourite ${x.n}"><svg class="ico st${stars[x.n] ? ' on' : ''}" width="16" height="16" viewBox="0 0 24 24" stroke-width="1.9">${P.star}</svg></button></div>`;

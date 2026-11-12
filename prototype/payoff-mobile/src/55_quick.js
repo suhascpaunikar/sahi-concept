@@ -61,6 +61,10 @@ function rebuildSlots() {
 function saveQuick() { store.set('quick', QV); store.set('tpls', TPLS); rebuildSlots(); if (typeof syncDevHints === 'function' && CH.idx.g) syncDevHints(); }
 function resetQuick() { Object.assign(QV, JSON.parse(JSON.stringify(QV_DEF))); saveQuick(); }
 
+// the Quick view picks first, in the order they were picked, then the rest in the list's own order. Taken once when a sheet
+// opens, so a row doesn't jump away under the finger when its flash icon is tapped: it moves up on the next visit.
+function picksFirst(list, picks, keyOf) { const at = x => { const i = picks.indexOf(keyOf(x)); return i < 0 ? 99 : i; }; return list.map((x, i) => [x, i]).sort((a, b) => at(a[0]) - at(b[0]) || a[1] - b[1]).map(a => a[0]); }
+
 /* ---- the flash icon ---- */
 function flashBtn(group, key, name) {
   const on = QV[group].includes(key), dis = !on && QV[group].length >= 2;
@@ -99,9 +103,10 @@ const DRAW_OPTS = [['toolbar', 'grid', 'Enable drawing toolbar'], ['magnet', 'pi
 function openDrawing(id) {
   const c = CH[id]; S.draw = S.draw || {}; S.draw.toolbar = !!$('.dtool');
   const sh = h(`<div class="sheet dsheet" style="top:${L.sat + 16}px"><div class="sh-title">Drawing Tools</div><button class="sh-x" aria-label="Close">${ic('x', 18, 1.7)}</button><hr class="dhr"><div class="dlist"></div></div>`);
+  const tools = picksFirst(DRAW_TOOLS, QV.tools.slice(), t => t[0]);
   const render = () => {
     const el = $('.dlist', sh), sc = el.scrollTop;
-    el.innerHTML = `<div class="dsec">Tools</div>${DRAW_OPTS.map(([k, icn, n]) => `<button class="drow" data-do="${k}" role="switch" aria-checked="${!!S.draw[k]}"><span class="di">${ic(P[icn] ? icn : 'gear', 20, 1.7)}</span><span class="dnm">${n}</span><span class="tog${S.draw[k] ? ' on' : ''}"></span></button>`).join('')}<hr class="dhr"><div class="dsec">Drawings</div>${DRAW_TOOLS.map(([k, icn, n]) => `<div class="drow"><button class="dtap" data-dt="${k}"><span class="di">${ic(P[icn] ? icn : 'pen', 20, 1.7)}</span><span class="dnm">${n}</span></button>${flashBtn('tools', k, n)}</div>`).join('')}<div style="height:calc(20px + var(--sab))"></div>`;
+    el.innerHTML = `<div class="dsec">Tools</div>${DRAW_OPTS.map(([k, icn, n]) => `<button class="drow" data-do="${k}" role="switch" aria-checked="${!!S.draw[k]}"><span class="di">${ic(P[icn] ? icn : 'gear', 20, 1.7)}</span><span class="dnm">${n}</span><span class="tog${S.draw[k] ? ' on' : ''}"></span></button>`).join('')}<hr class="dhr"><div class="dsec">Drawings</div>${tools.map(([k, icn, n]) => `<div class="drow"><button class="dtap" data-dt="${k}"><span class="di">${ic(P[icn] ? icn : 'pen', 20, 1.7)}</span><span class="dnm">${n}</span></button>${flashBtn('tools', k, n)}</div>`).join('')}<div style="height:calc(20px + var(--sab))"></div>`;
     el.scrollTop = sc;
   };
   render();
