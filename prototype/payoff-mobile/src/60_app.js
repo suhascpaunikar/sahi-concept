@@ -187,7 +187,7 @@ function showCoach(force = false) {
   dismissCoach(true);
   if (sstore.get('coach', false) && !force) return;
   const r = rectIn($('.tfb', CH.opt.el)), a = { x: r.x + r.w / 2, y: r.y + r.h };
-  coachEl = h(`<div class="coach" role="note"><b>Quick actions on the timeframe button</b>Hold ${CH.opt.tf}, slide to an action, release. A tap opens the chart menu.<div class="cbtns"><button data-c="ok">Got it</button></div></div>`);
+  coachEl = h(`<div class="coach" role="note"><b>Quick actions</b>Press and hold ${CH.opt.tf}. Slide to what you want and let go.<div class="cbtns"><button data-c="ok">Got it</button></div></div>`);
   app.appendChild(coachEl);
   const w = coachEl.offsetWidth, hh = coachEl.offsetHeight, x = clamp(a.x - w / 2, 10, L.W - w - 10);
   coachEl.style.left = x + 'px'; coachEl.style.top = clamp(a.y + 12, L.sat + 4, L.H - hh - 8) + 'px';
