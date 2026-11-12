@@ -73,16 +73,20 @@ function geometry(id) {
     });
     hh = y + (col ? ph : 0) + 10 + foot;
   }
-  let top = pr.y + pr.h + 6; const below = top + hh <= L.H - L.sab - 8;
-  if (!below) top = pr.y - 6 - hh;
-  const x = clamp(pr.x + pr.w - w, 8, L.W - w - 8), ok = top >= L.sat + 4;
+  // The panel always opens downwards, under the button. Where the screen ends first (the option chart's button), it moves
+  // up only as far as it must to fit, and may then cover the button: it never flips to open above it.
+  const maxTop = L.H - L.sab - 8 - hh, ok = maxTop >= L.sat + 4;
+  const top = Math.min(pr.y + pr.h + 6, maxTop), below = true;
+  const x = clamp(pr.x + pr.w - w, 8, L.W - w - 8);
   return { kind: S.qa === 'list' ? 'list' : 'pills', cols: S.qa === 'list' ? 1 : S.qa === 'pills' ? 2 : 3, rect: { x, y: top, w, h: hh }, cells, titles, ok, reason: ok ? null : 'space', chart: id, above: !below, anchor: pr };
 }
 function hitTest(geo, p) {
   const q = { x: p.x - geo.rect.x, y: p.y - geo.rect.y }, pad = geo.kind === 'list' ? 0 : 5;
+  // the button itself is never an action, also where the panel covers it: lifting the finger without sliding picks nothing
+  if (inRect(p, geo.anchor, 6)) return { zone: 'inner' };
   const c = geo.cells.find(c => inRect(q, c, pad));
   if (c) return { zone: 'slot', i: c.i, chart: geo.chart };
-  return { zone: inRect(p, geo.anchor, 6) ? 'inner' : inRect(p, geo.rect) ? 'gap' : 'outside' };
+  return { zone: inRect(p, geo.rect) ? 'gap' : 'outside' };
 }
 
 /* =========================================================================

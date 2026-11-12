@@ -128,7 +128,7 @@ Two parts follow Sahi's Option Seller panel on mobile (screenshots shared on 11 
 - `&qa=pills` **Pills × 2:** the same sections with two wider pills a row.
 - `&qa=list` **List:** one row per action, as V6 was. It has no template rows.
 
-No ring pulses where an action is picked, where the panel opens, or on the Payoff point when it is moved by a tap; the haptic tick stays. If the pills panel has no room (the option chart on a 360-wide phone at 130% text), holding shows "release for Quick actions" and opens the Quick actions sheet.
+No ring pulses where an action is picked, where the panel opens, or on the Payoff point when it is moved by a tap; the haptic tick stays. The panel always opens downwards. Under the option chart's button, where the screen ends first, it moves up only as far as it must to fit and may cover the button; it never flips to open above it. Lifting the finger on the button picks nothing. Only if the panel is taller than the screen does holding open the Quick actions sheet instead.
 
 **Quick view** lets the trader choose what the panel holds. Payoff is always the last action.
 
