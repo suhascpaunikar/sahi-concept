@@ -319,8 +319,6 @@ function payoffOver(id, ctx, g) {
   if (x < -4 || x > g.paneR + 4) return;
   ctx.save(); ctx.strokeStyle = 'rgba(127,155,255,.55)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(Math.round(x) + .5, g.pT); ctx.lineTo(Math.round(x) + .5, g.pB); ctx.moveTo(0, Math.round(y) + .5); ctx.lineTo(g.paneR, Math.round(y) + .5); ctx.stroke(); ctx.setLineDash([]);
-  const pulse = PM.pulseAt ? clamp((now - 0) && (performance.now() - PM.pulseAt) / 450, 0, 1) : 1;
-  if (pulse < 1) { ctx.beginPath(); ctx.arc(x, y, 8 + pulse * 16, 0, 7); ctx.strokeStyle = `rgba(127,155,255,${.6 * (1 - pulse)})`; ctx.lineWidth = 2; ctx.stroke(); requestAnimationFrame(() => redraw('idx')); }
   ctx.beginPath(); ctx.arc(x, y, 8, 0, 7); ctx.fillStyle = 'rgba(127,155,255,.22)'; ctx.fill();
   ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 7); ctx.fillStyle = '#171717'; ctx.fill(); ctx.lineWidth = 2.2; ctx.strokeStyle = '#fff'; ctx.stroke();
   ctx.restore();
@@ -495,7 +493,7 @@ function setPoint(pt, how, opts = {}) {
     const crossedExp = b.legs.some(l => (prev.T < l.c.expT) !== (pt.T < l.c.expT)) || (b.legs.every(l => l.product === 'INTRADAY') && (prev.T < PF.SQ_T) !== (pt.T < PF.SQ_T));
     if ((s0 && s1 && s0 !== s1) || crossedExp) { Haptic.fire('select'); PM.crossed = true; }
   }
-  if (how === 'tap' || how === 'chip' || how === 'stepper') { PM.pulseAt = performance.now(); if (how !== 'chip') Haptic.fire('open'); }
+  if (how === 'tap' || how === 'stepper') Haptic.fire('open');   // a tick only: the ring that pulsed on the point was removed
   if (PM.hint && how !== 'chip') { PM.hint = false; PM.hintSeen = true; store.set('hintSeen', true); }
   const t = now(); if (t - PM.lastMoveLog > 2500 && !opts.quiet) { PM.lastMoveLog = t; track('payoff_point_move', { method: how, sessions_to_expiry: +(((poAxisEnd(b) || pt.T) - pt.T) / E.SESSION).toFixed(1), distance: Math.round(pt.S - b.S0), crossed_breakeven: !!PM.crossed }); PM.crossed = false; }
   if (how !== 'chip') followOpt();
