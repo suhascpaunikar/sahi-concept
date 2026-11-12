@@ -1,8 +1,9 @@
 'use strict';
 /* =========================================================================
    Sahi Payoff on mobile (Payoff mobile PRD v1.0), on the Option Scalper
-   rebuild from the Quick Action Wheel placement study. The wheel's seventh
-   action, Clean View, is now Payoff, in all six placements.
+   rebuild from the Quick Action Wheel placement study. Of the six placements
+   only V6 remains (hold the timeframe button for a panel of quick actions),
+   with Payoff as one of the actions.
    Reference frame: Android, 412 x 915 CSS px.
    ========================================================================= */
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -57,7 +58,6 @@ const P = {
   chevR: '<path d="m9 18 6-6-6-6"/>',
   info: '<circle cx="12" cy="12" r="9.2"/><path d="M12 16.2v-4.6"/><path d="M12 8.1h.01"/>',
   pin: '<path d="M12 17v5"/><path d="M9 10.8V5h6v5.8l2.4 3.2H6.6z"/>',
-  wheel: '<path d="M20 20 L20 6 A14 14 0 0 0 6 20 Z" fill="currentColor" fill-opacity=".18"/><path d="M20 13.6 A6.4 6.4 0 0 0 13.6 20"/><path d="M20 6 A14 14 0 0 0 6 20"/><path d="m10.1 10.1 4.4 4.4"/><path d="M20 13.6V6M13.6 20H6"/>',
   dots3: '<circle cx="12" cy="5.2" r="1.9" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/><circle cx="12" cy="18.8" r="1.9" fill="currentColor" stroke="none"/>',
   /* chart type icons (Settings sheet) */
   ct_line: '<path d="M2.6 17.6 8.4 11.1l4.3 4 5.5-6.6 3.4 2.6"/>',
@@ -90,25 +90,24 @@ const FRAMES = {
    Session state
    ========================================================================= */
 const S = {
-  v: 'v1', frame: 'ref', hand: 'right', haptics: true, sound: false, touches: false, zones: false, pulses: true,
+  frame: 'ref', haptics: true, sound: false, touches: false, pulses: true, qa: 'pills',
   linked: false, focus: 'opt', split: .5, fontsReady: false,
-  labels: 'default', fs: 1, fit: true, order: false,
+  fs: 1, order: false,
 };
 
 /* ---- Event log (no prices, symbols only as chart ids) ---- */
 const LOG = [];
 let IID = 0;
 function track(event, props = {}) {
-  const e = { t: Math.round(performance.now()), event, v: S.v, ...props };
+  const e = { t: Math.round(performance.now()), event, ...props };
   LOG.push(e); if (LOG.length > 400) LOG.shift();
   if (typeof renderLog === 'function') renderLog();
-  if (typeof Study !== 'undefined') Study.onEvent(e);
   return e;
 }
 
 /* ---- Haptics: Vibration API on Android, iOS 18 switch tick, visual pulses ---- */
 const Haptic = (() => {
-  const K = { open: { vib: 10, label: 'Light impact', why: 'wheel opened' }, select: { vib: 6, label: 'Selection', why: 'hovered action changed' }, success: { vib: [12, 45, 18], label: 'Success', why: 'change applied' }, error: { vib: [26, 60, 26], label: 'Warning', why: 'not available' }, cancel: { vib: 4, label: 'Soft', why: 'released to cancel' } };
+  const K = { open: { vib: 10, label: 'Light impact', why: 'panel opened' }, select: { vib: 6, label: 'Selection', why: 'hovered action changed' }, success: { vib: [12, 45, 18], label: 'Success', why: 'change applied' }, error: { vib: [26, 60, 26], label: 'Warning', why: 'not available' }, cancel: { vib: 4, label: 'Soft', why: 'released to cancel' } };
   const canVibrate = typeof navigator.vibrate === 'function';
   let iosLabel = null, actx = null, lastSel = -1e9, dotT = 0;
   function iosTick() {

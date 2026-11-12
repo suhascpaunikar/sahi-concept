@@ -1,7 +1,7 @@
 """Build prototype/payoff-mobile/index.html: one self-contained file.
 
 Sources: src/ (the Option Scalper rebuild from the Quick Action Wheel placement
-study, with Payoff in slot 7) and ../payoff/src/ (the desktop Payoff engine and
+study, keeping its V6 quick actions, with Payoff as an action) and ../payoff/src/ (the desktop Payoff engine and
 the real Kite data it runs on). Run: python3 prototype/payoff-mobile/build.py
 """
 import base64, os, re, sys
@@ -15,7 +15,7 @@ shell = rd(SRC, '00_shell.html')
 css = rd(SRC, '10_css.css') + '\n' + rd(SRC, '15_payoff.css')
 engine = '\n'.join(rd(ENGINE, f) for f in ['data.js', 'engine.js', 'payoff.js'])
 # the engine files end with a CommonJS export for Node tests; harmless in the browser
-js = '\n'.join(rd(SRC, f) for f in ['20_core.js', '30_chart.js', '40_ui.js', '50a_content.js', '50b_geo.js', '50c_render.js', '55_quick.js', '70_payoff.js', '75_panel.js', '76_horizon.js', '60_app.js'])
+js = '\n'.join(rd(SRC, f) for f in ['20_core.js', '30_chart.js', '40_ui.js', '50_actions.js', '55_quick.js', '70_payoff.js', '75_panel.js', '76_horizon.js', '60_app.js'])
 # font family names that cannot collide with a system copy
 css = css.replace('Inter, system-ui', 'InterQW, Inter, system-ui')
 js = js.replace('Roboto, "Roboto Fallback", Arial', 'RobotoQW, Roboto, Arial').replace('Roboto, Arial', 'RobotoQW, Roboto, Arial').replace('Inter, sans-serif', 'InterQW, Inter, sans-serif')
@@ -33,7 +33,7 @@ def ic(name, size, sw, vb=24):
 
 
 out = shell.replace('/*CSS*/', css).replace('/*JS*/', engine + '\n' + js).replace('/*FONTS*/', fonts)
-out = out.replace('/*ICON_X*/', ic('x', 24, 1.6)).replace('/*ICON_ROT*/', ic('rot', 35, 1.65, 32).replace('<svg ', '<svg style="transform:translate(-1px,-.3px)" ')).replace('/*ICON_AI*/', ic('ai', 24.6, 2.1, 32)).replace('/*ICON_MORE*/', ic('dots3', 21, 2)).replace('/*ICON_DOCK*/', ic('wheel', 22, 1.6))
+out = out.replace('/*ICON_X*/', ic('x', 24, 1.6)).replace('/*ICON_ROT*/', ic('rot', 35, 1.65, 32).replace('<svg ', '<svg style="transform:translate(-1px,-.3px)" ')).replace('/*ICON_AI*/', ic('ai', 24.6, 2.1, 32)).replace('/*ICON_MORE*/', ic('dots3', 21, 2))
 dst = sys.argv[1] if len(sys.argv) > 1 else os.path.join(D, 'index.html')
 open(dst, 'w', encoding='utf-8').write(out)
 print('wrote', dst, len(out) // 1024, 'KB')

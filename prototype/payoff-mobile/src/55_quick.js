@@ -1,16 +1,17 @@
 /* =========================================================================
-   Quick view: what the wheel (the quick view panel) holds, picked by the trader.
+   Quick view: what the quick action panel holds, picked by the trader.
    - Two timeframes, from the two dropdowns under "Quick view" in the chart menu.
    - Two drawings, from the flash icon on each row of the Drawing Tools sheet.
-   - Two indicators or templates (they share the two slots), from the flash icon
-     on each row of Add indicators and of My Templates.
+   - Two indicators, from the flash icon on each row of Add indicators.
+   - Two templates, from the flash icon on each row of My Templates. Templates
+     show in the pills layout only; the list layout has no template rows.
    A group holds two picks. When it is full the other flash icons are dimmed, and
    tapping one says to remove a pick first. A group with fewer than two picks
-   leaves an "Empty" slot in the wheel. Slot 7 stays Payoff.
+   leaves an "Add" slot in the panel. Payoff is always the last action.
    The Drawing Tools and My Templates sheets follow the Sahi app's screens
    (screenshots shared on 11 Nov 2026).
    ========================================================================= */
-// [key, icon, name in the sheet, short label for the wheel]. The prototype draws the first four it had: the rest only arm a toast.
+// [key, icon, name in the sheet, short label for a pill]. The prototype draws the first four it had: the rest only arm a toast.
 const DRAW_TOOLS = [
   ['trend', 'trend', 'Trend Line', 'Trend'], ['hline', 'hline', 'Horizontal Line', 'H line'], ['hray', 'hline', 'Horizontal Ray', 'H ray'], ['rect', 'rect', 'Rectangle', 'Rect'],
   ['fib', 'fib', 'Fibonacci Retracement', 'Fib'], ['channel', 'trend', 'Parallel Channel', 'Channel'], ['long', 'fib', 'Long Position', 'Long'], ['short', 'fib', 'Short Position', 'Short'],
@@ -30,35 +31,36 @@ function indShort(x) {
   return x.n.length <= 10 ? x.n : x.n.split(' ')[0].slice(0, 9);
 }
 
-const QV_DEF = { tf: ['1m', '15m'], tools: ['trend', 'fib'], inds: ['vwap', 'ema'] };
+const QV_DEF = { tf: ['1m', '15m'], tools: ['trend', 'fib'], inds: ['vwap', 'ema'], tpls: [] };
 const QV = (() => { const s = store.get('quick', null), ok = s && Array.isArray(s.tf) && s.tf.length === 2 && s.tf.every(t => TF[t]) && Array.isArray(s.tools) && Array.isArray(s.inds); return ok ? s : JSON.parse(JSON.stringify(QV_DEF)); })();
+// picks saved while a template shared the indicator slots: the templates move to their own group
+if (!Array.isArray(QV.tpls)) { QV.tpls = QV.inds.filter(k => String(k).startsWith('tpl:')); QV.inds = QV.inds.filter(k => !String(k).startsWith('tpl:')); }
 const TPLS = store.get('tpls', [{ id: 1, name: '1', inds: ['RSI Bars', 'OI Profile'] }]);
 const tplOf = id => TPLS.find(t => t.id === id);
-const BASE_SLOTS = SLOTS.slice();
-const QGROUP = { tools: 'drawings', inds: 'indicators or templates' };
+const QGROUP = { tools: 'drawings', inds: 'indicators', tpls: 'templates' };
 
+// The panel's actions, in order: [label on a pill, name in a row or sentence]; grp is the section title in the pills layout
 function rebuildSlots() {
   QV.tools = QV.tools.filter(toolOf).slice(0, 2);
-  QV.inds = QV.inds.filter(k => String(k).startsWith('tpl:') ? tplOf(+k.slice(4)) : indOf(k)).slice(0, 2);
-  const tf = S.labels && S.labels !== 'default' ? LS.tf : QV.tf, out = [{ id: 'tfA', kind: 'tf', tf: tf[0] }, { id: 'tfB', kind: 'tf', tf: tf[1] }];
+  QV.inds = QV.inds.filter(indOf).slice(0, 2);
+  QV.tpls = QV.tpls.filter(k => tplOf(+String(k).slice(4))).slice(0, 2);
+  const out = QV.tf.map((tf, k) => ({ id: k ? 'tfB' : 'tfA', kind: 'tf', tf, grp: 'Timeframe' }));
   for (let k = 0; k < 2; k++) {
     const key = QV.tools[k], t = key && toolOf(key);
-    if (!t) out.push({ id: 'empty-tool' + k, kind: 'empty', what: 'drawing', icon: 'flash' });
-    else if (key === 'trend' || key === 'fib') out.push(BASE_SLOTS[key === 'trend' ? 2 : 3]);
-    else out.push({ id: 'tool:' + key, kind: 'tool', tool: key, icon: t[1], lab: [t[3], t[3], t[2]] });
+    out.push(t ? { id: 'tool:' + key, kind: 'tool', tool: key, icon: t[1], lab: [t[3], t[2]], grp: 'Drawing' } : { id: 'empty-tool' + k, kind: 'empty', what: 'drawing', grp: 'Drawing' });
   }
   for (let k = 0; k < 2; k++) {
-    const key = QV.inds[k];
-    if (!key) { out.push({ id: 'empty-ind' + k, kind: 'empty', what: 'indicator or template', icon: 'flash' }); continue; }
-    if (key === 'vwap' || key === 'ema') { out.push(BASE_SLOTS[key === 'vwap' ? 4 : 5]); continue; }
-    if (key.startsWith('tpl:')) { const t = tplOf(+key.slice(4)); out.push({ id: key, kind: 'tpl', tpl: t.id, icon: 'grid', lab: [`Tpl ${t.name}`, `Tpl ${t.name}`, `Template ${t.name}`] }); continue; }
-    const x = indOf(key), s = indShort(x);
-    out.push({ id: 'ind:' + key, kind: 'ind', ind: x.k || null, nm: x.n, icon: x.k && P[x.k] ? x.k : 'fx', lab: [s, s, x.n] });
+    const key = QV.inds[k], x = key && indOf(key);
+    out.push(x ? { id: 'ind:' + key, kind: 'ind', ind: x.k || null, icon: x.k && P[x.k] ? x.k : 'fx', lab: [indShort(x), x.k ? IND[x.k].name : x.n], grp: 'Indicator' } : { id: 'empty-ind' + k, kind: 'empty', what: 'indicator', grp: 'Indicator' });
   }
-  out.push(BASE_SLOTS[6]);
+  if (S.qa !== 'list') for (let k = 0; k < 2; k++) {
+    const key = QV.tpls[k], t = key && tplOf(+key.slice(4));
+    out.push(t ? { id: key, kind: 'tpl', tpl: t.id, icon: 'grid', lab: [`Template ${t.name}`, `Template ${t.name}`], grp: 'Template' } : { id: 'empty-tpl' + k, kind: 'empty', what: 'template', grp: 'Template' });
+  }
+  out.push({ id: 'payoff', kind: 'payoff', icon: 'payoff', lab: ['Payoff', 'Payoff'], grp: 'Payoff' });
   SLOTS.splice(0, SLOTS.length, ...out);
 }
-function saveQuick() { store.set('quick', QV); store.set('tpls', TPLS); rebuildSlots(); if (typeof syncDevHints === 'function' && CH.idx.g) syncDevHints(); }
+function saveQuick() { store.set('quick', QV); store.set('tpls', TPLS); rebuildSlots(); }
 function resetQuick() { Object.assign(QV, JSON.parse(JSON.stringify(QV_DEF))); saveQuick(); }
 
 // the Quick view picks first, in the order they were picked, then the rest in the list's own order. Taken once when a sheet
@@ -79,7 +81,7 @@ function quickToggle(group, key, name) {
 }
 function flashClick(e, rerender) {
   const f = e.target.closest('.flb'); if (!f) return false;
-  const group = f.dataset.fl, key = f.dataset.key, name = group === 'tools' ? toolOf(key)[2] : key.startsWith('tpl:') ? `Template ${tplOf(+key.slice(4)).name}` : indOf(key).n;
+  const group = f.dataset.fl, key = f.dataset.key, name = group === 'tools' ? toolOf(key)[2] : group === 'tpls' ? `Template ${tplOf(+key.slice(4)).name}` : indOf(key).n;
   if (quickToggle(group, key, name)) rerender();
   return true;
 }
@@ -87,7 +89,7 @@ function flashClick(e, rerender) {
 /* ---- Quick view section of the chart menu: the two timeframes ---- */
 function quickTfHTML() {
   const opts = cur => TF_GROUPS.map(([g, list]) => `<optgroup label="${g}">${list.map(tf => `<option value="${tf}"${tf === cur ? ' selected' : ''}>${tf}</option>`).join('')}</optgroup>`).join('');
-  return `<div class="sech qvh"><span>${ic('flash', 15, 1.9)}Quick view</span></div><div class="qvdd">${[0, 1].map(i => `<label><span>Timeframe ${i + 1}</span><select data-qtf="${i}" aria-label="Quick view timeframe ${i + 1}">${opts(QV.tf[i])}</select></label>`).join('')}</div><div class="qvn">The two timeframes in the quick view panel. Hold the timeframe button to open it.</div>`;
+  return `<div class="sech qvh"><span>${ic('flash', 15, 1.9)}Quick view</span></div><div class="qvdd">${[0, 1].map(i => `<label><span>Timeframe ${i + 1}</span><select data-qtf="${i}" aria-label="Quick view timeframe ${i + 1}">${opts(QV.tf[i])}</select></label>`).join('')}</div><div class="qvn">The two timeframes in the quick action panel. Hold the timeframe button to open it.</div>`;
 }
 function bindQuickTf(pop) {
   pop.addEventListener('change', e => {
@@ -139,7 +141,7 @@ function openTemplates(id) {
   const sh = h(`<div class="sheet tsheet" style="height:${Math.round(L.H * .62)}px"><div class="th"><button class="tback" aria-label="Back">${ic('chevL', 18, 2)}</button><h3></h3></div><hr class="dhr"><div class="tlist"></div><button class="tsave">Save current indicators as template</button></div>`);
   const render = () => {
     $('h3', sh).textContent = `My Templates (${TPLS.length})`;
-    $('.tlist', sh).innerHTML = TPLS.length ? TPLS.map(t => `<div class="trow"><button class="ttap" data-tp="${t.id}"><b>${escH(t.name)}</b><small>${escH(t.inds.join(', '))}</small></button>${flashBtn('inds', 'tpl:' + t.id, 'Template ' + t.name)}<button class="tdel" data-td="${t.id}" aria-label="Delete template ${escH(t.name)}">${ic('trash', 18, 1.7)}</button></div>`).join('') : '<div class="tnone">No templates yet. Add indicators to the chart, then save them here.</div>';
+    $('.tlist', sh).innerHTML = TPLS.length ? TPLS.map(t => `<div class="trow"><button class="ttap" data-tp="${t.id}"><b>${escH(t.name)}</b><small>${escH(t.inds.join(', '))}</small></button>${flashBtn('tpls', 'tpl:' + t.id, 'Template ' + t.name)}<button class="tdel" data-td="${t.id}" aria-label="Delete template ${escH(t.name)}">${ic('trash', 18, 1.7)}</button></div>`).join('') : '<div class="tnone">No templates yet. Add indicators to the chart, then save them here.</div>';
   };
   render();
   const layer = openLayer(sh, { label: 'My Templates' });

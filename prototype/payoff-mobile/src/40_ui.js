@@ -149,7 +149,7 @@ function openDrawToolbar(id) {
 }
 
 /* =========================================================================
-   Chart actions (one path for the popover, the sheets and every wheel)
+   Chart actions (one path for the popover, the sheets and the quick action panel)
    ========================================================================= */
 function setTimeframe(id, tf, meta = {}) {
   const ids = S.linked ? CHART_IDS : [id];

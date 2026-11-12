@@ -66,8 +66,7 @@ function cardMarkup(id) {
   ${id === 'idx' ? `<div class="pbar" hidden><div class="pchips" role="group" aria-label="Look ahead to"></div><button class="pclose" aria-label="Close payoff">${ic('x', 16, 2.2)}</button></div><div class="pban" role="status" hidden></div><div class="pread" role="button" tabindex="0" hidden></div><button class="pedge" hidden></button><div class="phint" hidden></div><div class="pempty" hidden>Pick a contract on the option chart to see its payoff</div>` : `<button class="pchip" hidden></button><div class="pcard" hidden></div>`}
   <div class="ptip" role="tooltip" hidden></div>
   <div class="banner"><span class="bt"></span><button aria-label="Stop drawing">${ic('x', 12, 2.6)}</button></div>
-  <div class="wm">${LOGO}</div>
-  <div class="cornerglyph" aria-hidden="true">${ic('wheel', 18, 1.6)}</div>`;
+  <div class="wm">${LOGO}</div>`;
 }
 function buildCards() {
   for (const id of CHART_IDS) {
@@ -100,13 +99,8 @@ function placeChrome() {
     cv.width = Math.round(r.w * dpr); cv.height = Math.round(r.h * dpr); cv.style.width = r.w + 'px'; cv.style.height = r.h + 'px'; CH[id].dpr = dpr;
     $('.wm', el).style.top = (r.paneB - 16 - 17.5) + 'px';
     $('.wm', el).style.display = CH[id].opts.wm ? '' : 'none';
-    const g = CH[id].g || (S.fontsReady ? geomOf(id) : null), cg = $('.cornerglyph', el);
-    if (g) { const cx = S.hand === 'left' ? 22 : g.paneR + g.axisW / 2; cg.style.left = (cx - 11) + 'px'; cg.style.top = (r.paneB + 12 - 11) + 'px'; }
   }
   const dv = $('#divider'); dv.style.top = L.divY + 'px';
-  const dock = $('#dock'), oc = L.cards.opt;
-  const dx = S.hand === 'left' ? 34 : L.W - 34;
-  dock.style.left = (dx - 22) + 'px'; dock.style.top = (oc.y + oc.paneB - 62) + 'px';
 }
 
 /* ---- Indicators ---- */
@@ -185,7 +179,6 @@ function drawChart(id) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, r.w, r.h);
   const { bars, xOf, p2y, s, paneR, pT, pB } = g;
   c.el.style.setProperty('--axw', g.axisW + 'px');
-  const cg = $('.cornerglyph', c.el); if (cg) { const cx = S.hand === 'left' ? 22 : g.paneR + g.axisW / 2; cg.style.left = (cx - 11) + 'px'; cg.style.top = (r.paneB + 12 - 11) + 'px'; }
   const snap = v => Math.round(v * dpr) / dpr, half = .5 / dpr;
   // pane clip
   ctx.save(); ctx.beginPath(); ctx.rect(0, pT, paneR, pB - pT); ctx.clip();
