@@ -362,6 +362,9 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
 .qpanel .qpf.act { color: #fff; }
 .qlist .qli[data-i] { box-sizing: border-box; }
 
+/* three pills a row: tighter padding so names like Key Levels fit */
+.qpanel.c3 .qp { padding: 0 5px; gap: 4px; font-size: min(calc(13px * var(--fs)), 17px); } .qpanel.c3 .qp.on { font-weight: 500; } .qpanel.c3 .qp .ck { width: 12px; height: 12px; }
+
 /* =========================================================================
    Payoff on mobile (Payoff mobile PRD v1.0)
    ========================================================================= */
@@ -1109,7 +1112,7 @@ const FRAMES = {
    Session state
    ========================================================================= */
 const S = {
-  frame: 'ref', haptics: true, sound: false, touches: false, pulses: true, qa: 'pills',
+  frame: 'ref', haptics: true, sound: false, touches: false, qa: 'pills3',
   linked: false, focus: 'opt', split: .5, fontsReady: false,
   fs: 1, order: false,
 };
@@ -1124,7 +1127,7 @@ function track(event, props = {}) {
   return e;
 }
 
-/* ---- Haptics: Vibration API on Android, iOS 18 switch tick, visual pulses ---- */
+/* ---- Haptics: Vibration API on Android, iOS 18 switch tick. No visual pulse: the ring that used to mark a pick was removed ---- */
 const Haptic = (() => {
   const K = { open: { vib: 10, label: 'Light impact', why: 'panel opened' }, select: { vib: 6, label: 'Selection', why: 'hovered action changed' }, success: { vib: [12, 45, 18], label: 'Success', why: 'change applied' }, error: { vib: [26, 60, 26], label: 'Warning', why: 'not available' }, cancel: { vib: 4, label: 'Soft', why: 'released to cancel' } };
   const canVibrate = typeof navigator.vibrate === 'function';
@@ -1152,13 +1155,6 @@ const Haptic = (() => {
       });
     } catch {}
   }
-  function pulse(kind, at) {
-    if (!S.pulses || !at || kind === 'select' || kind === 'cancel') return;
-    const size = kind === 'open' ? 92 : 120;
-    const el = document.createElement('div'); el.className = 'hpulse ' + kind;
-    el.style.cssText = `left:${at.x - size / 2}px;top:${at.y - size / 2}px;width:${size}px;height:${size}px`;
-    app.appendChild(el); setTimeout(() => el.remove(), 500);
-  }
   function meter(kind) {
     const dot = $('#hDot'), txt = $('#hTxt'); if (!dot) return;
     dot.classList.remove('fire'); void dot.offsetWidth; dot.classList.add('fire'); clearTimeout(dotT); dotT = setTimeout(() => dot.classList.remove('fire'), 140);
@@ -1170,7 +1166,7 @@ const Haptic = (() => {
     if (canVibrate) { try { navigator.vibrate(K[kind].vib); } catch {} }
     else { iosTick(); if (kind === 'success') setTimeout(iosTick, 70); }
     if (S.sound) sound(kind);
-    pulse(kind, at); meter(kind);
+    meter(kind);
   }
   return { fire, canVibrate };
 })();
@@ -1828,9 +1824,10 @@ function regionAt(id, p) {
    placements (pill fan, axis-corner fan, price-axis arc, split-handle dial,
    thumb dock) were removed from this prototype; they remain in
    prototype/quick-wheel-placements/.
-   Two layouts of the panel (S.qa):
-   - pills: titled sections with action pills, like the chart menu's
-     timeframe sections: Timeframe, Drawing, Indicator, Template, Payoff.
+   Three layouts of the panel (S.qa):
+   - pills3: titled sections with action pills, three a row, like the chart
+     menu's timeframe sections: Timeframe, Drawing, Indicator, Template, Payoff.
+   - pills: the same sections with two wider pills a row.
    - list: one row per action, as V6 was; it has no templates.
    The actions themselves are built by rebuildSlots() in 55_quick.js.
    ========================================================================= */
@@ -1881,22 +1878,22 @@ function geometry(id) {
     w = clamp(Math.ceil(need), 228, Math.min(L.W - 16, 340)); hh = SLOTS.length * rowH + 12;
     SLOTS.forEach((sl, i) => cells.push({ i, x: 0, y: 6 + i * rowH, w, h: rowH }));
   } else {
-    // sections in the order of the slots; two pills a row
-    const pad = 14, gap = 10, th = Math.round(26 * f), ph = Math.round(34 * f), foot = Math.round(30 * f);
-    w = Math.min(Math.round(300 * f), L.W - 16); const cw = (w - 2 * pad - gap) / 2;
+    // sections in the order of the slots; three pills a row (pills3) or two wider ones (pills)
+    const cols = S.qa === 'pills' ? 2 : 3, pad = 14, gap = 10, th = Math.round(26 * f), ph = Math.round(34 * f), foot = Math.round(30 * f);
+    w = Math.min(Math.round((cols === 3 ? 340 : 300) * f), L.W - 16); const cw = (w - 2 * pad - gap * (cols - 1)) / cols;
     let y = 8, grp = null, col = 0;
     SLOTS.forEach((sl, i) => {
       if (sl.grp !== grp) { if (grp != null) y += (col ? ph : 0) + 6; grp = sl.grp; col = 0; titles.push({ t: grp, y, h: th }); y += th; }
       else if (col === 0) y += 8;
       cells.push({ i, x: pad + col * (cw + gap), y, w: cw, h: ph }); col++;
-      if (col === 2) { col = 0; y += ph; }
+      if (col === cols) { col = 0; y += ph; }
     });
     hh = y + (col ? ph : 0) + 10 + foot;
   }
   let top = pr.y + pr.h + 6; const below = top + hh <= L.H - L.sab - 8;
   if (!below) top = pr.y - 6 - hh;
   const x = clamp(pr.x + pr.w - w, 8, L.W - w - 8), ok = top >= L.sat + 4;
-  return { kind: S.qa === 'list' ? 'list' : 'pills', rect: { x, y: top, w, h: hh }, cells, titles, ok, reason: ok ? null : 'space', chart: id, above: !below, anchor: pr };
+  return { kind: S.qa === 'list' ? 'list' : 'pills', cols: S.qa === 'list' ? 1 : S.qa === 'pills' ? 2 : 3, rect: { x, y: top, w, h: hh }, cells, titles, ok, reason: ok ? null : 'space', chart: id, above: !below, anchor: pr };
 }
 function hitTest(geo, p) {
   const q = { x: p.x - geo.rect.x, y: p.y - geo.rect.y }, pad = geo.kind === 'list' ? 0 : 5;
@@ -1991,9 +1988,9 @@ function renderOverlay() {
     if (el) el.remove();
     const style = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;transform-origin:${geo.above ? 'bottom' : 'top'} right`;
     if (list) el = h(`<div class="qlist fit" style="${style}">${geo.cells.map(c => { const d = describe(SLOTS[c.i], id); return `<div class="qli${d.status !== 'ok' ? ' na' : ''}" data-i="${c.i}" style="height:${c.h}px">${d.big ? `<b class="qtf">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}<span class="qn">${escH(d.name)}</span><span class="s${d.capOn ? ' on' : ''}">${d.big ? '' : escH(d.cap)}</span></div>`; }).join('')}</div>`);
-    else el = h(`<div class="qpanel" style="${style}">${geo.titles.map(t => `<div class="qpt" style="top:${t.y}px;height:${t.h}px">${escH(t.t)}</div>`).join('')}${geo.cells.map(c => {
+    else el = h(`<div class="qpanel${geo.cols === 3 ? ' c3' : ''}" style="${style}">${geo.titles.map(t => `<div class="qpt" style="top:${t.y}px;height:${t.h}px">${escH(t.t)}</div>`).join('')}${geo.cells.map(c => {
       const d = describe(SLOTS[c.i], id), on = d.capOn;
-      return `<div class="qp${on ? ' on' : ''}${d.empty ? ' emp' : d.status === 'na' ? ' na' : ''}" data-i="${c.i}" style="left:${c.x}px;top:${c.y}px;width:${c.w}px;height:${c.h}px">${d.big ? '' : ic(d.icon, 15, 1.9)}<span>${escH(d.label)}</span>${on ? ic('check', 13, 2.4, 'ck') : ''}</div>`;
+      return `<div class="qp${on ? ' on' : ''}${d.empty ? ' emp' : d.status === 'na' ? ' na' : ''}" data-i="${c.i}" style="left:${c.x}px;top:${c.y}px;width:${c.w}px;height:${c.h}px">${d.big || (on && geo.cols === 3) ? '' : ic(d.icon, 15, 1.9)}<span>${escH(d.label)}</span>${on ? ic('check', 13, 2.4, 'ck') : ''}</div>`;
     }).join('')}<div class="qpf"></div></div>`);
     el._geo = geo; $('#ov').appendChild(el);
   }
@@ -2089,7 +2086,7 @@ function rebuildSlots() {
   }
   if (S.qa !== 'list') for (let k = 0; k < 2; k++) {
     const key = QV.tpls[k], t = key && tplOf(+key.slice(4));
-    out.push(t ? { id: key, kind: 'tpl', tpl: t.id, icon: 'grid', lab: [`Template ${t.name}`, `Template ${t.name}`], grp: 'Template' } : { id: 'empty-tpl' + k, kind: 'empty', what: 'template', grp: 'Template' });
+    out.push(t ? { id: key, kind: 'tpl', tpl: t.id, icon: 'grid', lab: [String(t.name).length > 8 ? t.name : `Tpl ${t.name}`, `Template ${t.name}`], grp: 'Template' } : { id: 'empty-tpl' + k, kind: 'empty', what: 'template', grp: 'Template' });
   }
   out.push({ id: 'payoff', kind: 'payoff', icon: 'payoff', lab: ['Payoff', 'Payoff'], grp: 'Payoff' });
   SLOTS.splice(0, SLOTS.length, ...out);
@@ -3581,7 +3578,7 @@ function bindChrome() {
    Menu (⋮), coach mark, desktop panel
    ========================================================================= */
 const TEXT_SIZES = [1, 1.3, 2];
-const QA_LAYOUTS = [['pills', 'Pills'], ['list', 'List']];
+const QA_LAYOUTS = [['pills3', 'Pills × 3'], ['pills', 'Pills × 2'], ['list', 'List']];
 function openMenu() {
   const sh = h(`<div class="sheet lsheet" style="max-height:${L.H - L.sat - 24}px"><div class="sh-title">Payoff prototype</div><button class="sh-x" aria-label="Close">${ic('x', 18, 1.7)}</button>
     <div class="rows"><div class="secl">Payoff demo</div><div class="pdev">${payoffDevHTML()}</div>
@@ -3614,7 +3611,7 @@ function setTextSize(f, { silent = false } = {}) {
 // the quick action panel's layout: pills in titled sections, or the list
 function setQa(v, { silent = false } = {}) {
   cancelGesture('invalid_context');
-  S.qa = v === 'list' ? 'list' : 'pills'; store.set('qa', S.qa); rebuildSlots(); syncDev();
+  S.qa = QA_LAYOUTS.some(q => q[0] === v) ? v : 'pills3'; store.set('qa2', S.qa); rebuildSlots(); syncDev();
   if (!silent) track('qa_layout', { to: S.qa });
 }
 let coachEl = null;
@@ -3643,15 +3640,15 @@ function buildDev() {
     <div><h1>Sahi Payoff · mobile</h1></div>
     <div class="sub">Tap Payoff in the index chart's header, then tap, drag or long-press in the shaded area. Hold a timeframe button for the quick action panel; tap it for the chart menu, where the flash icons choose the panel's actions. PRD in docs/sahi-payoff-mobile-prd.md.</div>
     <div class="box"><h2>Payoff demo</h2>${payoffDevHTML()}</div>
-    <div class="box"><h2>Quick actions</h2><div class="seg" id="qas">${QA_LAYOUTS.map(([k, n]) => `<button data-qa="${k}">${n} panel</button>`).join('')}</div>
+    <div class="box"><h2>Quick actions</h2><div class="seg" id="qas">${QA_LAYOUTS.map(([k, n]) => `<button data-qa="${k}">${n}</button>`).join('')}</div>
       <div class="seg" id="lfs" style="margin-top:6px">${TEXT_SIZES.map(f => `<button data-fs="${f}">${Math.round(f * 100)}% text</button>`).join('')}</div>
       <div style="display:flex;gap:6px;margin-top:10px"><button class="dbtn" data-d="q1">Quick actions sheet</button><button class="dbtn" data-d="picks">Reset picks</button><button class="dbtn" data-d="coach">Coach mark</button></div></div>
     <div class="box"><h2>Phone</h2><div class="seg" id="frames">${Object.entries(FRAMES).map(([k, f]) => `<button data-f="${k}" title="${f.note}">${f.label}</button>`).join('')}</div></div>
     <div class="box"><h2>Options</h2>
       <label class="dt">Show touches<input type="checkbox" data-t="touches"></label>
-      <label class="dt">Haptics (vibration, iOS tick, pulses)<input type="checkbox" data-t="haptics"></label>
+      <label class="dt">Haptics (vibration, iOS tick)<input type="checkbox" data-t="haptics"></label>
       <label class="dt">Sound ticks (desktop stand-in for haptics)<input type="checkbox" data-t="sound"></label>
-      <div class="hmeter" style="margin-top:6px"><i id="hDot"></i><span id="hTxt">${Haptic.canVibrate ? 'Vibration API available' : 'No Vibration API here: pulses and optional sound stand in'}</span></div></div>
+      <div class="hmeter" style="margin-top:6px"><i id="hDot"></i><span id="hTxt">${Haptic.canVibrate ? 'Vibration API available' : 'No Vibration API here: optional sound stands in'}</span></div></div>
     <div class="box"><h2>Event log</h2><ul class="log" id="log"></ul><div style="display:flex;gap:6px;margin-top:8px"><button class="dbtn" data-d="copylog">Copy JSON</button><button class="dbtn" data-d="reset">Reset charts</button></div></div>`;
   dev.addEventListener('click', e => {
     const fb = e.target.closest('[data-f]'); if (fb) { S.frame = fb.dataset.f; relayout(); syncDev(); return; }
@@ -3695,7 +3692,7 @@ async function init() {
   const q = new URLSearchParams(location.search);
   if (FRAMES[q.get('frame')]) S.frame = q.get('frame');
   if (q.get('touches') === '1') { S.touches = true; app.classList.add('touches'); }
-  S.qa = ['list', 'pills'].includes(q.get('qa')) ? q.get('qa') : store.get('qa', 'pills');   // the quick action panel's layout
+  S.qa = ['list', 'pills', 'pills3'].includes(q.get('qa')) ? q.get('qa') : store.get('qa2', 'pills3');   // the quick action panel's layout
   if (SCEN[q.get('pos')]) PM.scenario = q.get('pos');
   if (q.get('product') === 'intraday') PM.product = 'INTRADAY';
   if (q.get('later') === '1') PM.later = true;

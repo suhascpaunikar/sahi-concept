@@ -348,3 +348,6 @@ body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-se
 .qpanel .qpf { position: absolute; left: 14px; right: 14px; bottom: 9px; font-size: min(calc(11.5px * var(--fs)), 15px); color: #8a8a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qpanel .qpf.act { color: #fff; }
 .qlist .qli[data-i] { box-sizing: border-box; }
+
+/* three pills a row: tighter padding so names like Key Levels fit */
+.qpanel.c3 .qp { padding: 0 5px; gap: 4px; font-size: min(calc(13px * var(--fs)), 17px); } .qpanel.c3 .qp.on { font-weight: 500; } .qpanel.c3 .qp .ck { width: 12px; height: 12px; }

@@ -90,7 +90,7 @@ const FRAMES = {
    Session state
    ========================================================================= */
 const S = {
-  frame: 'ref', haptics: true, sound: false, touches: false, pulses: true, qa: 'pills',
+  frame: 'ref', haptics: true, sound: false, touches: false, qa: 'pills3',
   linked: false, focus: 'opt', split: .5, fontsReady: false,
   fs: 1, order: false,
 };
@@ -105,7 +105,7 @@ function track(event, props = {}) {
   return e;
 }
 
-/* ---- Haptics: Vibration API on Android, iOS 18 switch tick, visual pulses ---- */
+/* ---- Haptics: Vibration API on Android, iOS 18 switch tick. No visual pulse: the ring that used to mark a pick was removed ---- */
 const Haptic = (() => {
   const K = { open: { vib: 10, label: 'Light impact', why: 'panel opened' }, select: { vib: 6, label: 'Selection', why: 'hovered action changed' }, success: { vib: [12, 45, 18], label: 'Success', why: 'change applied' }, error: { vib: [26, 60, 26], label: 'Warning', why: 'not available' }, cancel: { vib: 4, label: 'Soft', why: 'released to cancel' } };
   const canVibrate = typeof navigator.vibrate === 'function';
@@ -133,13 +133,6 @@ const Haptic = (() => {
       });
     } catch {}
   }
-  function pulse(kind, at) {
-    if (!S.pulses || !at || kind === 'select' || kind === 'cancel') return;
-    const size = kind === 'open' ? 92 : 120;
-    const el = document.createElement('div'); el.className = 'hpulse ' + kind;
-    el.style.cssText = `left:${at.x - size / 2}px;top:${at.y - size / 2}px;width:${size}px;height:${size}px`;
-    app.appendChild(el); setTimeout(() => el.remove(), 500);
-  }
   function meter(kind) {
     const dot = $('#hDot'), txt = $('#hTxt'); if (!dot) return;
     dot.classList.remove('fire'); void dot.offsetWidth; dot.classList.add('fire'); clearTimeout(dotT); dotT = setTimeout(() => dot.classList.remove('fire'), 140);
@@ -151,7 +144,7 @@ const Haptic = (() => {
     if (canVibrate) { try { navigator.vibrate(K[kind].vib); } catch {} }
     else { iosTick(); if (kind === 'success') setTimeout(iosTick, 70); }
     if (S.sound) sound(kind);
-    pulse(kind, at); meter(kind);
+    meter(kind);
   }
   return { fire, canVibrate };
 })();

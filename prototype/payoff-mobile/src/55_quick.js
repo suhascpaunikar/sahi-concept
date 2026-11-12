@@ -55,7 +55,7 @@ function rebuildSlots() {
   }
   if (S.qa !== 'list') for (let k = 0; k < 2; k++) {
     const key = QV.tpls[k], t = key && tplOf(+key.slice(4));
-    out.push(t ? { id: key, kind: 'tpl', tpl: t.id, icon: 'grid', lab: [`Template ${t.name}`, `Template ${t.name}`], grp: 'Template' } : { id: 'empty-tpl' + k, kind: 'empty', what: 'template', grp: 'Template' });
+    out.push(t ? { id: key, kind: 'tpl', tpl: t.id, icon: 'grid', lab: [String(t.name).length > 8 ? t.name : `Tpl ${t.name}`, `Template ${t.name}`], grp: 'Template' } : { id: 'empty-tpl' + k, kind: 'empty', what: 'template', grp: 'Template' });
   }
   out.push({ id: 'payoff', kind: 'payoff', icon: 'payoff', lab: ['Payoff', 'Payoff'], grp: 'Payoff' });
   SLOTS.splice(0, SLOTS.length, ...out);

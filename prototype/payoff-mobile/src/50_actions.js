@@ -7,9 +7,10 @@
    placements (pill fan, axis-corner fan, price-axis arc, split-handle dial,
    thumb dock) were removed from this prototype; they remain in
    prototype/quick-wheel-placements/.
-   Two layouts of the panel (S.qa):
-   - pills: titled sections with action pills, like the chart menu's
-     timeframe sections: Timeframe, Drawing, Indicator, Template, Payoff.
+   Three layouts of the panel (S.qa):
+   - pills3: titled sections with action pills, three a row, like the chart
+     menu's timeframe sections: Timeframe, Drawing, Indicator, Template, Payoff.
+   - pills: the same sections with two wider pills a row.
    - list: one row per action, as V6 was; it has no templates.
    The actions themselves are built by rebuildSlots() in 55_quick.js.
    ========================================================================= */
@@ -60,22 +61,22 @@ function geometry(id) {
     w = clamp(Math.ceil(need), 228, Math.min(L.W - 16, 340)); hh = SLOTS.length * rowH + 12;
     SLOTS.forEach((sl, i) => cells.push({ i, x: 0, y: 6 + i * rowH, w, h: rowH }));
   } else {
-    // sections in the order of the slots; two pills a row
-    const pad = 14, gap = 10, th = Math.round(26 * f), ph = Math.round(34 * f), foot = Math.round(30 * f);
-    w = Math.min(Math.round(300 * f), L.W - 16); const cw = (w - 2 * pad - gap) / 2;
+    // sections in the order of the slots; three pills a row (pills3) or two wider ones (pills)
+    const cols = S.qa === 'pills' ? 2 : 3, pad = 14, gap = 10, th = Math.round(26 * f), ph = Math.round(34 * f), foot = Math.round(30 * f);
+    w = Math.min(Math.round((cols === 3 ? 340 : 300) * f), L.W - 16); const cw = (w - 2 * pad - gap * (cols - 1)) / cols;
     let y = 8, grp = null, col = 0;
     SLOTS.forEach((sl, i) => {
       if (sl.grp !== grp) { if (grp != null) y += (col ? ph : 0) + 6; grp = sl.grp; col = 0; titles.push({ t: grp, y, h: th }); y += th; }
       else if (col === 0) y += 8;
       cells.push({ i, x: pad + col * (cw + gap), y, w: cw, h: ph }); col++;
-      if (col === 2) { col = 0; y += ph; }
+      if (col === cols) { col = 0; y += ph; }
     });
     hh = y + (col ? ph : 0) + 10 + foot;
   }
   let top = pr.y + pr.h + 6; const below = top + hh <= L.H - L.sab - 8;
   if (!below) top = pr.y - 6 - hh;
   const x = clamp(pr.x + pr.w - w, 8, L.W - w - 8), ok = top >= L.sat + 4;
-  return { kind: S.qa === 'list' ? 'list' : 'pills', rect: { x, y: top, w, h: hh }, cells, titles, ok, reason: ok ? null : 'space', chart: id, above: !below, anchor: pr };
+  return { kind: S.qa === 'list' ? 'list' : 'pills', cols: S.qa === 'list' ? 1 : S.qa === 'pills' ? 2 : 3, rect: { x, y: top, w, h: hh }, cells, titles, ok, reason: ok ? null : 'space', chart: id, above: !below, anchor: pr };
 }
 function hitTest(geo, p) {
   const q = { x: p.x - geo.rect.x, y: p.y - geo.rect.y }, pad = geo.kind === 'list' ? 0 : 5;
@@ -170,9 +171,9 @@ function renderOverlay() {
     if (el) el.remove();
     const style = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;transform-origin:${geo.above ? 'bottom' : 'top'} right`;
     if (list) el = h(`<div class="qlist fit" style="${style}">${geo.cells.map(c => { const d = describe(SLOTS[c.i], id); return `<div class="qli${d.status !== 'ok' ? ' na' : ''}" data-i="${c.i}" style="height:${c.h}px">${d.big ? `<b class="qtf">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}<span class="qn">${escH(d.name)}</span><span class="s${d.capOn ? ' on' : ''}">${d.big ? '' : escH(d.cap)}</span></div>`; }).join('')}</div>`);
-    else el = h(`<div class="qpanel" style="${style}">${geo.titles.map(t => `<div class="qpt" style="top:${t.y}px;height:${t.h}px">${escH(t.t)}</div>`).join('')}${geo.cells.map(c => {
+    else el = h(`<div class="qpanel${geo.cols === 3 ? ' c3' : ''}" style="${style}">${geo.titles.map(t => `<div class="qpt" style="top:${t.y}px;height:${t.h}px">${escH(t.t)}</div>`).join('')}${geo.cells.map(c => {
       const d = describe(SLOTS[c.i], id), on = d.capOn;
-      return `<div class="qp${on ? ' on' : ''}${d.empty ? ' emp' : d.status === 'na' ? ' na' : ''}" data-i="${c.i}" style="left:${c.x}px;top:${c.y}px;width:${c.w}px;height:${c.h}px">${d.big ? '' : ic(d.icon, 15, 1.9)}<span>${escH(d.label)}</span>${on ? ic('check', 13, 2.4, 'ck') : ''}</div>`;
+      return `<div class="qp${on ? ' on' : ''}${d.empty ? ' emp' : d.status === 'na' ? ' na' : ''}" data-i="${c.i}" style="left:${c.x}px;top:${c.y}px;width:${c.w}px;height:${c.h}px">${d.big || (on && geo.cols === 3) ? '' : ic(d.icon, 15, 1.9)}<span>${escH(d.label)}</span>${on ? ic('check', 13, 2.4, 'ck') : ''}</div>`;
     }).join('')}<div class="qpf"></div></div>`);
     el._geo = geo; $('#ov').appendChild(el);
   }

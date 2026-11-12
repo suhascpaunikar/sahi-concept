@@ -146,7 +146,7 @@ function bindChrome() {
    Menu (⋮), coach mark, desktop panel
    ========================================================================= */
 const TEXT_SIZES = [1, 1.3, 2];
-const QA_LAYOUTS = [['pills', 'Pills'], ['list', 'List']];
+const QA_LAYOUTS = [['pills3', 'Pills × 3'], ['pills', 'Pills × 2'], ['list', 'List']];
 function openMenu() {
   const sh = h(`<div class="sheet lsheet" style="max-height:${L.H - L.sat - 24}px"><div class="sh-title">Payoff prototype</div><button class="sh-x" aria-label="Close">${ic('x', 18, 1.7)}</button>
     <div class="rows"><div class="secl">Payoff demo</div><div class="pdev">${payoffDevHTML()}</div>
@@ -179,7 +179,7 @@ function setTextSize(f, { silent = false } = {}) {
 // the quick action panel's layout: pills in titled sections, or the list
 function setQa(v, { silent = false } = {}) {
   cancelGesture('invalid_context');
-  S.qa = v === 'list' ? 'list' : 'pills'; store.set('qa', S.qa); rebuildSlots(); syncDev();
+  S.qa = QA_LAYOUTS.some(q => q[0] === v) ? v : 'pills3'; store.set('qa2', S.qa); rebuildSlots(); syncDev();
   if (!silent) track('qa_layout', { to: S.qa });
 }
 let coachEl = null;
@@ -208,15 +208,15 @@ function buildDev() {
     <div><h1>Sahi Payoff · mobile</h1></div>
     <div class="sub">Tap Payoff in the index chart's header, then tap, drag or long-press in the shaded area. Hold a timeframe button for the quick action panel; tap it for the chart menu, where the flash icons choose the panel's actions. PRD in docs/sahi-payoff-mobile-prd.md.</div>
     <div class="box"><h2>Payoff demo</h2>${payoffDevHTML()}</div>
-    <div class="box"><h2>Quick actions</h2><div class="seg" id="qas">${QA_LAYOUTS.map(([k, n]) => `<button data-qa="${k}">${n} panel</button>`).join('')}</div>
+    <div class="box"><h2>Quick actions</h2><div class="seg" id="qas">${QA_LAYOUTS.map(([k, n]) => `<button data-qa="${k}">${n}</button>`).join('')}</div>
       <div class="seg" id="lfs" style="margin-top:6px">${TEXT_SIZES.map(f => `<button data-fs="${f}">${Math.round(f * 100)}% text</button>`).join('')}</div>
       <div style="display:flex;gap:6px;margin-top:10px"><button class="dbtn" data-d="q1">Quick actions sheet</button><button class="dbtn" data-d="picks">Reset picks</button><button class="dbtn" data-d="coach">Coach mark</button></div></div>
     <div class="box"><h2>Phone</h2><div class="seg" id="frames">${Object.entries(FRAMES).map(([k, f]) => `<button data-f="${k}" title="${f.note}">${f.label}</button>`).join('')}</div></div>
     <div class="box"><h2>Options</h2>
       <label class="dt">Show touches<input type="checkbox" data-t="touches"></label>
-      <label class="dt">Haptics (vibration, iOS tick, pulses)<input type="checkbox" data-t="haptics"></label>
+      <label class="dt">Haptics (vibration, iOS tick)<input type="checkbox" data-t="haptics"></label>
       <label class="dt">Sound ticks (desktop stand-in for haptics)<input type="checkbox" data-t="sound"></label>
-      <div class="hmeter" style="margin-top:6px"><i id="hDot"></i><span id="hTxt">${Haptic.canVibrate ? 'Vibration API available' : 'No Vibration API here: pulses and optional sound stand in'}</span></div></div>
+      <div class="hmeter" style="margin-top:6px"><i id="hDot"></i><span id="hTxt">${Haptic.canVibrate ? 'Vibration API available' : 'No Vibration API here: optional sound stands in'}</span></div></div>
     <div class="box"><h2>Event log</h2><ul class="log" id="log"></ul><div style="display:flex;gap:6px;margin-top:8px"><button class="dbtn" data-d="copylog">Copy JSON</button><button class="dbtn" data-d="reset">Reset charts</button></div></div>`;
   dev.addEventListener('click', e => {
     const fb = e.target.closest('[data-f]'); if (fb) { S.frame = fb.dataset.f; relayout(); syncDev(); return; }
@@ -260,7 +260,7 @@ async function init() {
   const q = new URLSearchParams(location.search);
   if (FRAMES[q.get('frame')]) S.frame = q.get('frame');
   if (q.get('touches') === '1') { S.touches = true; app.classList.add('touches'); }
-  S.qa = ['list', 'pills'].includes(q.get('qa')) ? q.get('qa') : store.get('qa', 'pills');   // the quick action panel's layout
+  S.qa = ['list', 'pills', 'pills3'].includes(q.get('qa')) ? q.get('qa') : store.get('qa2', 'pills3');   // the quick action panel's layout
   if (SCEN[q.get('pos')]) PM.scenario = q.get('pos');
   if (q.get('product') === 'intraday') PM.product = 'INTRADAY';
   if (q.get('later') === '1') PM.later = true;

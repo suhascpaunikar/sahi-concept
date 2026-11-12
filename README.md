@@ -122,12 +122,13 @@ Two parts follow Sahi's Option Seller panel on mobile (screenshots shared on 11 
 - **The option chart's point card** names its range: "Premium ₹251.40", then "If IV moves: ₹231.17 to ₹277.33". The bar on the chart is that range, the premium if IV falls 2.5 points or rises 3; the dot is the premium with IV held.
 - **Several positions** open in a panel with the seller panel's structure: "NIFTY50 positions", **Positions | Analyse** tabs, leg cards (side, expiry, LTP, type, strike, quantity, P&L at the point), and under Analyse a **Summary** (Max Loss, Max Profit, POP, premium, Greeks, breakeven) and a **Payoff graph** with the point's time and the expiry date. Dragging on the graph moves the point's level, and the button in the panel's header makes it full height. Margin is not modelled, so the Summary shows Open P&L in that place.
 
-**Quick actions, one version.** The prototype keeps only V6 of the placement study: hold "5m" on either chart, a panel opens under the button, slide to an action and release. A tap still opens the chart menu. The wheel placements V1 to V5, their demo, the timed tasks, the label stress test, the touch-zone overlay and the left-handed option are removed here; they remain in `prototype/quick-wheel-placements/`. The panel has two layouts, switched under ⋮ → Quick actions → Panel layout, or by link:
+**Quick actions, one version.** The prototype keeps only V6 of the placement study: hold "5m" on either chart, a panel opens under the button, slide to an action and release. A tap still opens the chart menu. The wheel placements V1 to V5, their demo, the timed tasks, the label stress test, the touch-zone overlay and the left-handed option are removed here; they remain in `prototype/quick-wheel-placements/`. The panel has three layouts, switched under ⋮ → Quick actions → Panel layout, or by link:
 
-- `&qa=pills` **Pills** (default): titled sections with action pills, like the chart menu's timeframe sections. Timeframe, Drawing, Indicator and Template hold two pills each; Payoff has one. A pill that is on (an indicator, Payoff, the current timeframe) has a white border and a tick. A line at the bottom names the action under the finger ("Turn on VWAP · NIFTY50").
+- `&qa=pills3` **Pills × 3** (default): titled sections with action pills, three a row, like the chart menu's timeframe sections. Timeframe, Drawing, Indicator and Template hold two pills each, so the third place in a row is empty; Payoff has one. A pill that is on (an indicator, Payoff, the current timeframe) has a white border and a tick. A line at the bottom names the action under the finger ("Turn on VWAP · NIFTY50").
+- `&qa=pills` **Pills × 2:** the same sections with two wider pills a row.
 - `&qa=list` **List:** one row per action, as V6 was. It has no template rows.
 
-If the pills panel has no room (the option chart on a 360-wide phone at 130% text), holding shows "release for Quick actions" and opens the Quick actions sheet.
+No ring pulses where an action is picked or the panel opens; the haptic tick stays. If the pills panel has no room (the option chart on a 360-wide phone at 130% text), holding shows "release for Quick actions" and opens the Quick actions sheet.
 
 **Quick view** lets the trader choose what the panel holds. Payoff is always the last action.
 
@@ -149,7 +150,7 @@ Open `prototype/payoff-mobile/index.html`. On a desktop you get the 412 × 915 p
 - **Date chips** (only with `&ux=a`) fit the view to today or to an expiry; "19 Oct" shows the holiday shift ("moved from Tue 20 Oct").
 - **Tap the option chart** for the order panel; buying while Payoff is on switches pre-trade to the held position, and a second position switches to the Payoff list.
 - **Demo controls:** 12 sample position sets (one position, pre-trade, no contract, weekly + monthly book, iron condor, straddles, calendar, futures + put, intraday + carry-forward), carry-forward or intraday, the clock (9:30 am, 11:15 am, 12:59 pm latest data, 3:05 pm simulated, 3:45 pm closed), live, delayed, offline or unavailable prices, the Later release (order actions, B2, N3), failing orders, and the N1 tip again.
-- **Links:** `?payoff=1` opens with Payoff on; `&pos=book|condor|pretrade|empty|mixed|…`, `&product=intraday`, `&clock=15:45`, `&pricing=delayed|offline|unavailable`, `&later=1`, `&box=a|b|c|0` for the payoff box, `&qa=pills|list` for the quick action panel, `&frame=small|iphone|max`, `&text=130|200`, `&coach=0&tip=0` to skip the first-run marks.
+- **Links:** `?payoff=1` opens with Payoff on; `&pos=book|condor|pretrade|empty|mixed|…`, `&product=intraday`, `&clock=15:45`, `&pricing=delayed|offline|unavailable`, `&later=1`, `&box=a|b|c|0` for the payoff box, `&qa=pills3|pills|list` for the quick action panel, `&frame=small|iphone|max`, `&text=130|200`, `&coach=0&tip=0` to skip the first-run marks.
 
 NIFTY 50 and the NIFTY 19 Oct 22500 Call and Put run on the desktop prototype's real 1-minute Kite data, up to 12:59 pm on Wed 14 Oct 2026; later times are simulated and other contracts are modelled. Values come from the same engine as desktop (Black-Scholes on trading time, IV held).
 
