@@ -210,3 +210,18 @@
 .sp .spgw { flex: 1; min-height: 150px; position: relative; touch-action: none; cursor: crosshair; }
 .sp .spcv { position: absolute; inset: 0; width: 100%; height: 100%; }
 .sp .spgt { position: absolute; pointer-events: none; z-index: 2; }
+
+.pcard .rf2.ml { color: #d4d4d8; }
+
+/* Payoff box, three takes that lead with the expected P&L (S.box a, b, c): the level and time stay on the axes */
+.pbox .bl { color: #b9b9be; font-size: min(calc(10.5px * var(--fs)), 15.2px); }
+.pbox .bn { font-size: min(calc(19px * var(--fs)), 27.6px); line-height: 1.25; font-weight: 700; letter-spacing: -.3px; }
+.pbox .bs { color: #b9b9be; } .pbox .bs b { font-weight: 600; }
+.pbox .bm { margin-top: 3px; color: #8d8d93; font-size: min(calc(10.5px * var(--fs)), 15.2px); } .pbox .bm b { font-weight: 600; }
+.pbox .bg { display: grid; grid-template-columns: auto auto; column-gap: 16px; align-items: baseline; margin-top: 1px; }
+.pbox .bg span { color: #b9b9be; } .pbox .bg b { text-align: right; font-weight: 600; }
+.pbox .bg .p { font-size: min(calc(14.5px * var(--fs)), 21px); line-height: 1.5; font-weight: 700; } .pbox .bg span.p { color: #fff; font-weight: 600; }
+.pread.pbox[data-box="c"] { pointer-events: none; padding: 5px 9px 6px; border-radius: 10px; }
+.pread.pbox[data-box="c"] .bm { margin-top: 0; }
+.pcard .rr.ri { color: #b9b9be; }
+.pdl.pdb { margin-bottom: 4px; }

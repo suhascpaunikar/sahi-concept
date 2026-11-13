@@ -225,15 +225,15 @@ body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-se
 .zones .z.sys span { color: #ff8a8a; }
 
 /* ---- Crosshair labels, toasts, coach marks, touches ---- */
-.toast { position: absolute; left: 50%; bottom: calc(var(--sab) + 70px); transform: translate(-50%, 12px); z-index: 70; max-width: calc(100% - 48px); padding: 10px 14px; border-radius: 12px; background: #2b2b2b; box-shadow: 0 10px 30px rgba(0,0,0,.6), inset 0 0 0 1px #3a3a3a; color: #fff; font-size: 13px; line-height: 18px; opacity: 0; transition: opacity .18s, transform .18s; pointer-events: none; display: flex; align-items: center; gap: 8px; }
+.toast { position: absolute; left: 50%; bottom: calc(var(--sab) + 70px); transform: translate(-50%, 12px); z-index: 70; width: max-content; max-width: calc(100% - 24px); box-sizing: border-box; padding: 10px 14px; border-radius: 12px; background: #2b2b2b; box-shadow: 0 10px 30px rgba(0,0,0,.6), inset 0 0 0 1px #3a3a3a; color: #fff; font-size: 13px; line-height: 18px; opacity: 0; transition: opacity .18s, transform .18s; pointer-events: none; display: flex; align-items: center; gap: 8px; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
 .toast .tk { width: 18px; height: 18px; border-radius: 9px; background: #089981; display: grid; place-items: center; flex: none; }
-.coach { position: absolute; z-index: 30; width: 236px; padding: 12px 12px 10px 14px; border-radius: 14px; background: #fff; color: #000; box-shadow: 0 14px 36px rgba(0,0,0,.6); font-size: 13px; line-height: 18px; }
+.coach { position: absolute; z-index: 30; width: 236px; padding: 12px 12px 10px 14px; border-radius: 14px; background: #1c1c1c; color: #fff; box-shadow: 0 14px 36px rgba(0,0,0,.6), inset 0 0 0 1px #333; font-size: 13px; line-height: 18px; }
 .coach b { display: block; font-size: 14px; font-weight: 600; margin-bottom: 3px; }
 .coach .cbtns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
-.coach .cbtns button { height: 30px; padding: 0 14px; border-radius: 15px; font-size: 13px; font-weight: 600; background: #000; color: #fff; }
-.coach .cbtns button.ghost { background: #ededed; color: #000; }
-.coach::before { content: ""; position: absolute; width: 12px; height: 12px; background: #fff; transform: rotate(45deg); left: var(--ax, 50%); top: var(--ay, -5px); margin-left: -6px; }
+.coach .cbtns button { height: 30px; padding: 0 14px; border-radius: 15px; font-size: 13px; font-weight: 600; background: #fff; color: #000; }
+.coach .cbtns button.ghost { background: #2e2e2e; color: #fff; }
+.coach::before { content: ""; position: absolute; width: 12px; height: 12px; background: #1c1c1c; box-shadow: inset 1px 1px 0 #333; transform: rotate(45deg); left: var(--ax, 50%); top: var(--ay, -5px); margin-left: -6px; }
 .study { position: absolute; left: 8px; right: 8px; top: calc(var(--sat) + 4px); z-index: 60; min-height: 40px; border-radius: 14px; background: #2962ff; color: #fff; display: none; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,.5); font-size: 13px; line-height: 17px; }
 .study.on { display: flex; }
 .study .sq { flex: 1; min-width: 0; }
@@ -303,3 +303,54 @@ body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-se
 .seg2 { display: flex; flex-wrap: wrap; gap: 6px; }
 .seg2 button { height: 30px; padding: 0 12px; border-radius: 15px; background: #262626; color: #e6e6e6; font-size: 13px; }
 .seg2 button.on { background: #fff; color: #000; font-weight: 500; }
+
+/* Quick view: flash icon, the chart menu's two timeframe dropdowns, Drawing Tools and My Templates sheets */
+.flb { flex: none; width: 36px; height: 40px; display: grid; place-items: center; color: #fff; -webkit-tap-highlight-color: transparent; }
+.flb.on { color: #f5c24b; } .flb.on .ico { fill: #f5c24b; }
+.flb.dis { opacity: .28; }
+.irow .flb { margin-right: 4px; }
+.sech.qvh span { display: flex; align-items: center; gap: 6px; } .sech.qvh .ico { color: #f5c24b; fill: #f5c24b; }
+.qvdd { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.qvdd label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #9e9e9e; }
+.qvdd select { height: 36px; border-radius: 18px; border: 1px solid #2f2f2f; background: #171717 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23b0b0b0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 4.5 3 3 3-3'/%3E%3C/svg%3E") no-repeat right 12px center; color: #fff; font: inherit; font-size: 14px; font-weight: 500; padding: 0 30px 0 14px; -webkit-appearance: none; appearance: none; }
+.qvn { margin-top: 10px; font-size: 12px; line-height: 1.4; color: #8a8a8a; }
+.dhr { flex: none; height: 1px; border: 0; margin: 16px 16px 0; background: #2c2c2c; }
+.dsheet .dlist, .tsheet .tlist { flex: 1; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: none; }
+.dsheet .dlist::-webkit-scrollbar, .tsheet .tlist::-webkit-scrollbar { display: none; }
+.dsheet .dlist .dhr { margin: 8px 16px 0; }
+.dsec { margin: 18px 16px 6px; font-size: 13px; color: #8a8a8a; }
+.drow { display: flex; align-items: center; width: 100%; min-height: 52px; padding: 0 12px 0 16px; box-sizing: border-box; font-size: 14px; font-weight: 500; text-align: left; }
+.drow .dtap { flex: 1; min-width: 0; min-height: 52px; display: flex; align-items: center; text-align: left; font: inherit; color: inherit; }
+.drow .di { flex: none; width: 22px; display: grid; place-items: center; margin-right: 14px; }
+.drow .dnm { flex: 1; }
+.drow .tog { margin-right: 4px; }
+.tsheet .th { flex: none; display: flex; align-items: center; gap: 6px; margin: 18px 12px 0; }
+.tsheet .th h3 { margin: 0; font-size: 18px; font-weight: 600; line-height: 24px; }
+.tback { width: 36px; height: 36px; display: grid; place-items: center; }
+.trow { display: flex; align-items: center; min-height: 60px; padding: 4px 10px 4px 16px; }
+.trow .ttap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; font-size: 14px; }
+.trow .ttap b { font-weight: 600; } .trow .ttap small { font-size: 12px; color: #aeaeae; }
+.tdel { flex: none; width: 36px; height: 40px; display: grid; place-items: center; }
+.tnone { margin: 24px 16px; font-size: 13px; color: #8a8a8a; line-height: 1.4; }
+.tsave { flex: none; margin: 8px 16px calc(22px + var(--sab)); font-size: 14px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Quick action panel, pills layout: titled sections of action pills, like the chart menu's timeframe sections */
+.qpanel { position: absolute; z-index: 41; box-sizing: border-box; border-radius: 16px; background: #171717; box-shadow: 0 14px 40px rgba(0,0,0,.6), inset 0 0 0 1px #262626; animation: qlin .14s cubic-bezier(.2,.8,.2,1); pointer-events: none; }
+.qpanel .qpt { position: absolute; left: 14px; display: flex; align-items: center; font-size: min(calc(13px * var(--fs)), 17px); font-weight: 500; color: #fff; }
+.qpanel .qp { position: absolute; box-sizing: border-box; border-radius: 999px; border: 1px solid #2f2f2f; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 10px; font-size: min(calc(13.5px * var(--fs)), 17.5px); color: #c4c4c4; white-space: nowrap; }
+.qpanel .qp span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.qpanel .qp .ico { flex: none; }
+.qpanel .qp.on { border: 1.5px solid #e6e6e6; color: #fff; font-weight: 600; }
+.qpanel .qp.na { opacity: .4; }
+.qpanel .qp.emp { border-style: dashed; color: #8a8a8a; }
+.qpanel .qp.hov { background: #fff; border-color: #fff; color: #000; opacity: 1; }
+.qpanel .qp.emp.hov, .qpanel .qp.na.hov { background: #2a2a2a; border-color: #4a4a4a; color: #d0d0d0; }
+.qpanel .qpf { position: absolute; left: 14px; right: 14px; bottom: 9px; font-size: min(calc(11.5px * var(--fs)), 15px); color: #8a8a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qpanel .qpf.act { color: #fff; }
+.qlist .qli[data-i] { box-sizing: border-box; }
+
+/* three pills a row: tighter padding so names like Key Levels fit */
+.qpanel.c3 .qp { padding: 0 5px; gap: 4px; font-size: min(calc(13px * var(--fs)), 17px); } .qpanel.c3 .qp.on { font-weight: 500; } .qpanel.c3 .qp .ck { width: 12px; height: 12px; }
+
+/* a row on its way to the top of its list after its flash icon was tapped: above the rows it passes, on its own surface */
+.drow.flmv, .irow.flmv, .trow.flmv { position: relative; z-index: 2; background: #1f1f1f; border-radius: 12px; box-shadow: 0 8px 22px rgba(0,0,0,.5); }

@@ -1,8 +1,9 @@
 'use strict';
 /* =========================================================================
    Sahi Payoff on mobile (Payoff mobile PRD v1.0), on the Option Scalper
-   rebuild from the Quick Action Wheel placement study. The wheel's seventh
-   action, Clean View, is now Payoff, in all six placements.
+   rebuild from the Quick Action Wheel placement study. Of the six placements
+   only V6 remains (hold the timeframe button for a panel of quick actions),
+   with Payoff as one of the actions.
    Reference frame: Android, 412 x 915 CSS px.
    ========================================================================= */
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -53,10 +54,10 @@ const P = {
   payoff: '<path d="M2.5 17h8.2L21.5 6.2"/><path d="M2.5 13.9c4.4 0 7.6-.9 10.6-3S18.4 6.5 21.5 4.6" stroke-dasharray="2.3 2.1"/>',
   minus: '<path d="M5 12h14"/>',
   chevL: '<path d="m15 18-6-6 6-6"/>',
+  flash: '<path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2z"/>',
   chevR: '<path d="m9 18 6-6-6-6"/>',
   info: '<circle cx="12" cy="12" r="9.2"/><path d="M12 16.2v-4.6"/><path d="M12 8.1h.01"/>',
   pin: '<path d="M12 17v5"/><path d="M9 10.8V5h6v5.8l2.4 3.2H6.6z"/>',
-  wheel: '<path d="M20 20 L20 6 A14 14 0 0 0 6 20 Z" fill="currentColor" fill-opacity=".18"/><path d="M20 13.6 A6.4 6.4 0 0 0 13.6 20"/><path d="M20 6 A14 14 0 0 0 6 20"/><path d="m10.1 10.1 4.4 4.4"/><path d="M20 13.6V6M13.6 20H6"/>',
   dots3: '<circle cx="12" cy="5.2" r="1.9" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/><circle cx="12" cy="18.8" r="1.9" fill="currentColor" stroke="none"/>',
   /* chart type icons (Settings sheet) */
   ct_line: '<path d="M2.6 17.6 8.4 11.1l4.3 4 5.5-6.6 3.4 2.6"/>',
@@ -89,25 +90,24 @@ const FRAMES = {
    Session state
    ========================================================================= */
 const S = {
-  v: 'v1', frame: 'ref', hand: 'right', haptics: true, sound: false, touches: false, zones: false, pulses: true,
+  frame: 'ref', haptics: true, sound: false, touches: false, qa: 'pills',
   linked: false, focus: 'opt', split: .5, fontsReady: false,
-  labels: 'default', fs: 1, fit: true, order: false,
+  fs: 1, order: false,
 };
 
 /* ---- Event log (no prices, symbols only as chart ids) ---- */
 const LOG = [];
 let IID = 0;
 function track(event, props = {}) {
-  const e = { t: Math.round(performance.now()), event, v: S.v, ...props };
+  const e = { t: Math.round(performance.now()), event, ...props };
   LOG.push(e); if (LOG.length > 400) LOG.shift();
   if (typeof renderLog === 'function') renderLog();
-  if (typeof Study !== 'undefined') Study.onEvent(e);
   return e;
 }
 
-/* ---- Haptics: Vibration API on Android, iOS 18 switch tick, visual pulses ---- */
+/* ---- Haptics: Vibration API on Android, iOS 18 switch tick. No visual pulse: the ring that used to mark a pick was removed ---- */
 const Haptic = (() => {
-  const K = { open: { vib: 10, label: 'Light impact', why: 'wheel opened' }, select: { vib: 6, label: 'Selection', why: 'hovered action changed' }, success: { vib: [12, 45, 18], label: 'Success', why: 'change applied' }, error: { vib: [26, 60, 26], label: 'Warning', why: 'not available' }, cancel: { vib: 4, label: 'Soft', why: 'released to cancel' } };
+  const K = { open: { vib: 10, label: 'Light impact', why: 'panel opened' }, select: { vib: 6, label: 'Selection', why: 'hovered action changed' }, success: { vib: [12, 45, 18], label: 'Success', why: 'change applied' }, error: { vib: [26, 60, 26], label: 'Warning', why: 'not available' }, cancel: { vib: 4, label: 'Soft', why: 'released to cancel' } };
   const canVibrate = typeof navigator.vibrate === 'function';
   let iosLabel = null, actx = null, lastSel = -1e9, dotT = 0;
   function iosTick() {
@@ -133,13 +133,6 @@ const Haptic = (() => {
       });
     } catch {}
   }
-  function pulse(kind, at) {
-    if (!S.pulses || !at || kind === 'select' || kind === 'cancel') return;
-    const size = kind === 'open' ? 92 : 120;
-    const el = document.createElement('div'); el.className = 'hpulse ' + kind;
-    el.style.cssText = `left:${at.x - size / 2}px;top:${at.y - size / 2}px;width:${size}px;height:${size}px`;
-    app.appendChild(el); setTimeout(() => el.remove(), 500);
-  }
   function meter(kind) {
     const dot = $('#hDot'), txt = $('#hTxt'); if (!dot) return;
     dot.classList.remove('fire'); void dot.offsetWidth; dot.classList.add('fire'); clearTimeout(dotT); dotT = setTimeout(() => dot.classList.remove('fire'), 140);
@@ -151,7 +144,7 @@ const Haptic = (() => {
     if (canVibrate) { try { navigator.vibrate(K[kind].vib); } catch {} }
     else { iosTick(); if (kind === 'success') setTimeout(iosTick, 70); }
     if (S.sound) sound(kind);
-    pulse(kind, at); meter(kind);
+    meter(kind);
   }
   return { fire, canVibrate };
 })();

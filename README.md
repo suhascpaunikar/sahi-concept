@@ -20,7 +20,7 @@ Feature concepts for Sahi, each with a PRD and a clickable prototype: **Mirror**
 | `prototype/payoff/data/` | Real 1-minute Kite data the prototype runs on (CSVs and handover note); `python3 prototype/payoff/data/build_data.py` regenerates `src/data.js` |
 | `docs/sahi-payoff-mobile-prd.md` | Payoff (Mobile) PRD v1.0: Payoff on the mobile Option Scalper, opened from the Quick Action Wheel's seventh slot, which was Clean View |
 | `docs/sahi-payoff-mobile-ux-research.md` | UX research note v1.1 on mobile Payoff: prototype measurements, other apps, a review of the concept, Payoff position by position, and 21 suggestions with before/after mock-ups (images in `docs/img/payoff-mobile-ux/`) |
-| `prototype/payoff-mobile/index.html` | Clickable phone prototype of the mobile Payoff PRD, built on the placement study's Option Scalper rebuild, with all six wheel placements. One self-contained file, no build step |
+| `prototype/payoff-mobile/index.html` | Clickable phone prototype of the mobile Payoff PRD, built on the placement study's Option Scalper rebuild. Of the six placements it keeps V6 only: hold the timeframe button for a panel of quick actions. One self-contained file, no build step |
 | `prototype/payoff-mobile/src/` and `build.py` | Sources for the mobile Payoff prototype; `python3 prototype/payoff-mobile/build.py` rebuilds `index.html` with the desktop engine and data from `prototype/payoff/src/` |
 
 ## Sahi Mirror: mobile concept
@@ -100,32 +100,63 @@ Example values in the PRD come from the desktop research model (Nifty 25,000, IV
 
 ### Run the mobile Payoff prototype
 
-The prototype now includes the first three suggestions from the research note. Add `&ux=a` to a link, or untick "Improved Payoff" in the demo controls, to see PRD v1.0 as first built.
+The prototype now includes five suggestions from the research note. Add `&ux=a` to a link, or untick "Improved Payoff" in the demo controls, to see PRD v1.0 as first built.
+
+- **The point is set on the chart, with no slider:** dragging the ring sets its level and its time together. Holding it at the right edge of the index chart scrolls on to later sessions and stops at the expiry; the left edge scrolls back to Now. The option chart scrolls with it. The level moves in 1-point steps when 5 points would jump more than 6 px. The time slider strip (UX-03, UX-04) was tried and removed after a phone review: it took a row between the charts, and dragging on the chart felt smoother. The header's Payoff button closes Payoff.
+- **The point opens at the trader's horizon (UX-19):** 30 minutes ahead when every position is intraday or expires today, and at the session end otherwise.
+- **The most the position can lose (UX-20):** the option chart's point card and the point sheet say "Most you can lose: ₹13,572, the premium paid", or "Loss isn't capped below 22,285 at expiry" for a sold option.
 
 - **Breakevens in view (UX-01):** when Payoff opens, the index chart's price scale widens to show the nearest breakeven, and the loss side is shaded red. It stops widening when the candles would take less than 20% of the chart's height; a breakeven further out keeps an edge label with its distance, and tapping the label brings it into view. Closing Payoff puts the scale back.
 - **Plain wording (UX-02):** the point sheet says "If Nifty stays at 22,665 till 3:30 pm", the change from now ("−₹521 vs now · time decay"), "Needs Nifty above 22,677 (+12)" for a loss or before a buy, and "If IV moves: …" in place of "Range".
-- **A visible way in (UX-05):** a Payoff button in the index chart's header, named while a position is held and icon-only otherwise. The wheel and Quick actions still work, and the first-run tip points at the button.
+- **A visible way in (UX-05):** a Payoff button in the index chart's header, named while a position is held and icon-only otherwise. It is the only way in: Payoff is no longer a quick action. The first-run tip points at the button.
 
 Two parts follow Sahi's Option Seller panel on mobile (screenshots shared on 11 Nov 2026):
 
-- **The payoff box** on the index chart uses the wording and style of the seller panel's payoff-graph tooltip: "When price is at 22665.00 0.00%", then "Expected P&L on", the point's time ("Today, 3:30 pm: +₹1.50K") and "Expiry date: −₹2.85K". Tapping it still opens the point sheet, which holds the plain-wording lines and the model label.
+- **The payoff box** on the index chart comes in three takes that lead with the expected P&L, because the crosshair already shows the level on the price axis and the time on the time axis. Pick one under "Payoff box" in the demo controls, or by link:
+  - `&box=a` **P&L first** (default): "Expected P&L", the amount as a headline, "At expiry −₹1,092", then "Nifty +26 pts (+0.12%)".
+  - `&box=b` **Two rows:** the point's time and the expiry as two aligned rows, then the same last line.
+  - `&box=c` **At the point:** a small tag beside the ring with the amount and the expiry amount; nothing is docked in the corner.
+  - `&box=0` **Before:** the seller panel's payoff-graph tooltip wording ("When price is at 22665.00 0.00%", "Expected P&L on", "Today, 3:30 pm: +₹1.50K", "Expiry date: −₹2.85K").
+
+  Tapping the box (or the ring, for take c) still opens the point sheet, which holds the plain-wording lines and the model label.
+- **The option chart's point card** names its range: "Premium ₹251.40", then "If IV moves: ₹231.17 to ₹277.33". The bar on the chart is that range, the premium if IV falls 2.5 points or rises 3; the dot is the premium with IV held.
 - **Several positions** open in a panel with the seller panel's structure: "NIFTY50 positions", **Positions | Analyse** tabs, leg cards (side, expiry, LTP, type, strike, quantity, P&L at the point), and under Analyse a **Summary** (Max Loss, Max Profit, POP, premium, Greeks, breakeven) and a **Payoff graph** with the point's time and the expiry date. Dragging on the graph moves the point's level, and the button in the panel's header makes it full height. Margin is not modelled, so the Summary shows Open P&L in that place.
+
+**Quick actions, one version.** The prototype keeps only V6 of the placement study: hold "5m" on either chart, a panel opens under the button, slide to an action and release. A tap still opens the chart menu. The wheel placements V1 to V5, their demo, the timed tasks, the label stress test, the touch-zone overlay and the left-handed option are removed here; they remain in `prototype/quick-wheel-placements/`. The panel has three layouts, switched under ⋮ → Quick actions → Panel layout, or by link:
+
+- `&qa=pills` **Pills × 2** (default): four titled sections, Timeframe, Drawing, Indicator and Template, each with its two pills side by side. A pill that is on (an indicator, the current timeframe) has a white border and a tick. A line at the bottom names the action under the finger ("Turn on VWAP · NIFTY50").
+- `&qa=pills3` **Pills × 3:** the same sections on a three-a-row grid, like the chart menu's timeframe sections; the third place in each row is empty.
+- `&qa=list` **List:** one row per action, as V6 was. It has no template rows.
+
+No ring pulses where an action is picked, where the panel opens, or on the Payoff point when it is moved by a tap; the haptic tick stays. The panel always opens downwards. Under the option chart's button, where the screen ends first, it moves up only as far as it must to fit and may cover the button; it never flips to open above it. Lifting the finger on the button picks nothing. Only if the panel is taller than the screen does holding open the Quick actions sheet instead.
+
+**Quick view** lets the trader choose what the panel holds: four groups of two. Payoff is not an action in the panel; it is turned on and off with its button in the index chart's header.
+
+- **Two timeframes:** a "Quick view" section below Day in the chart menu (tap 5m) has two dropdowns, Timeframe 1 and Timeframe 2. Picking the other slot's timeframe swaps the two.
+- **Two drawings:** the Drawing tile opens a Drawing Tools sheet (toggles, then the drawings list, as in the Sahi app) with a flash icon on the right of each drawing.
+- **Two indicators:** Add indicators has a flash icon left of the star.
+- **Two templates (pills layout only):** My Templates has a flash icon left of the delete icon. Templates have their own two slots and show under the Template title; a pill applies the template to that chart.
+- **Limit of two per group:** when a group is full the other flash icons are dimmed, and tapping one shows "Quick view already has 2 drawings. Remove one to add another." Removing a pick leaves a dashed "Add" pill (an "Empty … slot" row in the list) until another is added.
+- **A pick moves to the top at once:** tapping a flash icon lists that drawing or indicator first, after any earlier pick. The row grows 5%, travels to the top of the list while the rows it passes slide down, then settles back to its size (about 0.6 s; no motion when the phone asks for reduced motion). The list scrolls to its start so the row is seen arriving. Removing a pick slides the row back to its usual place.
+- Picks are saved on the device. The prototype draws Trend Line, Horizontal Line, Rectangle and Fibonacci Retracement, and the EMA, SMA, VWAP, Bollinger Bands and Key Levels indicators; any other pick sits in the panel and says it is not drawn here.
+
+The button beside Payoff in the index chart's header is the Sahi app's option chain button; the chain is not part of this prototype.
 
 Open `prototype/payoff-mobile/index.html`. On a desktop you get the 412 × 915 phone with a panel beside it; on a phone the app fills the screen and the ⋮ button opens the same controls.
 
-- **Hold** the "5m" button on either chart, **slide** to Payoff and **release**. Hold again and release on Payoff (now "On") to turn it off, or tap × in the Payoff bar. Esc stands in for Android back.
-- **Move the point:** tap the shaded zone, drag the ring, or long-press anywhere and slide into the zone. Pan and pinch work as before; the point keeps its level and time, and an edge pill brings it back.
+- **Tap Payoff** in the index chart's header to turn it on, and again to turn it off. Esc stands in for Android back.
+- **Move the point:** tap the shaded zone, drag the ring, or long-press anywhere and slide into the zone. Hold the ring at the right edge to reach later days. Pan and pinch work as before (the candles follow the finger); the point keeps its level and time, and an edge pill brings it back.
 - **Tap the readout** for B1: steppers move the level 5 points and the time one candle. Hold a stepper to repeat.
-- **Date chips** fit the view to today or to an expiry; "19 Oct" shows the holiday shift ("moved from Tue 20 Oct").
+- **Date chips** (only with `&ux=a`) fit the view to today or to an expiry; "19 Oct" shows the holiday shift ("moved from Tue 20 Oct").
 - **Tap the option chart** for the order panel; buying while Payoff is on switches pre-trade to the held position, and a second position switches to the Payoff list.
 - **Demo controls:** 12 sample position sets (one position, pre-trade, no contract, weekly + monthly book, iron condor, straddles, calendar, futures + put, intraday + carry-forward), carry-forward or intraday, the clock (9:30 am, 11:15 am, 12:59 pm latest data, 3:05 pm simulated, 3:45 pm closed), live, delayed, offline or unavailable prices, the Later release (order actions, B2, N3), failing orders, and the N1 tip again.
-- **Links:** `?payoff=1` opens with Payoff on; `&pos=book|condor|pretrade|empty|mixed|…`, `&product=intraday`, `&clock=15:45`, `&pricing=delayed|offline|unavailable`, `&later=1`, `&v=1` to `&v=6` for the placement, `&frame=small|iphone|max`, `&text=130|200`, `&coach=0&tip=0` to skip the first-run marks.
+- **Links:** `?payoff=1` opens with Payoff on; `&pos=book|condor|pretrade|empty|mixed|…`, `&product=intraday`, `&clock=15:45`, `&pricing=delayed|offline|unavailable`, `&later=1`, `&box=a|b|c|0` for the payoff box, `&qa=pills3|pills|list` for the quick action panel, `&frame=small|iphone|max`, `&text=130|200`, `&coach=0&tip=0` to skip the first-run marks.
 
 NIFTY 50 and the NIFTY 19 Oct 22500 Call and Put run on the desktop prototype's real 1-minute Kite data, up to 12:59 pm on Wed 14 Oct 2026; later times are simulated and other contracts are modelled. Values come from the same engine as desktop (Black-Scholes on trading time, IV held).
 
 ### Mobile Payoff surfaces covered
 
-S1 Option Scalper with Payoff in slot 7 of every placement and in Quick actions · N1 Payoff introduction tip · S2 Payoff mode: one position (pre-trade, empty, intraday, expired, too-uncertain and at-expiry readouts) · S3 Payoff mode: several positions (Payoff list, squared-off and expired legs, realised today, max profit and loss) · B1 Payoff point sheet · N2 Pricing status banner (delayed, offline, closed, unavailable with Retry) · B2 Confirm order sheet and N3 snackbar (Later release) · the order panel.
+S1 Option Scalper with the Payoff button in the index chart's header · N1 Payoff introduction tip · S2 Payoff mode: one position (pre-trade, empty, intraday, expired, too-uncertain and at-expiry readouts) · S3 Payoff mode: several positions (Payoff list, squared-off and expired legs, realised today, max profit and loss) · B1 Payoff point sheet · N2 Pricing status banner (delayed, offline, closed, unavailable with Retry) · B2 Confirm order sheet and N3 snackbar (Later release) · the order panel.
 
 ## Sahi Quick Action Wheel: mobile concept
 

@@ -60,14 +60,13 @@ function cardMarkup(id) {
   <div class="hd">
     <button class="sym" data-act="symbol"><span class="nm">${c.sym}</span><span class="ty">${c.ty}</span><svg class="ico chv" viewBox="0 0 12 12" stroke-width="1.5">${P.chev}</svg></button>
     <div class="pxl"><span class="ltp">${c.ltp.toFixed(2)}</span><span class="chg"></span></div>
-    <div class="hdr">${id === 'idx' ? `<button class="pobtn" aria-pressed="false" aria-label="Show payoff" hidden>${ic('payoff', 14, 2)}<span>Payoff</span></button><button class="lnk" data-act="link" aria-label="Link timeframes" aria-pressed="false">${ic('link', 14.5, 2.1)}</button>` : ''}<button class="tfb" data-chart="${id}" aria-haspopup="dialog" aria-label="Timeframe ${c.tf}. Tap for chart menu"><span class="tfl">${c.tf}</span><i class="sep"></i><svg class="ico tfi" width="12.8" height="9.2" viewBox="0 0 12.8 9.2" stroke-width="1.15">${P.tfmenu}</svg></button></div>
+    <div class="hdr">${id === 'idx' ? `<button class="pobtn" aria-pressed="false" aria-label="Show payoff" hidden>${ic('payoff', 14, 2)}<span>Payoff</span></button><button class="lnk" data-act="chain" aria-label="Option chain">${ic('link', 14.5, 2.1)}</button>` : ''}<button class="tfb" data-chart="${id}" aria-haspopup="dialog" aria-label="Timeframe ${c.tf}. Tap for chart menu"><span class="tfl">${c.tf}</span><i class="sep"></i><svg class="ico tfi" width="12.8" height="9.2" viewBox="0 0 12.8 9.2" stroke-width="1.15">${P.tfmenu}</svg></button></div>
   </div>
   <div class="legend"></div>
   ${id === 'idx' ? `<div class="pbar" hidden><div class="pchips" role="group" aria-label="Look ahead to"></div><button class="pclose" aria-label="Close payoff">${ic('x', 16, 2.2)}</button></div><div class="pban" role="status" hidden></div><div class="pread" role="button" tabindex="0" hidden></div><button class="pedge" hidden></button><div class="phint" hidden></div><div class="pempty" hidden>Pick a contract on the option chart to see its payoff</div>` : `<button class="pchip" hidden></button><div class="pcard" hidden></div>`}
   <div class="ptip" role="tooltip" hidden></div>
   <div class="banner"><span class="bt"></span><button aria-label="Stop drawing">${ic('x', 12, 2.6)}</button></div>
-  <div class="wm">${LOGO}</div>
-  <div class="cornerglyph" aria-hidden="true">${ic('wheel', 18, 1.6)}</div>`;
+  <div class="wm">${LOGO}</div>`;
 }
 function buildCards() {
   for (const id of CHART_IDS) {
@@ -90,7 +89,7 @@ function updateHeaders() {
     const bn = $('.banner', el); bn.classList.toggle('on', !!c.draft);
     if (c.draft) $('.bt', bn).textContent = c.draft.tool === 'fib' ? (c.draft.pts.length ? 'Tap the second point' : 'Fib: tap the first point') : c.draft.tool === 'hline' ? 'Tap a price level' : c.draft.tool === 'rect' ? (c.draft.pts.length ? 'Tap the opposite corner' : 'Rectangle: tap a corner') : (c.draft.pts.length ? 'Tap the second point' : 'Trend line: tap the first point');
   }
-  const lk = $('.lnk'); if (lk) { lk.classList.toggle('on', S.linked); lk.setAttribute('aria-pressed', String(S.linked)); }
+  
 }
 function placeChrome() {
   for (const id of CHART_IDS) {
@@ -100,13 +99,8 @@ function placeChrome() {
     cv.width = Math.round(r.w * dpr); cv.height = Math.round(r.h * dpr); cv.style.width = r.w + 'px'; cv.style.height = r.h + 'px'; CH[id].dpr = dpr;
     $('.wm', el).style.top = (r.paneB - 16 - 17.5) + 'px';
     $('.wm', el).style.display = CH[id].opts.wm ? '' : 'none';
-    const g = CH[id].g || (S.fontsReady ? geomOf(id) : null), cg = $('.cornerglyph', el);
-    if (g) { const cx = S.hand === 'left' ? 22 : g.paneR + g.axisW / 2; cg.style.left = (cx - 11) + 'px'; cg.style.top = (r.paneB + 12 - 11) + 'px'; }
   }
   const dv = $('#divider'); dv.style.top = L.divY + 'px';
-  const dock = $('#dock'), oc = L.cards.opt;
-  const dx = S.hand === 'left' ? 34 : L.W - 34;
-  dock.style.left = (dx - 22) + 'px'; dock.style.top = (oc.y + oc.paneB - 62) + 'px';
 }
 
 /* ---- Indicators ---- */
@@ -146,7 +140,7 @@ function geomOf(id) {
   const axisW = Math.round((ctx.measureText(c.tag.toFixed(2)).width + 8.9) * 4) / 4;
   const paneR = r.w - axisW, s = c.spacing;
   const fut = futureSlots(c, bars), N = n + fut.length;
-  c.ro = clamp(c.ro, -(n - 3), Math.max(2, fut.length + .5));
+  c.ro = clamp(c.ro, -(n - 3), Math.max(2, fut.length + 9));
   const xOf = i => paneR - (c.ro + (n - 1 - i)) * s;
   const i0 = Math.max(0, Math.floor(n - 1 - (paneR / s - c.ro)) - 1), i1 = Math.min(n - 1, Math.ceil(n - 1 + c.ro + 1)), j1 = Math.min(N - 1, Math.ceil(n - 1 + c.ro + 1));
   const slotAt = i => i < n ? bars[i] : fut[i - n];
@@ -185,7 +179,6 @@ function drawChart(id) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, r.w, r.h);
   const { bars, xOf, p2y, s, paneR, pT, pB } = g;
   c.el.style.setProperty('--axw', g.axisW + 'px');
-  const cg = $('.cornerglyph', c.el); if (cg) { const cx = S.hand === 'left' ? 22 : g.paneR + g.axisW / 2; cg.style.left = (cx - 11) + 'px'; cg.style.top = (r.paneB + 12 - 11) + 'px'; }
   const snap = v => Math.round(v * dpr) / dpr, half = .5 / dpr;
   // pane clip
   ctx.save(); ctx.beginPath(); ctx.rect(0, pT, paneR, pB - pT); ctx.clip();
@@ -235,7 +228,7 @@ function drawChart(id) {
       });
       const val = ser[0] && ser[0][Math.min(g.i1, raw.length - 1)]; const lb = $(`.legend [data-ind="${k}"]`, c.el); if (lb && val != null) lb.textContent = val.toFixed(2);
     }
-    for (const d of c.draws) drawShape(ctx, g, d, false);
+    if (!(S.draw && S.draw.hide)) for (const d of c.draws) drawShape(ctx, g, d, false);
   }
   if (c.draft && c.draft.pts.length) drawShape(ctx, g, { tool: c.draft.tool, a: c.draft.pts[0], b: c.draft.hover || c.draft.pts[0] }, true);
   if (typeof payoffOver === 'function') payoffOver(id, ctx, g);

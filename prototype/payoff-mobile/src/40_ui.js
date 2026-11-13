@@ -7,6 +7,9 @@ function openLayer(inner, { onClose, label = 'Dialog', scrimClose = true, cls = 
   closeTransient();
   const el = h(`<div class="layer ${cls}" role="dialog" aria-modal="true" aria-label="${label}"><div class="scrim"></div></div>`);
   el.appendChild(inner); app.appendChild(el);
+  // a layer that opens on a touch's release sits under the finger, so the click from that same tap would land on it
+  // (on its scrim, which closes it). Clicks in its first moments are dropped.
+  const t0 = now(); el.addEventListener('click', e => { if (now() - t0 < 350) { e.stopPropagation(); e.preventDefault(); } }, true);
   const layer = { el, close(reason = 'dismissed') { if (layer.closed) return; layer.closed = true; el.classList.remove('in'); const i = LAYERS.indexOf(layer); if (i >= 0) LAYERS.splice(i, 1); setTimeout(() => el.remove(), 260); onClose && onClose(reason); syncDevHints(); } };
   if (scrimClose) $('.scrim', el).addEventListener('click', () => layer.close('scrim'));
   LAYERS.push(layer); requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));
@@ -29,8 +32,9 @@ function openPopover(id) {
       <button class="tile" data-t="draw">${ic('pen', 16, 2)}<span>Drawing</span></button>
       <button class="tile" data-t="set">${ic('gear', 16, 2)}<span>Settings</span></button>
     </div><hr>
-    <div class="scroll">${TF_GROUPS.map(([g, list], k) => `<div class="sech${k ? '' : ' btn'}"><span>${g}</span>${k ? '' : `<button class="addi">${ic('plus', 18, 1.75)}Add interval</button>`}</div><div class="chips">${tfChips(list)}</div>`).join('')}<div style="height:24px"></div></div>
+    <div class="scroll">${TF_GROUPS.map(([g, list], k) => `<div class="sech${k ? '' : ' btn'}"><span>${g}</span>${k ? '' : `<button class="addi">${ic('plus', 18, 1.75)}Add interval</button>`}</div><div class="chips">${tfChips(list)}</div>`).join('')}${quickTfHTML()}<div style="height:24px"></div></div>
   </div>`);
+  bindQuickTf(pop);
   tfb.classList.add('active');
   const layer = openLayer(pop, { label: 'Chart menu', onClose: () => tfb.classList.remove('active') });
   pop.addEventListener('click', e => {
@@ -73,7 +77,8 @@ function openSettings(id, tab = 0) {
 
 /* ---- Add indicators sheet (screenshot 3) ---- */
 const IND_LIST = [
-  { k: 'kl', n: 'Key Levels', only: true, cat: 'main' }, { n: 'Lite Zones & 34 EMA Band', by: 'Animesh Kumar', cat: 'main' }, { n: 'Pushkar Premium Trend', by: 'Pushkar Raj Thakur', cat: 'main' }, { n: 'RizeX Lite', by: 'Animesh Kumar', cat: 'main' },
+  { n: 'Expected Move', only: true, cat: 'main' }, { k: 'kl', n: 'Key Levels', only: true, cat: 'main' }, { n: 'Max Pain', only: true, cat: 'main' }, { n: 'OI Profile', only: true, cat: 'main' }, { n: 'OI Resistance', only: true, cat: 'main' }, { n: 'OI Support', only: true, cat: 'main' },
+  { n: 'Lite Zones & 34 EMA Band', by: 'Animesh Kumar', cat: 'main' }, { n: 'Pushkar Premium Trend', by: 'Pushkar Raj Thakur', cat: 'main' }, { n: 'RizeX Lite', by: 'Animesh Kumar', cat: 'main' }, { n: '52 Week High/Low (52W H/L)', cat: 'main' },
   { n: 'Accumulation/Distribution', cat: 'sub' }, { n: 'Adaptive SuperTrend (AS)', cat: 'main' }, { n: 'Advance/Decline Ratio', cat: 'sub' }, { n: 'Arnaud Legoux Moving Average (ALMA)', cat: 'main' }, { n: 'Aroon', cat: 'sub' },
   { n: 'Auto Fib Extension', cat: 'main' }, { n: 'Average Directional Index (ADX)', cat: 'sub' }, { n: 'Average True Range (ATR)', cat: 'sub' }, { n: 'Awesome Oscillator (AO)', cat: 'sub' }, { n: 'Balance of Power (BOP)', cat: 'sub' },
   { k: 'bb', n: 'Bollinger Bands (BB)', cat: 'main' }, { n: 'Bollinger Bands %B', cat: 'sub' }, { n: 'Chaikin Money Flow (CMF)', cat: 'sub' }, { n: 'Commodity Channel Index (CCI)', cat: 'sub' }, { n: 'Donchian Channels (DC)', cat: 'main' },
@@ -86,16 +91,16 @@ function openIndicators(id) {
   const sh = h(`<div class="sheet" style="top:${L.sat + 16}px">
     <div class="ih"><h3>Add indicators</h3><button class="tpl">${ic('grid', 16, 1.9)}My Templates</button><i class="vs"></i><button class="sh-x" aria-label="Close">${ic('x', 18, 1.7)}</button></div>
     <label class="srch">${ic('search', 18, 1.6)}<input type="search" placeholder="Search" aria-label="Search indicators"></label>
-    <div class="itabs" role="tablist"><button class="tab on" data-cat="all">All · 142</button><button class="tab" data-cat="main">Main chart · 65</button><button class="tab" data-cat="sub">Sub chart · 56</button><button class="tab" data-cat="ai">AI based · 21</button></div>
+    <div class="itabs" role="tablist"><button class="tab on" data-cat="all">All · 147</button><button class="tab" data-cat="main">Main chart · 66</button><button class="tab" data-cat="sub">Sub chart · 55</button><button class="tab" data-cat="ai">AI based · 21</button></div>
     <div class="ilist" role="list"></div>
   </div>`);
   let cat = 'all', q = '';
   const stars = sstore.get('stars', {});
   const render = () => {
-    const rows = IND_LIST.filter(x => (cat === 'all' || x.cat === cat) && x.n.toLowerCase().includes(q));
+    const rows = picksFirst(IND_LIST, QV.inds, indKey).filter(x => (cat === 'all' || x.cat === cat) && x.n.toLowerCase().includes(q));
     $('.ilist', sh).innerHTML = (cat === 'ai' ? '<div class="secl" style="margin:24px 16px">AI-based indicators are not part of this prototype.</div>' : '') + rows.map(x => {
       const on = x.k && c.ind[x.k];
-      return `<div class="irow${x.by ? ' two' : ''}${on ? ' on' : ''}" role="listitem"><button class="add" data-n="${x.n}" aria-label="${on ? 'Remove' : 'Add'} ${x.n}">${on ? ic('check', 9, 3.4) : ic('plus', 9, 3.4)}</button><div class="nm"><div class="t1">${x.n}${x.only ? '<span class="only">Only on SAHI</span>' : ''}</div>${x.by ? `<div class="t2">By ${x.by}</div>` : ''}</div>${on ? '<span class="onlbl">On chart</span>' : ''}<button class="stb" data-s="${x.n}" aria-label="Favourite ${x.n}"><svg class="ico st${stars[x.n] ? ' on' : ''}" width="16" height="16" viewBox="0 0 24 24" stroke-width="1.9">${P.star}</svg></button></div>`;
+      return `<div class="irow${x.by ? ' two' : ''}${on ? ' on' : ''}" role="listitem" data-k="${escH(indKey(x))}"><button class="add" data-n="${x.n}" aria-label="${on ? 'Remove' : 'Add'} ${x.n}">${on ? ic('check', 9, 3.4) : ic('plus', 9, 3.4)}</button><div class="nm"><div class="t1">${x.n}${x.only ? '<span class="only">Only on SAHI</span>' : ''}</div>${x.by ? `<div class="t2">By ${x.by}</div>` : ''}</div>${on ? '<span class="onlbl">On chart</span>' : ''}${flashBtn('inds', indKey(x), x.n)}<button class="stb" data-s="${x.n}" aria-label="Favourite ${x.n}"><svg class="ico st${stars[x.n] ? ' on' : ''}" width="16" height="16" viewBox="0 0 24 24" stroke-width="1.9">${P.star}</svg></button></div>`;
     }).join('');
   };
   render();
@@ -103,7 +108,8 @@ function openIndicators(id) {
   $('input', sh).addEventListener('input', e => { q = e.target.value.trim().toLowerCase(); render(); });
   sh.addEventListener('click', e => {
     if (e.target.closest('.sh-x')) return layer.close('close');
-    if (e.target.closest('.tpl')) return toast('Templates are not part of this prototype');
+    if (e.target.closest('.tpl')) return openTemplates(id);
+    if (flashClick(e, render, $('.ilist', sh), '.irow')) return;
     const t = e.target.closest('.itabs .tab'); if (t) { cat = t.dataset.cat; $$('.itabs .tab', sh).forEach(x => x.classList.toggle('on', x === t)); render(); return; }
     const s = e.target.closest('.stb'); if (s) { stars[s.dataset.s] = !stars[s.dataset.s]; sstore.set('stars', stars); render(); return; }
     const a = e.target.closest('.add'); if (a) {
@@ -129,21 +135,21 @@ function openRange(id) {
   });
 }
 const TOOLS = [['trend', 'trend', 'Trend line'], ['hline', 'hline', 'Horizontal line'], ['fib', 'fib', 'Fib retracement'], ['rect', 'rect', 'Rectangle']];
-function openDrawing(id) {
+function openDrawToolbar(id) {
   const c = CH[id], el = c.el;
   $$('.dtool').forEach(x => x.remove());
   const bar = h(`<div class="dtool" style="top:${L.cards[id].y + 56}px">${TOOLS.map(([k, icn, n]) => `<button data-tool="${k}" aria-label="${n}" class="${c.draft && c.draft.tool === k ? 'on' : ''}">${ic(icn, 20, 1.8)}</button>`).join('')}<button data-tool="clear" aria-label="Remove drawings">${ic('trash', 19, 1.8)}</button><span class="dsp"></span><button data-tool="close" aria-label="Close drawing tools">${ic('x', 18, 2)}</button></div>`);
   app.appendChild(bar);
   bar.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return; const t = b.dataset.tool;
-    if (t === 'close') { bar.remove(); disarm(id); return; }
+    if (t === 'close') { bar.remove(); disarm(id); if (S.draw) S.draw.toolbar = false; return; }
     if (t === 'clear') { c.draws = []; redraw(id); toast(`Drawings removed from ${c.short}`); return; }
     armTool(id, t, { route: 'toolbar' }); $$('button', bar).forEach(x => x.classList.toggle('on', x === b));
   });
 }
 
 /* =========================================================================
-   Chart actions (one path for the popover, the sheets and every wheel)
+   Chart actions (one path for the popover, the sheets and the quick action panel)
    ========================================================================= */
 function setTimeframe(id, tf, meta = {}) {
   const ids = S.linked ? CHART_IDS : [id];
@@ -160,7 +166,7 @@ function toggleIndicator(id, k, meta = {}) {
 function armTool(id, tool, meta = {}) {
   for (const k of CHART_IDS) if (k !== id && CH[k].draft) disarm(k);
   CH[id].draft = { tool, pts: [], hover: null }; updateHeaders(); redraw(id);
-  if (meta.route !== 'toolbar') toast(`${tool === 'fib' ? 'Fib retracement' : 'Trend line'}: tap two points on ${CH[id].short}`, true);
+  if (meta.route !== 'toolbar') toast(tool === 'hline' ? `Horizontal line: tap a level on ${CH[id].short}` : `${tool === 'fib' ? 'Fib retracement' : tool === 'rect' ? 'Rectangle' : 'Trend line'}: tap two points on ${CH[id].short}`, true);
 }
 function disarm(id) { const c = CH[id]; if (!c.draft) return; c.draft = null; updateHeaders(); redraw(id); }
 function placePoint(id, p) {
