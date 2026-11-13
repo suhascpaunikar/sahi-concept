@@ -241,12 +241,12 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
 .toast { position: absolute; left: 50%; bottom: calc(var(--sab) + 70px); transform: translate(-50%, 12px); z-index: 70; max-width: calc(100% - 48px); padding: 10px 14px; border-radius: 12px; background: #2b2b2b; box-shadow: 0 10px 30px rgba(0,0,0,.6), inset 0 0 0 1px #3a3a3a; color: #fff; font-size: 13px; line-height: 18px; opacity: 0; transition: opacity .18s, transform .18s; pointer-events: none; display: flex; align-items: center; gap: 8px; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
 .toast .tk { width: 18px; height: 18px; border-radius: 9px; background: #089981; display: grid; place-items: center; flex: none; }
-.coach { position: absolute; z-index: 30; width: 236px; padding: 12px 12px 10px 14px; border-radius: 14px; background: #fff; color: #000; box-shadow: 0 14px 36px rgba(0,0,0,.6); font-size: 13px; line-height: 18px; }
+.coach { position: absolute; z-index: 30; width: 236px; padding: 12px 12px 10px 14px; border-radius: 14px; background: #1c1c1c; color: #fff; box-shadow: 0 14px 36px rgba(0,0,0,.6), inset 0 0 0 1px #333; font-size: 13px; line-height: 18px; }
 .coach b { display: block; font-size: 14px; font-weight: 600; margin-bottom: 3px; }
 .coach .cbtns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
-.coach .cbtns button { height: 30px; padding: 0 14px; border-radius: 15px; font-size: 13px; font-weight: 600; background: #000; color: #fff; }
-.coach .cbtns button.ghost { background: #ededed; color: #000; }
-.coach::before { content: ""; position: absolute; width: 12px; height: 12px; background: #fff; transform: rotate(45deg); left: var(--ax, 50%); top: var(--ay, -5px); margin-left: -6px; }
+.coach .cbtns button { height: 30px; padding: 0 14px; border-radius: 15px; font-size: 13px; font-weight: 600; background: #fff; color: #000; }
+.coach .cbtns button.ghost { background: #2e2e2e; color: #fff; }
+.coach::before { content: ""; position: absolute; width: 12px; height: 12px; background: #1c1c1c; box-shadow: inset 1px 1px 0 #333; transform: rotate(45deg); left: var(--ax, 50%); top: var(--ay, -5px); margin-left: -6px; }
 .study { position: absolute; left: 8px; right: 8px; top: calc(var(--sat) + 4px); z-index: 60; min-height: 40px; border-radius: 14px; background: #2962ff; color: #fff; display: none; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,.5); font-size: 13px; line-height: 17px; }
 .study.on { display: flex; }
 .study .sq { flex: 1; min-width: 0; }
