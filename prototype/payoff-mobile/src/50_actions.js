@@ -7,10 +7,12 @@
    placements (pill fan, axis-corner fan, price-axis arc, split-handle dial,
    thumb dock) were removed from this prototype; they remain in
    prototype/quick-wheel-placements/.
-   Three layouts of the panel (S.qa):
-   - pills3: titled sections with action pills, three a row, like the chart
-     menu's timeframe sections: Timeframe, Drawing, Indicator, Template, Payoff.
-   - pills: the same sections with two wider pills a row.
+   The panel holds four groups of two actions: Timeframe, Drawing, Indicator
+   and Template. Payoff is not in it: it has its own button in the index
+   chart's header. Three layouts (S.qa):
+   - pills: a titled section per group with its two pills side by side.
+   - pills3: the same sections on a three-a-row grid, like the chart menu's
+     timeframe sections; the third place in each row is empty.
    - list: one row per action, as V6 was; it has no templates.
    The actions themselves are built by rebuildSlots() in 55_quick.js.
    ========================================================================= */
@@ -23,19 +25,16 @@ const SEE = { drawing: 'a drawing', indicator: 'an indicator', template: 'a temp
 function describe(slot, id) {
   const c = CH[id], [label, name] = slot.lab || [slot.tf, 'Timeframe ' + slot.tf];
   if (slot.kind === 'empty') return { label: 'Add', name: `Empty ${slot.what} slot`, icon: 'plus', cap: '', status: 'na', empty: true, verb: `Add ${SEE[slot.what]}`, action: `Empty slot. Tap the flash icon beside ${SEE[slot.what]} to add it here` };
-  // While the Payoff list covers the option chart (S3), that chart's actions are unavailable, except Payoff (FR-28)
-  if (id === 'opt' && slot.kind !== 'payoff' && PM.on && PM.s3) return { label, name, icon: slot.icon, big: slot.kind === 'tf', cap: 'Hidden', status: 'na', verb: 'Hidden by the Payoff list', action: 'The Payoff list covers the option chart' };
+  // While the Payoff list covers the option chart (S3), that chart's actions are unavailable (FR-28)
+  if (id === 'opt' && PM.on && PM.s3) return { label, name, icon: slot.icon, big: slot.kind === 'tf', cap: 'Hidden', status: 'na', verb: 'Hidden by the Payoff list', action: 'The Payoff list covers the option chart' };
   if (slot.kind === 'tf') {
     const cur = c.tf === slot.tf;
     return { label: slot.tf, big: true, name: cur ? 'Current timeframe' : name, cap: cur ? 'Current' : '', capOn: cur, status: cur ? 'current' : 'ok', verb: cur ? `Already ${slot.tf}` : `Switch to ${slot.tf}`, action: cur ? `${c.short} is already on ${slot.tf}` : `Switch ${c.short} to ${slot.tf}` };
   }
   if (slot.kind === 'tool') { const armed = c.draft && c.draft.tool === slot.tool; return { label, name, icon: slot.icon, cap: armed ? 'Armed' : '', capOn: armed, status: 'ok', verb: `Draw ${name}`, action: `Draw a ${name} on ${c.short}` }; }
   if (slot.kind === 'tpl') return { label, name, icon: slot.icon, cap: '', status: 'ok', verb: `Apply ${name}`, action: `Apply ${name} to ${c.short}` };
-  if (slot.kind === 'ind') { const on = !!(slot.ind && c.ind[slot.ind]); return { label, name, icon: slot.icon, cap: on ? 'On' : 'Off', capOn: on, status: 'ok', verb: `Turn ${on ? 'off' : 'on'} ${name}`, action: `Turn ${on ? 'off' : 'on'} ${name} · ${c.short}` }; }
-  // Payoff: one switch for both charts, from either chart's panel (BR-32)
-  if (!payoffAvailable()) return { label, name, icon: slot.icon, cap: 'No options', status: 'na', verb: 'Payoff needs an index with options', action: 'Payoff needs an index with options', scope: 'Both charts' };
-  const on = PM.on;
-  return { label, name, icon: slot.icon, cap: on ? 'On' : 'Off', capOn: on, status: 'ok', verb: on ? 'Hide payoff' : 'Show payoff', action: 'Breakeven and P&L at any level and time', scope: 'Both charts' };
+  const on = !!(slot.ind && c.ind[slot.ind]);   // an indicator
+  return { label, name, icon: slot.icon, cap: on ? 'On' : 'Off', capOn: on, status: 'ok', verb: `Turn ${on ? 'off' : 'on'} ${name}`, action: `Turn ${on ? 'off' : 'on'} ${name} · ${c.short}` };
 }
 function applySlot(i, id, meta = {}) {
   const slot = SLOTS[i], d = describe(slot, id);
@@ -44,7 +43,6 @@ function applySlot(i, id, meta = {}) {
   else if (slot.kind === 'tool') { if (DRAWABLE.has(slot.tool)) armTool(id, slot.tool, meta); else toast(`${d.name} is not drawn in this prototype`); }
   else if (slot.kind === 'ind') { if (slot.ind) toggleIndicator(id, slot.ind, meta); else toast(`${d.name} is not drawn in this prototype`); }
   else if (slot.kind === 'tpl') applyTemplate(id, slot.tpl);
-  else setPayoff(!PM.on, { source: meta.route === 'q1' ? 'quick_actions' : 'panel', chart: id });
   return true;
 }
 

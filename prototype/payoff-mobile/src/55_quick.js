@@ -7,7 +7,8 @@
      show in the pills layout only; the list layout has no template rows.
    A group holds two picks. When it is full the other flash icons are dimmed, and
    tapping one says to remove a pick first. A group with fewer than two picks
-   leaves an "Add" slot in the panel. Payoff is always the last action.
+   leaves an "Add" slot in the panel. Four groups of two: Payoff is not an action
+   here, it has its own button in the index chart's header.
    The Drawing Tools and My Templates sheets follow the Sahi app's screens
    (screenshots shared on 11 Nov 2026).
    ========================================================================= */
@@ -57,7 +58,6 @@ function rebuildSlots() {
     const key = QV.tpls[k], t = key && tplOf(+key.slice(4));
     out.push(t ? { id: key, kind: 'tpl', tpl: t.id, icon: 'grid', lab: [String(t.name).length > 8 ? t.name : `Tpl ${t.name}`, `Template ${t.name}`], grp: 'Template' } : { id: 'empty-tpl' + k, kind: 'empty', what: 'template', grp: 'Template' });
   }
-  out.push({ id: 'payoff', kind: 'payoff', icon: 'payoff', lab: ['Payoff', 'Payoff'], grp: 'Payoff' });
   SLOTS.splice(0, SLOTS.length, ...out);
 }
 function saveQuick() { store.set('quick', QV); store.set('tpls', TPLS); rebuildSlots(); }

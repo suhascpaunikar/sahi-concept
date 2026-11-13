@@ -1115,7 +1115,7 @@ const FRAMES = {
    Session state
    ========================================================================= */
 const S = {
-  frame: 'ref', haptics: true, sound: false, touches: false, qa: 'pills3',
+  frame: 'ref', haptics: true, sound: false, touches: false, qa: 'pills',
   linked: false, focus: 'opt', split: .5, fontsReady: false,
   fs: 1, order: false,
 };
@@ -1827,10 +1827,12 @@ function regionAt(id, p) {
    placements (pill fan, axis-corner fan, price-axis arc, split-handle dial,
    thumb dock) were removed from this prototype; they remain in
    prototype/quick-wheel-placements/.
-   Three layouts of the panel (S.qa):
-   - pills3: titled sections with action pills, three a row, like the chart
-     menu's timeframe sections: Timeframe, Drawing, Indicator, Template, Payoff.
-   - pills: the same sections with two wider pills a row.
+   The panel holds four groups of two actions: Timeframe, Drawing, Indicator
+   and Template. Payoff is not in it: it has its own button in the index
+   chart's header. Three layouts (S.qa):
+   - pills: a titled section per group with its two pills side by side.
+   - pills3: the same sections on a three-a-row grid, like the chart menu's
+     timeframe sections; the third place in each row is empty.
    - list: one row per action, as V6 was; it has no templates.
    The actions themselves are built by rebuildSlots() in 55_quick.js.
    ========================================================================= */
@@ -1843,19 +1845,16 @@ const SEE = { drawing: 'a drawing', indicator: 'an indicator', template: 'a temp
 function describe(slot, id) {
   const c = CH[id], [label, name] = slot.lab || [slot.tf, 'Timeframe ' + slot.tf];
   if (slot.kind === 'empty') return { label: 'Add', name: `Empty ${slot.what} slot`, icon: 'plus', cap: '', status: 'na', empty: true, verb: `Add ${SEE[slot.what]}`, action: `Empty slot. Tap the flash icon beside ${SEE[slot.what]} to add it here` };
-  // While the Payoff list covers the option chart (S3), that chart's actions are unavailable, except Payoff (FR-28)
-  if (id === 'opt' && slot.kind !== 'payoff' && PM.on && PM.s3) return { label, name, icon: slot.icon, big: slot.kind === 'tf', cap: 'Hidden', status: 'na', verb: 'Hidden by the Payoff list', action: 'The Payoff list covers the option chart' };
+  // While the Payoff list covers the option chart (S3), that chart's actions are unavailable (FR-28)
+  if (id === 'opt' && PM.on && PM.s3) return { label, name, icon: slot.icon, big: slot.kind === 'tf', cap: 'Hidden', status: 'na', verb: 'Hidden by the Payoff list', action: 'The Payoff list covers the option chart' };
   if (slot.kind === 'tf') {
     const cur = c.tf === slot.tf;
     return { label: slot.tf, big: true, name: cur ? 'Current timeframe' : name, cap: cur ? 'Current' : '', capOn: cur, status: cur ? 'current' : 'ok', verb: cur ? `Already ${slot.tf}` : `Switch to ${slot.tf}`, action: cur ? `${c.short} is already on ${slot.tf}` : `Switch ${c.short} to ${slot.tf}` };
   }
   if (slot.kind === 'tool') { const armed = c.draft && c.draft.tool === slot.tool; return { label, name, icon: slot.icon, cap: armed ? 'Armed' : '', capOn: armed, status: 'ok', verb: `Draw ${name}`, action: `Draw a ${name} on ${c.short}` }; }
   if (slot.kind === 'tpl') return { label, name, icon: slot.icon, cap: '', status: 'ok', verb: `Apply ${name}`, action: `Apply ${name} to ${c.short}` };
-  if (slot.kind === 'ind') { const on = !!(slot.ind && c.ind[slot.ind]); return { label, name, icon: slot.icon, cap: on ? 'On' : 'Off', capOn: on, status: 'ok', verb: `Turn ${on ? 'off' : 'on'} ${name}`, action: `Turn ${on ? 'off' : 'on'} ${name} · ${c.short}` }; }
-  // Payoff: one switch for both charts, from either chart's panel (BR-32)
-  if (!payoffAvailable()) return { label, name, icon: slot.icon, cap: 'No options', status: 'na', verb: 'Payoff needs an index with options', action: 'Payoff needs an index with options', scope: 'Both charts' };
-  const on = PM.on;
-  return { label, name, icon: slot.icon, cap: on ? 'On' : 'Off', capOn: on, status: 'ok', verb: on ? 'Hide payoff' : 'Show payoff', action: 'Breakeven and P&L at any level and time', scope: 'Both charts' };
+  const on = !!(slot.ind && c.ind[slot.ind]);   // an indicator
+  return { label, name, icon: slot.icon, cap: on ? 'On' : 'Off', capOn: on, status: 'ok', verb: `Turn ${on ? 'off' : 'on'} ${name}`, action: `Turn ${on ? 'off' : 'on'} ${name} · ${c.short}` };
 }
 function applySlot(i, id, meta = {}) {
   const slot = SLOTS[i], d = describe(slot, id);
@@ -1864,7 +1863,6 @@ function applySlot(i, id, meta = {}) {
   else if (slot.kind === 'tool') { if (DRAWABLE.has(slot.tool)) armTool(id, slot.tool, meta); else toast(`${d.name} is not drawn in this prototype`); }
   else if (slot.kind === 'ind') { if (slot.ind) toggleIndicator(id, slot.ind, meta); else toast(`${d.name} is not drawn in this prototype`); }
   else if (slot.kind === 'tpl') applyTemplate(id, slot.tpl);
-  else setPayoff(!PM.on, { source: meta.route === 'q1' ? 'quick_actions' : 'panel', chart: id });
   return true;
 }
 
@@ -2045,7 +2043,8 @@ function openQ1(id, from = 'a11y') {
      show in the pills layout only; the list layout has no template rows.
    A group holds two picks. When it is full the other flash icons are dimmed, and
    tapping one says to remove a pick first. A group with fewer than two picks
-   leaves an "Add" slot in the panel. Payoff is always the last action.
+   leaves an "Add" slot in the panel. Four groups of two: Payoff is not an action
+   here, it has its own button in the index chart's header.
    The Drawing Tools and My Templates sheets follow the Sahi app's screens
    (screenshots shared on 11 Nov 2026).
    ========================================================================= */
@@ -2095,7 +2094,6 @@ function rebuildSlots() {
     const key = QV.tpls[k], t = key && tplOf(+key.slice(4));
     out.push(t ? { id: key, kind: 'tpl', tpl: t.id, icon: 'grid', lab: [String(t.name).length > 8 ? t.name : `Tpl ${t.name}`, `Template ${t.name}`], grp: 'Template' } : { id: 'empty-tpl' + k, kind: 'empty', what: 'template', grp: 'Template' });
   }
-  out.push({ id: 'payoff', kind: 'payoff', icon: 'payoff', lab: ['Payoff', 'Payoff'], grp: 'Payoff' });
   SLOTS.splice(0, SLOTS.length, ...out);
 }
 function saveQuick() { store.set('quick', QV); store.set('tpls', TPLS); rebuildSlots(); }
@@ -3136,7 +3134,7 @@ function showPayoffTip(force) {
   const pb = uxB() && $('.pobtn', CH.idx.el), tf = pb && !pb.hidden ? pb : $('.tfb', CH.idx.el); if (!tf) return;
   const q = rectIn(tf), viaBtn = tf === pb;
   $$('.ptipn').forEach(x => x.remove());
-  const el = h(`<div class="ptipn" role="dialog" aria-label="New: Payoff"><div class="pdim"></div><div class="pring" style="left:${q.x - 4}px;top:${q.y - 4}px;width:${q.w + 8}px;height:${q.h + 8}px"></div><div class="pbub" style="top:${q.y + q.h + 12}px"><i class="parr" style="left:${q.x + q.w / 2 - 8}px"></i><div class="pbt"><span class="pic">${ic('payoff', 18, 1.9)}</span>${viaBtn ? `New: Payoff. Tap here to see your breakeven and P&amp;L at any Nifty level and time. It is also in your quick actions: hold ${CH.idx.tf} and slide to Payoff.` : `New in your quick actions: Payoff. Hold ${CH.idx.tf} and slide to Payoff to see your breakeven and P&amp;L at any Nifty level and time.`}</div><div class="pbb"><button data-n="got">Got it</button><button class="pri" data-n="show">Show me</button></div></div></div>`);
+  const el = h(`<div class="ptipn" role="dialog" aria-label="New: Payoff"><div class="pdim"></div><div class="pring" style="left:${q.x - 4}px;top:${q.y - 4}px;width:${q.w + 8}px;height:${q.h + 8}px"></div><div class="pbub" style="top:${q.y + q.h + 12}px"><i class="parr" style="left:${q.x + q.w / 2 - 8}px"></i><div class="pbt"><span class="pic">${ic('payoff', 18, 1.9)}</span>${viaBtn ? `New: Payoff. Tap here to see your breakeven and P&amp;L at any Nifty level and time.` : `New: Payoff. See your breakeven and P&amp;L at any Nifty level and time.`}</div><div class="pbb"><button data-n="got">Got it</button><button class="pri" data-n="show">Show me</button></div></div></div>`);
   app.appendChild(el); track('payoff_tip_shown', {});
   const done = (how) => { el.remove(); PM.tipSeen = true; store.set('tipSeen', true); track('payoff_tip_action', { action: how }); };
   el.addEventListener('click', e => { const b = e.target.closest('[data-n]'); if (b) { done(b.dataset.n === 'show' ? 'show_me' : 'got_it'); if (b.dataset.n === 'show') setPayoff(true, { source: 'tip' }); return; } if (e.target.classList.contains('pdim')) done('outside'); });
@@ -3600,7 +3598,7 @@ function bindChrome() {
    Menu (⋮), coach mark, desktop panel
    ========================================================================= */
 const TEXT_SIZES = [1, 1.3, 2];
-const QA_LAYOUTS = [['pills3', 'Pills × 3'], ['pills', 'Pills × 2'], ['list', 'List']];
+const QA_LAYOUTS = [['pills', 'Pills × 2'], ['pills3', 'Pills × 3'], ['list', 'List']];
 function openMenu() {
   const sh = h(`<div class="sheet lsheet" style="max-height:${L.H - L.sat - 24}px"><div class="sh-title">Payoff prototype</div><button class="sh-x" aria-label="Close">${ic('x', 18, 1.7)}</button>
     <div class="rows"><div class="secl">Payoff demo</div><div class="pdev">${payoffDevHTML()}</div>
@@ -3610,7 +3608,7 @@ function openMenu() {
     <button class="setrow" data-o="haptics" style="width:100%"><span>Haptics</span><span class="tog${S.haptics ? ' on' : ''}"></span></button>
     <div class="secl">Try it</div>
     <button class="qrow" data-a="q1"><span class="qi">${ic('dots3', 18, 1.8)}</span><span class="qt">Quick actions sheet<small>The same actions without the gesture</small></span></button>
-    <button class="qrow" data-a="picks"><span class="qi">${ic('flash', 18, 1.8)}</span><span class="qt">Reset quick action picks<small>1m, 15m, Trend Line, Fib, VWAP, EMA 20, no templates</small></span></button>
+    <button class="qrow" data-a="picks"><span class="qi">${ic('flash', 18, 1.8)}</span><span class="qt">Reset quick action picks<small>1m and 15m, Trend Line and Fib, VWAP and EMA 20, no templates</small></span></button>
     <button class="qrow" data-a="reset"><span class="qi">${ic('trash', 18, 1.8)}</span><span class="qt">Reset charts<small>5m, no indicators, no drawings</small></span></button></div></div>`);
   const layer = openLayer(sh, { label: 'Prototype settings' });
   bindPayoffDev(sh, () => layer.close('picked'));
@@ -3633,7 +3631,7 @@ function setTextSize(f, { silent = false } = {}) {
 // the quick action panel's layout: pills in titled sections, or the list
 function setQa(v, { silent = false } = {}) {
   cancelGesture('invalid_context');
-  S.qa = QA_LAYOUTS.some(q => q[0] === v) ? v : 'pills3'; store.set('qa2', S.qa); rebuildSlots(); syncDev();
+  S.qa = QA_LAYOUTS.some(q => q[0] === v) ? v : 'pills'; store.set('qa3', S.qa); rebuildSlots(); syncDev();
   if (!silent) track('qa_layout', { to: S.qa });
 }
 let coachEl = null;
@@ -3714,7 +3712,7 @@ async function init() {
   const q = new URLSearchParams(location.search);
   if (FRAMES[q.get('frame')]) S.frame = q.get('frame');
   if (q.get('touches') === '1') { S.touches = true; app.classList.add('touches'); }
-  S.qa = ['list', 'pills', 'pills3'].includes(q.get('qa')) ? q.get('qa') : store.get('qa2', 'pills3');   // the quick action panel's layout
+  S.qa = ['list', 'pills', 'pills3'].includes(q.get('qa')) ? q.get('qa') : store.get('qa3', 'pills');   // the quick action panel's layout
   if (SCEN[q.get('pos')]) PM.scenario = q.get('pos');
   if (q.get('product') === 'intraday') PM.product = 'INTRADAY';
   if (q.get('later') === '1') PM.later = true;

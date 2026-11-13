@@ -90,7 +90,7 @@ const FRAMES = {
    Session state
    ========================================================================= */
 const S = {
-  frame: 'ref', haptics: true, sound: false, touches: false, qa: 'pills3',
+  frame: 'ref', haptics: true, sound: false, touches: false, qa: 'pills',
   linked: false, focus: 'opt', split: .5, fontsReady: false,
   fs: 1, order: false,
 };

@@ -146,7 +146,7 @@ function bindChrome() {
    Menu (⋮), coach mark, desktop panel
    ========================================================================= */
 const TEXT_SIZES = [1, 1.3, 2];
-const QA_LAYOUTS = [['pills3', 'Pills × 3'], ['pills', 'Pills × 2'], ['list', 'List']];
+const QA_LAYOUTS = [['pills', 'Pills × 2'], ['pills3', 'Pills × 3'], ['list', 'List']];
 function openMenu() {
   const sh = h(`<div class="sheet lsheet" style="max-height:${L.H - L.sat - 24}px"><div class="sh-title">Payoff prototype</div><button class="sh-x" aria-label="Close">${ic('x', 18, 1.7)}</button>
     <div class="rows"><div class="secl">Payoff demo</div><div class="pdev">${payoffDevHTML()}</div>
@@ -156,7 +156,7 @@ function openMenu() {
     <button class="setrow" data-o="haptics" style="width:100%"><span>Haptics</span><span class="tog${S.haptics ? ' on' : ''}"></span></button>
     <div class="secl">Try it</div>
     <button class="qrow" data-a="q1"><span class="qi">${ic('dots3', 18, 1.8)}</span><span class="qt">Quick actions sheet<small>The same actions without the gesture</small></span></button>
-    <button class="qrow" data-a="picks"><span class="qi">${ic('flash', 18, 1.8)}</span><span class="qt">Reset quick action picks<small>1m, 15m, Trend Line, Fib, VWAP, EMA 20, no templates</small></span></button>
+    <button class="qrow" data-a="picks"><span class="qi">${ic('flash', 18, 1.8)}</span><span class="qt">Reset quick action picks<small>1m and 15m, Trend Line and Fib, VWAP and EMA 20, no templates</small></span></button>
     <button class="qrow" data-a="reset"><span class="qi">${ic('trash', 18, 1.8)}</span><span class="qt">Reset charts<small>5m, no indicators, no drawings</small></span></button></div></div>`);
   const layer = openLayer(sh, { label: 'Prototype settings' });
   bindPayoffDev(sh, () => layer.close('picked'));
@@ -179,7 +179,7 @@ function setTextSize(f, { silent = false } = {}) {
 // the quick action panel's layout: pills in titled sections, or the list
 function setQa(v, { silent = false } = {}) {
   cancelGesture('invalid_context');
-  S.qa = QA_LAYOUTS.some(q => q[0] === v) ? v : 'pills3'; store.set('qa2', S.qa); rebuildSlots(); syncDev();
+  S.qa = QA_LAYOUTS.some(q => q[0] === v) ? v : 'pills'; store.set('qa3', S.qa); rebuildSlots(); syncDev();
   if (!silent) track('qa_layout', { to: S.qa });
 }
 let coachEl = null;
@@ -260,7 +260,7 @@ async function init() {
   const q = new URLSearchParams(location.search);
   if (FRAMES[q.get('frame')]) S.frame = q.get('frame');
   if (q.get('touches') === '1') { S.touches = true; app.classList.add('touches'); }
-  S.qa = ['list', 'pills', 'pills3'].includes(q.get('qa')) ? q.get('qa') : store.get('qa2', 'pills3');   // the quick action panel's layout
+  S.qa = ['list', 'pills', 'pills3'].includes(q.get('qa')) ? q.get('qa') : store.get('qa3', 'pills');   // the quick action panel's layout
   if (SCEN[q.get('pos')]) PM.scenario = q.get('pos');
   if (q.get('product') === 'intraday') PM.product = 'INTRADAY';
   if (q.get('later') === '1') PM.later = true;
