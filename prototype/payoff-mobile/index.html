@@ -238,7 +238,7 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
 .zones .z.sys span { color: #ff8a8a; }
 
 /* ---- Crosshair labels, toasts, coach marks, touches ---- */
-.toast { position: absolute; left: 50%; bottom: calc(var(--sab) + 70px); transform: translate(-50%, 12px); z-index: 70; max-width: calc(100% - 48px); padding: 10px 14px; border-radius: 12px; background: #2b2b2b; box-shadow: 0 10px 30px rgba(0,0,0,.6), inset 0 0 0 1px #3a3a3a; color: #fff; font-size: 13px; line-height: 18px; opacity: 0; transition: opacity .18s, transform .18s; pointer-events: none; display: flex; align-items: center; gap: 8px; }
+.toast { position: absolute; left: 50%; bottom: calc(var(--sab) + 70px); transform: translate(-50%, 12px); z-index: 70; width: max-content; max-width: calc(100% - 24px); box-sizing: border-box; padding: 10px 14px; border-radius: 12px; background: #2b2b2b; box-shadow: 0 10px 30px rgba(0,0,0,.6), inset 0 0 0 1px #3a3a3a; color: #fff; font-size: 13px; line-height: 18px; opacity: 0; transition: opacity .18s, transform .18s; pointer-events: none; display: flex; align-items: center; gap: 8px; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
 .toast .tk { width: 18px; height: 18px; border-radius: 9px; background: #089981; display: grid; place-items: center; flex: none; }
 .coach { position: absolute; z-index: 30; width: 236px; padding: 12px 12px 10px 14px; border-radius: 14px; background: #1c1c1c; color: #fff; box-shadow: 0 14px 36px rgba(0,0,0,.6), inset 0 0 0 1px #333; font-size: 13px; line-height: 18px; }
@@ -366,7 +366,7 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
 .qpanel.c3 .qp { padding: 0 5px; gap: 4px; font-size: min(calc(13px * var(--fs)), 17px); } .qpanel.c3 .qp.on { font-weight: 500; } .qpanel.c3 .qp .ck { width: 12px; height: 12px; }
 
 /* a row on its way to the top of its list after its flash icon was tapped: above the rows it passes, on its own surface */
-.drow.flmv, .irow.flmv { position: relative; z-index: 2; background: #1f1f1f; border-radius: 12px; box-shadow: 0 8px 22px rgba(0,0,0,.5); }
+.drow.flmv, .irow.flmv, .trow.flmv { position: relative; z-index: 2; background: #1f1f1f; border-radius: 12px; box-shadow: 0 8px 22px rgba(0,0,0,.5); }
 
 /* =========================================================================
    Payoff on mobile (Payoff mobile PRD v1.0)
@@ -2113,7 +2113,7 @@ function flashBtn(group, key, name) {
 function quickToggle(group, key, name) {
   const a = QV[group], i = a.indexOf(key);
   if (i >= 0) { a.splice(i, 1); saveQuick(); toast(`${name} removed from Quick view`); track('quick_pick', { group, on: false }); return true; }
-  if (a.length >= 2) { Haptic.fire('error'); toast(`Quick view already has 2 ${QGROUP[group]}. Remove one to add another.`); track('quick_pick_full', { group }); return false; }
+  if (a.length >= 2) { Haptic.fire('error'); toast(`Only 2 ${QGROUP[group]}. Remove one to add another.`); track('quick_pick_full', { group }); return false; }
   a.push(key); saveQuick(); Haptic.fire('select'); toast(`${name} added to Quick view`, true); track('quick_pick', { group, on: true }); return true;
 }
 // A tap on a flash icon. The row that was picked grows 5%, travels to the top of its list while the rows it passes
@@ -2129,7 +2129,7 @@ function flashClick(e, rerender, scroller, rows) {
   if (!scroller) return true;
   const added = !was, me = $$(rows, scroller).find(r => r.dataset.k === key);
   // bring the top of the list into view, with its title and the picks before this one, so the row is seen arriving
-  if (added && me) { const sr = scroller.getBoundingClientRect(), fr = $$(rows, scroller)[0].getBoundingClientRect(); if (fr.top - 44 < sr.top) scroller.scrollTop -= sr.top - (fr.top - 44); }
+  if (added && me) { const sr = scroller.getBoundingClientRect(), fr = $$(rows, scroller)[0].getBoundingClientRect(); if (fr.top - 44 < sr.top) scroller.scrollTop = Math.max(0, scroller.scrollTop - (sr.top - (fr.top - 44))); }
   const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   for (const r of $$(rows, scroller)) {
     const d = before.has(r.dataset.k) ? before.get(r.dataset.k) - r.getBoundingClientRect().top : 0;
@@ -2196,13 +2196,13 @@ function openTemplates(id) {
   const sh = h(`<div class="sheet tsheet" style="height:${Math.round(L.H * .62)}px"><div class="th"><button class="tback" aria-label="Back">${ic('chevL', 18, 2)}</button><h3></h3></div><hr class="dhr"><div class="tlist"></div><button class="tsave">Save current indicators as template</button></div>`);
   const render = () => {
     $('h3', sh).textContent = `My Templates (${TPLS.length})`;
-    $('.tlist', sh).innerHTML = TPLS.length ? TPLS.map(t => `<div class="trow"><button class="ttap" data-tp="${t.id}"><b>${escH(t.name)}</b><small>${escH(t.inds.join(', '))}</small></button>${flashBtn('tpls', 'tpl:' + t.id, 'Template ' + t.name)}<button class="tdel" data-td="${t.id}" aria-label="Delete template ${escH(t.name)}">${ic('trash', 18, 1.7)}</button></div>`).join('') : '<div class="tnone">No templates yet. Add indicators to the chart, then save them here.</div>';
+    $('.tlist', sh).innerHTML = TPLS.length ? picksFirst(TPLS, QV.tpls, t => 'tpl:' + t.id).map(t => `<div class="trow" data-k="tpl:${t.id}"><button class="ttap" data-tp="${t.id}"><b>${escH(t.name)}</b><small>${escH(t.inds.join(', '))}</small></button>${flashBtn('tpls', 'tpl:' + t.id, 'Template ' + t.name)}<button class="tdel" data-td="${t.id}" aria-label="Delete template ${escH(t.name)}">${ic('trash', 18, 1.7)}</button></div>`).join('') : '<div class="tnone">No templates yet. Add indicators to the chart, then save them here.</div>';
   };
   render();
   const layer = openLayer(sh, { label: 'My Templates' });
   sh.addEventListener('click', e => {
     if (e.target.closest('.tback')) return layer.close('back');
-    if (flashClick(e, render)) return;
+    if (flashClick(e, render, $('.tlist', sh), '.trow')) return;
     const d = e.target.closest('[data-td]'); if (d) { const i = TPLS.findIndex(t => t.id === +d.dataset.td), nm = TPLS[i].name; TPLS.splice(i, 1); saveQuick(); render(); return toast(`Template ${nm} deleted`); }
     const a = e.target.closest('[data-tp]'); if (a) { layer.close('picked'); return applyTemplate(id, +a.dataset.tp); }
     if (e.target.closest('.tsave')) {

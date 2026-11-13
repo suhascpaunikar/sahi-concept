@@ -75,7 +75,7 @@ function flashBtn(group, key, name) {
 function quickToggle(group, key, name) {
   const a = QV[group], i = a.indexOf(key);
   if (i >= 0) { a.splice(i, 1); saveQuick(); toast(`${name} removed from Quick view`); track('quick_pick', { group, on: false }); return true; }
-  if (a.length >= 2) { Haptic.fire('error'); toast(`Quick view already has 2 ${QGROUP[group]}. Remove one to add another.`); track('quick_pick_full', { group }); return false; }
+  if (a.length >= 2) { Haptic.fire('error'); toast(`Only 2 ${QGROUP[group]}. Remove one to add another.`); track('quick_pick_full', { group }); return false; }
   a.push(key); saveQuick(); Haptic.fire('select'); toast(`${name} added to Quick view`, true); track('quick_pick', { group, on: true }); return true;
 }
 // A tap on a flash icon. The row that was picked grows 5%, travels to the top of its list while the rows it passes
@@ -91,7 +91,7 @@ function flashClick(e, rerender, scroller, rows) {
   if (!scroller) return true;
   const added = !was, me = $$(rows, scroller).find(r => r.dataset.k === key);
   // bring the top of the list into view, with its title and the picks before this one, so the row is seen arriving
-  if (added && me) { const sr = scroller.getBoundingClientRect(), fr = $$(rows, scroller)[0].getBoundingClientRect(); if (fr.top - 44 < sr.top) scroller.scrollTop -= sr.top - (fr.top - 44); }
+  if (added && me) { const sr = scroller.getBoundingClientRect(), fr = $$(rows, scroller)[0].getBoundingClientRect(); if (fr.top - 44 < sr.top) scroller.scrollTop = Math.max(0, scroller.scrollTop - (sr.top - (fr.top - 44))); }
   const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   for (const r of $$(rows, scroller)) {
     const d = before.has(r.dataset.k) ? before.get(r.dataset.k) - r.getBoundingClientRect().top : 0;
@@ -158,13 +158,13 @@ function openTemplates(id) {
   const sh = h(`<div class="sheet tsheet" style="height:${Math.round(L.H * .62)}px"><div class="th"><button class="tback" aria-label="Back">${ic('chevL', 18, 2)}</button><h3></h3></div><hr class="dhr"><div class="tlist"></div><button class="tsave">Save current indicators as template</button></div>`);
   const render = () => {
     $('h3', sh).textContent = `My Templates (${TPLS.length})`;
-    $('.tlist', sh).innerHTML = TPLS.length ? TPLS.map(t => `<div class="trow"><button class="ttap" data-tp="${t.id}"><b>${escH(t.name)}</b><small>${escH(t.inds.join(', '))}</small></button>${flashBtn('tpls', 'tpl:' + t.id, 'Template ' + t.name)}<button class="tdel" data-td="${t.id}" aria-label="Delete template ${escH(t.name)}">${ic('trash', 18, 1.7)}</button></div>`).join('') : '<div class="tnone">No templates yet. Add indicators to the chart, then save them here.</div>';
+    $('.tlist', sh).innerHTML = TPLS.length ? picksFirst(TPLS, QV.tpls, t => 'tpl:' + t.id).map(t => `<div class="trow" data-k="tpl:${t.id}"><button class="ttap" data-tp="${t.id}"><b>${escH(t.name)}</b><small>${escH(t.inds.join(', '))}</small></button>${flashBtn('tpls', 'tpl:' + t.id, 'Template ' + t.name)}<button class="tdel" data-td="${t.id}" aria-label="Delete template ${escH(t.name)}">${ic('trash', 18, 1.7)}</button></div>`).join('') : '<div class="tnone">No templates yet. Add indicators to the chart, then save them here.</div>';
   };
   render();
   const layer = openLayer(sh, { label: 'My Templates' });
   sh.addEventListener('click', e => {
     if (e.target.closest('.tback')) return layer.close('back');
-    if (flashClick(e, render)) return;
+    if (flashClick(e, render, $('.tlist', sh), '.trow')) return;
     const d = e.target.closest('[data-td]'); if (d) { const i = TPLS.findIndex(t => t.id === +d.dataset.td), nm = TPLS[i].name; TPLS.splice(i, 1); saveQuick(); render(); return toast(`Template ${nm} deleted`); }
     const a = e.target.closest('[data-tp]'); if (a) { layer.close('picked'); return applyTemplate(id, +a.dataset.tp); }
     if (e.target.closest('.tsave')) {
