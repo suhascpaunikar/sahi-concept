@@ -95,12 +95,12 @@ function openIndicators(id) {
     <div class="ilist" role="list"></div>
   </div>`);
   let cat = 'all', q = '';
-  const stars = sstore.get('stars', {}), list = picksFirst(IND_LIST, QV.inds.slice(), indKey);
+  const stars = sstore.get('stars', {});
   const render = () => {
-    const rows = list.filter(x => (cat === 'all' || x.cat === cat) && x.n.toLowerCase().includes(q));
+    const rows = picksFirst(IND_LIST, QV.inds, indKey).filter(x => (cat === 'all' || x.cat === cat) && x.n.toLowerCase().includes(q));
     $('.ilist', sh).innerHTML = (cat === 'ai' ? '<div class="secl" style="margin:24px 16px">AI-based indicators are not part of this prototype.</div>' : '') + rows.map(x => {
       const on = x.k && c.ind[x.k];
-      return `<div class="irow${x.by ? ' two' : ''}${on ? ' on' : ''}" role="listitem"><button class="add" data-n="${x.n}" aria-label="${on ? 'Remove' : 'Add'} ${x.n}">${on ? ic('check', 9, 3.4) : ic('plus', 9, 3.4)}</button><div class="nm"><div class="t1">${x.n}${x.only ? '<span class="only">Only on SAHI</span>' : ''}</div>${x.by ? `<div class="t2">By ${x.by}</div>` : ''}</div>${on ? '<span class="onlbl">On chart</span>' : ''}${flashBtn('inds', indKey(x), x.n)}<button class="stb" data-s="${x.n}" aria-label="Favourite ${x.n}"><svg class="ico st${stars[x.n] ? ' on' : ''}" width="16" height="16" viewBox="0 0 24 24" stroke-width="1.9">${P.star}</svg></button></div>`;
+      return `<div class="irow${x.by ? ' two' : ''}${on ? ' on' : ''}" role="listitem" data-k="${escH(indKey(x))}"><button class="add" data-n="${x.n}" aria-label="${on ? 'Remove' : 'Add'} ${x.n}">${on ? ic('check', 9, 3.4) : ic('plus', 9, 3.4)}</button><div class="nm"><div class="t1">${x.n}${x.only ? '<span class="only">Only on SAHI</span>' : ''}</div>${x.by ? `<div class="t2">By ${x.by}</div>` : ''}</div>${on ? '<span class="onlbl">On chart</span>' : ''}${flashBtn('inds', indKey(x), x.n)}<button class="stb" data-s="${x.n}" aria-label="Favourite ${x.n}"><svg class="ico st${stars[x.n] ? ' on' : ''}" width="16" height="16" viewBox="0 0 24 24" stroke-width="1.9">${P.star}</svg></button></div>`;
     }).join('');
   };
   render();
@@ -109,7 +109,7 @@ function openIndicators(id) {
   sh.addEventListener('click', e => {
     if (e.target.closest('.sh-x')) return layer.close('close');
     if (e.target.closest('.tpl')) return openTemplates(id);
-    if (flashClick(e, render)) return;
+    if (flashClick(e, render, $('.ilist', sh), '.irow')) return;
     const t = e.target.closest('.itabs .tab'); if (t) { cat = t.dataset.cat; $$('.itabs .tab', sh).forEach(x => x.classList.toggle('on', x === t)); render(); return; }
     const s = e.target.closest('.stb'); if (s) { stars[s.dataset.s] = !stars[s.dataset.s]; sstore.set('stars', stars); render(); return; }
     const a = e.target.closest('.add'); if (a) {

@@ -63,8 +63,7 @@ function rebuildSlots() {
 function saveQuick() { store.set('quick', QV); store.set('tpls', TPLS); rebuildSlots(); }
 function resetQuick() { Object.assign(QV, JSON.parse(JSON.stringify(QV_DEF))); saveQuick(); }
 
-// the Quick view picks first, in the order they were picked, then the rest in the list's own order. Taken once when a sheet
-// opens, so a row doesn't jump away under the finger when its flash icon is tapped: it moves up on the next visit.
+// the Quick view picks first, in the order they were picked, then the rest in the list's own order
 function picksFirst(list, picks, keyOf) { const at = x => { const i = picks.indexOf(keyOf(x)); return i < 0 ? 99 : i; }; return list.map((x, i) => [x, i]).sort((a, b) => at(a[0]) - at(b[0]) || a[1] - b[1]).map(a => a[0]); }
 
 /* ---- the flash icon ---- */
@@ -79,10 +78,29 @@ function quickToggle(group, key, name) {
   if (a.length >= 2) { Haptic.fire('error'); toast(`Quick view already has 2 ${QGROUP[group]}. Remove one to add another.`); track('quick_pick_full', { group }); return false; }
   a.push(key); saveQuick(); Haptic.fire('select'); toast(`${name} added to Quick view`, true); track('quick_pick', { group, on: true }); return true;
 }
-function flashClick(e, rerender) {
+// A tap on a flash icon. The row that was picked grows 5%, travels to the top of its list while the rows it passes
+// slide down, then settles back to its size. An unpicked row slides back to its usual place. rows: selector of the
+// list's rows inside scroller, each carrying data-k.
+function flashClick(e, rerender, scroller, rows) {
   const f = e.target.closest('.flb'); if (!f) return false;
   const group = f.dataset.fl, key = f.dataset.key, name = group === 'tools' ? toolOf(key)[2] : group === 'tpls' ? `Template ${tplOf(+key.slice(4)).name}` : indOf(key).n;
-  if (quickToggle(group, key, name)) rerender();
+  const was = QV[group].includes(key), before = new Map();
+  if (scroller) $$(rows, scroller).forEach(r => before.set(r.dataset.k, r.getBoundingClientRect().top));
+  if (!quickToggle(group, key, name)) return true;
+  rerender();
+  if (!scroller) return true;
+  const added = !was, me = $$(rows, scroller).find(r => r.dataset.k === key);
+  // bring the top of the list into view, with its title and the picks before this one, so the row is seen arriving
+  if (added && me) { const sr = scroller.getBoundingClientRect(), fr = $$(rows, scroller)[0].getBoundingClientRect(); if (fr.top - 44 < sr.top) scroller.scrollTop -= sr.top - (fr.top - 44); }
+  const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  for (const r of $$(rows, scroller)) {
+    const d = before.has(r.dataset.k) ? before.get(r.dataset.k) - r.getBoundingClientRect().top : 0;
+    if (Math.abs(d) < .5 || still || !r.animate) continue;
+    if (r === me && added) {
+      r.classList.add('flmv');
+      r.animate([{ transform: `translateY(${d}px) scale(1)`, offset: 0, easing: 'ease-out' }, { transform: `translateY(${d}px) scale(1.05)`, offset: .2, easing: 'cubic-bezier(.4,0,.2,1)' }, { transform: 'translateY(0) scale(1.05)', offset: .8, easing: 'ease-in-out' }, { transform: 'translateY(0) scale(1)', offset: 1 }], { duration: 620 }).onfinish = () => r.classList.remove('flmv');
+    } else r.animate([{ transform: `translateY(${d}px)` }, { transform: 'translateY(0)' }], { duration: added ? 370 : 300, delay: added ? 125 : 0, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'backwards' });
+  }
   return true;
 }
 
@@ -105,17 +123,16 @@ const DRAW_OPTS = [['toolbar', 'grid', 'Enable drawing toolbar'], ['magnet', 'pi
 function openDrawing(id) {
   const c = CH[id]; S.draw = S.draw || {}; S.draw.toolbar = !!$('.dtool');
   const sh = h(`<div class="sheet dsheet" style="top:${L.sat + 16}px"><div class="sh-title">Drawing Tools</div><button class="sh-x" aria-label="Close">${ic('x', 18, 1.7)}</button><hr class="dhr"><div class="dlist"></div></div>`);
-  const tools = picksFirst(DRAW_TOOLS, QV.tools.slice(), t => t[0]);
   const render = () => {
-    const el = $('.dlist', sh), sc = el.scrollTop;
-    el.innerHTML = `<div class="dsec">Tools</div>${DRAW_OPTS.map(([k, icn, n]) => `<button class="drow" data-do="${k}" role="switch" aria-checked="${!!S.draw[k]}"><span class="di">${ic(P[icn] ? icn : 'gear', 20, 1.7)}</span><span class="dnm">${n}</span><span class="tog${S.draw[k] ? ' on' : ''}"></span></button>`).join('')}<hr class="dhr"><div class="dsec">Drawings</div>${tools.map(([k, icn, n]) => `<div class="drow"><button class="dtap" data-dt="${k}"><span class="di">${ic(P[icn] ? icn : 'pen', 20, 1.7)}</span><span class="dnm">${n}</span></button>${flashBtn('tools', k, n)}</div>`).join('')}<div style="height:calc(20px + var(--sab))"></div>`;
+    const el = $('.dlist', sh), sc = el.scrollTop, tools = picksFirst(DRAW_TOOLS, QV.tools, t => t[0]);
+    el.innerHTML = `<div class="dsec">Tools</div>${DRAW_OPTS.map(([k, icn, n]) => `<button class="drow" data-do="${k}" role="switch" aria-checked="${!!S.draw[k]}"><span class="di">${ic(P[icn] ? icn : 'gear', 20, 1.7)}</span><span class="dnm">${n}</span><span class="tog${S.draw[k] ? ' on' : ''}"></span></button>`).join('')}<hr class="dhr"><div class="dsec">Drawings</div>${tools.map(([k, icn, n]) => `<div class="drow" data-k="${k}"><button class="dtap" data-dt="${k}"><span class="di">${ic(P[icn] ? icn : 'pen', 20, 1.7)}</span><span class="dnm">${n}</span></button>${flashBtn('tools', k, n)}</div>`).join('')}<div style="height:calc(20px + var(--sab))"></div>`;
     el.scrollTop = sc;
   };
   render();
   const layer = openLayer(sh, { label: 'Drawing Tools' });
   sh.addEventListener('click', e => {
     if (e.target.closest('.sh-x')) return layer.close('close');
-    if (flashClick(e, render)) return;
+    if (flashClick(e, render, $('.dlist', sh), '.drow[data-k]')) return;
     const o = e.target.closest('[data-do]'); if (o) {
       const k = o.dataset.do; S.draw[k] = !S.draw[k];
       if (k === 'toolbar') { if (S.draw.toolbar) openDrawToolbar(id); else { $$('.dtool').forEach(x => x.remove()); } }

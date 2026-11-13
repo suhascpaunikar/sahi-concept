@@ -137,7 +137,7 @@ No ring pulses where an action is picked, where the panel opens, or on the Payof
 - **Two indicators:** Add indicators has a flash icon left of the star.
 - **Two templates (pills layout only):** My Templates has a flash icon left of the delete icon. Templates have their own two slots and show under the Template title; a pill applies the template to that chart.
 - **Limit of two per group:** when a group is full the other flash icons are dimmed, and tapping one shows "Quick view already has 2 drawings. Remove one to add another." Removing a pick leaves a dashed "Add" pill (an "Empty … slot" row in the list) until another is added.
-- **Picks come first on the next visit:** the flashed drawings and indicators sit at the top of their lists the next time the sheet opens, in the order they were picked. The row stays where it is while the sheet is open, so it doesn't jump away under the finger.
+- **A pick moves to the top at once:** tapping a flash icon lists that drawing or indicator first, after any earlier pick. The row grows 5%, travels to the top of the list while the rows it passes slide down, then settles back to its size (about 0.6 s; no motion when the phone asks for reduced motion). The list scrolls to its start so the row is seen arriving. Removing a pick slides the row back to its usual place.
 - Picks are saved on the device. The prototype draws Trend Line, Horizontal Line, Rectangle and Fibonacci Retracement, and the EMA, SMA, VWAP, Bollinger Bands and Key Levels indicators; any other pick sits in the panel and says it is not drawn here.
 
 The button beside Payoff in the index chart's header is the Sahi app's option chain button; the chain is not part of this prototype.

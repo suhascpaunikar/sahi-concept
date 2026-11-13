@@ -351,3 +351,6 @@ body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-se
 
 /* three pills a row: tighter padding so names like Key Levels fit */
 .qpanel.c3 .qp { padding: 0 5px; gap: 4px; font-size: min(calc(13px * var(--fs)), 17px); } .qpanel.c3 .qp.on { font-weight: 500; } .qpanel.c3 .qp .ck { width: 12px; height: 12px; }
+
+/* a row on its way to the top of its list after its flash icon was tapped: above the rows it passes, on its own surface */
+.drow.flmv, .irow.flmv { position: relative; z-index: 2; background: #1f1f1f; border-radius: 12px; box-shadow: 0 8px 22px rgba(0,0,0,.5); }
