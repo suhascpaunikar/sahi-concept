@@ -217,6 +217,10 @@ body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-se
 .qlist .qli .s.on { color: #43e097; }
 .qlist .qli.hov .s { color: #444; } .qlist .qli.hov .s.on { color: #067a63; }
 .qlist .qli.na { opacity: .45; }
+/* on or off as a mark in the lists: filled green tick when on, empty ring when off */
+.stm { width: 18px; height: 18px; margin-left: auto; flex: none; box-sizing: border-box; border-radius: 50%; border: 1.5px solid #5c5c5c; display: grid; place-items: center; color: #0f0f0f; }
+.stm.on { background: #43e097; border-color: #43e097; }
+.qlist .qli.hov .stm { border-color: #9a9a9a; } .qlist .qli.hov .stm.on { background: #067a63; border-color: #067a63; color: #fff; }
 .fbhint { position: absolute; z-index: 41; padding: 8px 12px; border-radius: 12px; background: #2a2a2a; color: #fff; font-size: calc(12.5px * var(--fs)); line-height: 1.35; box-shadow: 0 8px 22px rgba(0,0,0,.55); max-width: calc(100% - 16px); box-sizing: border-box; width: max-content; pointer-events: none; }
 .zones { position: absolute; inset: 0; z-index: 39; pointer-events: none; }
 .zones .z { position: absolute; border: 1px dashed rgba(255,214,10,.85); background: rgba(255,214,10,.10); border-radius: 6px; }

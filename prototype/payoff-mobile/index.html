@@ -230,6 +230,10 @@ body { font-family: InterQW, Inter, system-ui, -apple-system, "Segoe UI", Roboto
 .qlist .qli .s.on { color: #43e097; }
 .qlist .qli.hov .s { color: #444; } .qlist .qli.hov .s.on { color: #067a63; }
 .qlist .qli.na { opacity: .45; }
+/* on or off as a mark in the lists: filled green tick when on, empty ring when off */
+.stm { width: 18px; height: 18px; margin-left: auto; flex: none; box-sizing: border-box; border-radius: 50%; border: 1.5px solid #5c5c5c; display: grid; place-items: center; color: #0f0f0f; }
+.stm.on { background: #43e097; border-color: #43e097; }
+.qlist .qli.hov .stm { border-color: #9a9a9a; } .qlist .qli.hov .stm.on { background: #067a63; border-color: #067a63; color: #fff; }
 .fbhint { position: absolute; z-index: 41; padding: 8px 12px; border-radius: 12px; background: #2a2a2a; color: #fff; font-size: calc(12.5px * var(--fs)); line-height: 1.35; box-shadow: 0 8px 22px rgba(0,0,0,.55); max-width: calc(100% - 16px); box-sizing: border-box; width: max-content; pointer-events: none; }
 .zones { position: absolute; inset: 0; z-index: 39; pointer-events: none; }
 .zones .z { position: absolute; border: 1px dashed rgba(255,214,10,.85); background: rgba(255,214,10,.10); border-radius: 6px; }
@@ -1926,7 +1930,7 @@ function listMetrics(id) {
   if (S.fit === false) return { w: 228, rowH: 44, px: 14 * fs };
   const px = 14 * fs, rowH = Math.max(44, Math.round(px * 1.3 + 20)); let need = 0;
   for (const sl of SLOTS) {
-    const d = describe(sl, id), ib = d.big ? Math.max(18, tw(d.label, 13 * fs, 600)) : 18, st = d.big ? 0 : tw(d.cap || 'Off', 11 * fs, 400, 0);
+    const d = describe(sl, id), ib = d.big ? Math.max(18, tw(d.label, 13 * fs, 600)) : 18, st = d.big ? 0 : 'capOn' in d ? 18 : tw(d.cap || 'Off', 11 * fs, 400, 0);
     need = Math.max(need, 14 + ib + 12 + tw(rowName(sl, d), px, 400) + 12 + st + 14);
   }
   return { w: clamp(Math.ceil(need), 228, Math.min(L.W - 16, 340)), rowH, px };
@@ -2222,6 +2226,8 @@ function anchorGhost() {
   if (S.v === 'v2') { const hub = G.geo.hub; return `<circle cx="${hub.x}" cy="${hub.y}" r="14" fill="#3a3a3a"/><svg x="${hub.x - 9}" y="${hub.y - 9}" width="18" height="18" viewBox="0 0 24 24"><g class="wi" style="stroke-width:1.6">${P.wheel}</g></svg>`; }
   return '';
 }
+// On or off in the lists is a mark, not a word: a filled green tick when on, an empty ring when off.
+const stMark = d => `<span class="stm${d.capOn ? ' on' : ''}" role="img" aria-label="${d.capOn ? 'On' : 'Off'}">${d.capOn ? ic('check', 12, 3) : ''}</span>`;
 function renderList(geo, hov) {
   const id = geo.chart, r = geo.rect, fit = S.fit !== false, hi = hov && hov.zone === 'slot' ? hov.sec.i : -1;
   // One element per hold. It used to be rebuilt on every row change, which replayed its open animation
@@ -2231,7 +2237,7 @@ function renderList(geo, hov) {
   if (el) el.remove();
   el = h(`<div class="qlist${fit ? ' fit' : ''}" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;transform-origin:${geo.above ? 'bottom' : 'top'} right">${SLOTS.map((sl, i) => {
     const d = describe(sl, id);
-    return `<div class="qli${i === hi ? ' hov' : ''}${d.status === 'current' || d.status === 'na' ? ' na' : ''}" style="height:${geo.rowH}px">${d.big ? `<b class="qtf">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}<span class="qn">${escH(rowName(sl, d))}</span><span class="s${d.capOn ? ' on' : ''}">${d.big ? '' : escH(d.cap)}</span></div>`;
+    return `<div class="qli${i === hi ? ' hov' : ''}${d.status === 'current' || d.status === 'na' ? ' na' : ''}" style="height:${geo.rowH}px">${d.big ? `<b class="qtf">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}<span class="qn">${escH(rowName(sl, d))}</span>${d.big ? '' : 'capOn' in d ? stMark(d) : `<span class="s">${escH(d.cap)}</span>`}</div>`;
   }).join('')}</div>`);
   el._geo = geo; $('#ov').appendChild(el);
 }
@@ -2249,7 +2255,7 @@ function hideTouch() { $('#touch').classList.remove('on'); }
 function openQ1(id, from = 'a11y') {
   const render = () => `<div class="qhead">Applies to <span class="chipx">${escH(CH[id].short)}</span>${from === 'dock' ? '<button class="chipx swap" style="margin-left:auto">Switch chart</button>' : ''}</div>` + SLOTS.map((sl, i) => {
     const d = describe(sl, id);
-    return `<button class="qrow" data-i="${i}" aria-disabled="${d.status === 'current' || d.status === 'na'}"><span class="qi">${d.big ? `<b style="font-size:13px;font-weight:600">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}</span><span class="qt">${escH(d.big ? 'Timeframe ' + d.label : d.name)}<small>${escH(d.action)}</small></span><span class="qs${d.capOn ? ' on' : ''}">${d.status === 'current' ? 'Current' : d.big && d.status !== 'na' ? '' : escH(d.cap)}</span></button>`;
+    return `<button class="qrow" data-i="${i}" aria-disabled="${d.status === 'current' || d.status === 'na'}"><span class="qi">${d.big ? `<b style="font-size:13px;font-weight:600">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}</span><span class="qt">${escH(d.big ? 'Timeframe ' + d.label : d.name)}<small>${escH(d.action)}</small></span>${'capOn' in d ? stMark(d) : `<span class="qs">${d.status === 'current' ? 'Current' : d.big && d.status !== 'na' ? '' : escH(d.cap)}</span>`}</button>`;
   }).join('');
   const sh = h(`<div class="sheet lsheet" style="max-height:${L.H - L.sat - 40}px"><div class="sh-title">Quick actions</div><button class="sh-x" aria-label="Close">${ic('x', 18, 1.7)}</button><div class="rows"></div></div>`);
   $('.rows', sh).innerHTML = render();

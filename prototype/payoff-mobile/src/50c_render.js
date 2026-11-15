@@ -86,6 +86,8 @@ function anchorGhost() {
   if (S.v === 'v2') { const hub = G.geo.hub; return `<circle cx="${hub.x}" cy="${hub.y}" r="14" fill="#3a3a3a"/><svg x="${hub.x - 9}" y="${hub.y - 9}" width="18" height="18" viewBox="0 0 24 24"><g class="wi" style="stroke-width:1.6">${P.wheel}</g></svg>`; }
   return '';
 }
+// On or off in the lists is a mark, not a word: a filled green tick when on, an empty ring when off.
+const stMark = d => `<span class="stm${d.capOn ? ' on' : ''}" role="img" aria-label="${d.capOn ? 'On' : 'Off'}">${d.capOn ? ic('check', 12, 3) : ''}</span>`;
 function renderList(geo, hov) {
   const id = geo.chart, r = geo.rect, fit = S.fit !== false, hi = hov && hov.zone === 'slot' ? hov.sec.i : -1;
   // One element per hold. It used to be rebuilt on every row change, which replayed its open animation
@@ -95,7 +97,7 @@ function renderList(geo, hov) {
   if (el) el.remove();
   el = h(`<div class="qlist${fit ? ' fit' : ''}" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;transform-origin:${geo.above ? 'bottom' : 'top'} right">${SLOTS.map((sl, i) => {
     const d = describe(sl, id);
-    return `<div class="qli${i === hi ? ' hov' : ''}${d.status === 'current' || d.status === 'na' ? ' na' : ''}" style="height:${geo.rowH}px">${d.big ? `<b class="qtf">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}<span class="qn">${escH(rowName(sl, d))}</span><span class="s${d.capOn ? ' on' : ''}">${d.big ? '' : escH(d.cap)}</span></div>`;
+    return `<div class="qli${i === hi ? ' hov' : ''}${d.status === 'current' || d.status === 'na' ? ' na' : ''}" style="height:${geo.rowH}px">${d.big ? `<b class="qtf">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}<span class="qn">${escH(rowName(sl, d))}</span>${d.big ? '' : 'capOn' in d ? stMark(d) : `<span class="s">${escH(d.cap)}</span>`}</div>`;
   }).join('')}</div>`);
   el._geo = geo; $('#ov').appendChild(el);
 }
@@ -113,7 +115,7 @@ function hideTouch() { $('#touch').classList.remove('on'); }
 function openQ1(id, from = 'a11y') {
   const render = () => `<div class="qhead">Applies to <span class="chipx">${escH(CH[id].short)}</span>${from === 'dock' ? '<button class="chipx swap" style="margin-left:auto">Switch chart</button>' : ''}</div>` + SLOTS.map((sl, i) => {
     const d = describe(sl, id);
-    return `<button class="qrow" data-i="${i}" aria-disabled="${d.status === 'current' || d.status === 'na'}"><span class="qi">${d.big ? `<b style="font-size:13px;font-weight:600">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}</span><span class="qt">${escH(d.big ? 'Timeframe ' + d.label : d.name)}<small>${escH(d.action)}</small></span><span class="qs${d.capOn ? ' on' : ''}">${d.status === 'current' ? 'Current' : d.big && d.status !== 'na' ? '' : escH(d.cap)}</span></button>`;
+    return `<button class="qrow" data-i="${i}" aria-disabled="${d.status === 'current' || d.status === 'na'}"><span class="qi">${d.big ? `<b style="font-size:13px;font-weight:600">${escH(d.label)}</b>` : ic(d.icon, 18, 1.8)}</span><span class="qt">${escH(d.big ? 'Timeframe ' + d.label : d.name)}<small>${escH(d.action)}</small></span>${'capOn' in d ? stMark(d) : `<span class="qs">${d.status === 'current' ? 'Current' : d.big && d.status !== 'na' ? '' : escH(d.cap)}</span>`}</button>`;
   }).join('');
   const sh = h(`<div class="sheet lsheet" style="max-height:${L.H - L.sat - 40}px"><div class="sh-title">Quick actions</div><button class="sh-x" aria-label="Close">${ic('x', 18, 1.7)}</button><div class="rows"></div></div>`);
   $('.rows', sh).innerHTML = render();

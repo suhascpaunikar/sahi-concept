@@ -161,7 +161,7 @@ Payoff is a mode of the Option Scalper (S1), not a new screen. It uses the Sahi 
 **Actor:** Trader (option seller) · **Starts:** S1 at 10:15 am on Wed 14 Oct, holding Sell 65 NIFTY 19 OCT 24800 PE at ₹68.26, Sell 65 NIFTY 19 OCT 25200 CE at ₹69.29 and Buy 65 NIFTY 27 OCT 25000 CE at ₹224.15, plus one Bank Nifty position · **Ends:** S1
 - Trader taps the "5m" timeframe button on the index chart; system opens QW-B1 Chart menu.
 - Trader taps the Quick actions row; system opens QW-Q1 Quick actions.
-- Trader taps the "Payoff" row (trailing "Off"); system closes QW-Q1 and opens S3 Payoff mode: several positions.
+- Trader taps the "Payoff" row (trailing empty ring, meaning off); system closes QW-Q1 and opens S3 Payoff mode: several positions.
 - System replaces the option chart with the Payoff list titled "Nifty 25,000 · 3:30 pm today", with the header "3 positions · 2 expiries" and the chip "1 position on other charts".
 - System draws two breakeven lines with the profit shading between them, the horizon chips "Today", "19 Oct" and "27 Oct" with none picked, and the Payoff point at 3:30 pm today at 25,000.
 - Trader taps the "19 Oct" chip; system fits the index chart to now through Mon 19 Oct and shows "Weekly expiry · Mon 19 Oct" with the sub-label "moved from Tue 20 Oct".
@@ -346,13 +346,13 @@ flowchart LR
 | Component / field | Type | Content | Purpose |
 |---|---|---|---|
 | Wheel slot 7 | Wheel sector (QW-M1) | Payoff icon, label "Payoff", caption "Off" | Entry point; replaces Clean View |
-| Quick actions row 7 | List item (QW-Q1) | Payoff icon, title "Payoff", subtitle "Breakeven and P&L at any level and time", trailing "Off" | Tap route to the same action |
+| Quick actions row 7 | List item (QW-Q1) | Payoff icon, title "Payoff", subtitle "Breakeven and P&L at any level and time", trailing state mark (empty ring) | Tap route to the same action |
 | N1 Payoff introduction tip | Coach mark | "New in your quick wheel: Payoff. Hold 5m and slide to Payoff to see your breakeven and P&L at any Nifty level and time." Buttons: Show me, Got it. "5m" and "Nifty" follow the chart's timeframe and index | Introduces Payoff once |
 
 #### States
 | Scope | State | When | What the user sees |
 |---|---|---|---|
-| Slot | Off | Payoff is off | Slot 7 "Payoff", caption "Off"; QW-Q1 trailing "Off" |
+| Slot | Off | Payoff is off | Slot 7 "Payoff", caption "Off"; QW-Q1 trailing empty ring |
 | Slot | Unavailable | The top chart shows an instrument without listed options | Slot greyed with caption "No options"; releasing on it gives a warning haptic and the snackbar "Payoff needs an index with options"; QW-Q1 row disabled with the same subtitle |
 | Screen | First visit after release | Feature flag on, QW-N1 seen, N1 not seen | N1 anchored to the index chart's timeframe button; the rest of the screen dimmed except the button |
 | Screen | Clean View chip | N/A: Clean View no longer exists (BR-33) | No "Clean view" chip on either chart |
@@ -423,12 +423,12 @@ flowchart LR
 #### Components & content
 | Component / field | Type | Content | Purpose |
 |---|---|---|---|
-| Row 7 | List item | Leading Payoff icon; title "Payoff"; subtitle "Breakeven and P&L at any level and time" ("Payoff needs an index with options" when unavailable); trailing "Off" or "On" | Same action as slot 7 |
+| Row 7 | List item | Leading Payoff icon; title "Payoff"; subtitle "Breakeven and P&L at any level and time" ("Payoff needs an index with options" when unavailable); trailing state mark: a filled green tick when on, an empty ring when off, with no "On" or "Off" text (screen readers hear "On" or "Off") | Same action as slot 7 |
 
 #### States
 | Scope | State | When | What the user sees |
 |---|---|---|---|
-| Row | Off / On | Payoff off or on | Trailing "Off" or "On" |
+| Row | Off / On | Payoff off or on | Trailing empty ring or filled green tick |
 | Row | Unavailable | Top chart has no listed options | Row disabled, subtitle as above |
 | Row | Large text | Text at 130% or 200% | Row grows in height; title and subtitle wrap; never truncated |
 

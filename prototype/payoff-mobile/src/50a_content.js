@@ -161,7 +161,7 @@ function listMetrics(id) {
   if (S.fit === false) return { w: 228, rowH: 44, px: 14 * fs };
   const px = 14 * fs, rowH = Math.max(44, Math.round(px * 1.3 + 20)); let need = 0;
   for (const sl of SLOTS) {
-    const d = describe(sl, id), ib = d.big ? Math.max(18, tw(d.label, 13 * fs, 600)) : 18, st = d.big ? 0 : tw(d.cap || 'Off', 11 * fs, 400, 0);
+    const d = describe(sl, id), ib = d.big ? Math.max(18, tw(d.label, 13 * fs, 600)) : 18, st = d.big ? 0 : 'capOn' in d ? 18 : tw(d.cap || 'Off', 11 * fs, 400, 0);
     need = Math.max(need, 14 + ib + 12 + tw(rowName(sl, d), px, 400) + 12 + st + 14);
   }
   return { w: clamp(Math.ceil(need), 228, Math.min(L.W - 16, 340)), rowH, px };
