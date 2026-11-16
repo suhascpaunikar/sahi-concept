@@ -3744,7 +3744,9 @@ function bindCard(id) {
   const cardPt = p => ({ x: p.x - L.cards[id].x, y: p.y - L.cards[id].y });
   cv.addEventListener('pointerdown', e => {
     if (e.button !== 0 || LAYERS.length) return;
-    const p = appPt(e), reg = regionAt(id, p);
+    const p = appPt(e); let reg = regionAt(id, p);
+    // the Payoff ring can hang over the price or time axis (it sits down-right of the point): a touch on it grabs it there too
+    if (reg !== 'pane' && id === 'idx' && PM.on && !c.draft && poPriced() && nearPoint({ x: p.x - L.cards[id].x, y: p.y - L.cards[id].y })) reg = 'pane';
     if (G.st !== 'idle') return;
     S.focus = id; syncFocus();
     if (reg === 'axis') {
