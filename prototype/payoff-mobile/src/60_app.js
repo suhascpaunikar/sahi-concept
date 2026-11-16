@@ -85,7 +85,7 @@ function bindCard(id) {
     if (mode === 'ptpend' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'ptdrag'; moved = true; }
     if (mode === 'ptdrag') { const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'drag'); return; }
     if (mode === 'pending' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'pan'; moved = true; if (id === 'idx' && PM.on && PM.chip) { PM.chip = null; renderPayoffUI(); } }
-    if (mode === 'pan') { c.ro = ro0 + (p.x - start.x) / c.spacing; redraw(id); }
+    if (mode === 'pan') { c.ro = ro0 - (p.x - start.x) / c.spacing; redraw(id); }   // candles follow the finger: drag left for newer candles and the future
     else if (mode === 'cross') {
       if (id === 'idx' && PM.on && !c.draft && poPriced() && inFuture(cardPt(p))) { if (c.cross) { c.cross = null; setOhlc(id, null); } const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'longpress'); redraw(id); }
       else { setCross(id, cardPt(p)); if (c.draft && c.draft.pts.length) { c.draft.hover = { t: xToTime(c.g, c.cross.x), p: c.g.y2p(c.cross.y) }; } }
@@ -457,6 +457,10 @@ async function init() {
   if (SCEN[q.get('pos')]) PM.scenario = q.get('pos');
   if (q.get('product') === 'intraday') PM.product = 'INTRADAY';
   if (q.get('later') === '1') PM.later = true;
+  if (['list', 'seller'].includes(q.get('panel'))) PM.panel = q.get('panel');
+  if (DISC_STYLES.some(([k]) => k === q.get('disc'))) PM.disc.style = q.get('disc');
+  if (+q.get('stop') >= 100) PM.disc.stop = Math.round(+q.get('stop'));
+  if ([1, 2, 3].includes(+q.get('rr'))) PM.disc.ratio = +q.get('rr');
   S.ux = q.get('ux') === 'a' ? 'a' : 'b';   // b: the improved Payoff (UX-01, UX-02, UX-05); a: PRD v1.0 as first built
   const qc = q.get('clock'); if (qc) { const m = /^(\d{1,2}):?(\d{2})$/.exec(qc); if (m) MK.mod = clamp(+m[1] * 60 + +m[2], 555, 960); }
   E.calibrate(MK.nowT());
@@ -487,6 +491,11 @@ function payoffDevHTML() {
     <div class="seg pseg" data-pd="product"><button data-v="CARRY">Carry forward</button><button data-v="INTRADAY">Intraday</button></div>
     <label class="pdl">Clock<select data-pd="clock">${CLOCKS.map(([m, n]) => `<option value="${m}">${n}</option>`).join('')}</select></label>
     <div class="seg pseg" data-pd="pricing"><button data-v="live">Live</button><button data-v="delayed">Delayed</button><button data-v="offline">Offline</button><button data-v="unavailable">Unavailable</button></div>
+    <div class="pdh">Option chart with several positions</div>
+    <div class="seg pseg" data-pd="panel"><button data-v="list">Simple list</button><button data-v="seller">Seller panel</button></div>
+    <div class="pdh">Stop loss and target</div>
+    <div class="seg pseg" data-pd="disc">${DISC_STYLES.map(([k, n]) => `<button data-v="${k}">${n}</button>`).join('')}</div>
+    <div class="pdl2"><label class="pdl">Stop loss ₹<input type="number" inputmode="numeric" min="100" step="100" data-pd="stop"></label><div class="seg pseg" data-pd="ratio"><button data-v="1">1:1</button><button data-v="2">1:2</button><button data-v="3">1:3</button></div></div>
     <div class="pdrow"><button class="dbtn pri" data-pa="toggle">Payoff on</button><button class="dbtn" data-pa="tip">Show the tip</button><button class="dbtn" data-pa="order">Order panel</button></div>
     <label class="dt pdt">Improved Payoff: breakevens in view, plain readout, header button<input type="checkbox" data-pt="ux"></label>
     <label class="dt pdt">Later release: order actions in the point sheet<input type="checkbox" data-pt="later"></label>
@@ -498,6 +507,10 @@ function syncPayoffDev() {
   $$('[data-pd="clock"]').forEach(s => s.value = String(MK.mod));
   $$('[data-pd="product"] button').forEach(b => { b.classList.toggle('on', b.dataset.v === PM.product); b.disabled = !SCEN[PM.scenario].product; });
   $$('[data-pd="pricing"] button').forEach(b => b.classList.toggle('on', b.dataset.v === MK.pricing));
+  $$('[data-pd="panel"] button').forEach(b => { b.classList.toggle('on', b.dataset.v === PM.panel); b.disabled = S.ux === 'a'; });
+  $$('[data-pd="disc"] button').forEach(b => { b.classList.toggle('on', b.dataset.v === PM.disc.style); b.disabled = S.ux === 'a'; });
+  $$('[data-pd="ratio"] button').forEach(b => { b.classList.toggle('on', +b.dataset.v === PM.disc.ratio); b.disabled = S.ux === 'a' || PM.disc.style === 'off'; });
+  $$('[data-pd="stop"]').forEach(i => { if (document.activeElement !== i) i.value = PM.disc.stop; i.disabled = S.ux === 'a' || PM.disc.style === 'off'; });
   $$('[data-pa="toggle"]').forEach(b => b.textContent = PM.on ? 'Payoff off' : 'Payoff on');
   $$('[data-pt="later"]').forEach(c => c.checked = PM.later);
   $$('[data-pt="ux"]').forEach(c => c.checked = S.ux !== 'a');
@@ -508,6 +521,7 @@ function bindPayoffDev(root, closeMenu) {
     const k = e.target.dataset.pd, tk = e.target.dataset.pt;
     if (k === 'scen') { PM.product = 'CARRY'; applyScenario(e.target.value); track('demo_positions', { scenario: e.target.value }); }
     else if (k === 'clock') { setClock(+e.target.value); track('demo_clock', { clock: +e.target.value }); }
+    else if (k === 'stop') { const n = Math.round(+e.target.value); if (n >= 100) { PM.disc.stop = n; store.set('discStop', n); track('demo_disc', { stop: n }); fitPrice(); renderPayoffUI(); redraw(); } }
     else if (tk === 'later') { PM.later = e.target.checked; store.set('later', PM.later); renderPayoffUI(); }
     else if (tk === 'fail') PM.orderFail = e.target.checked;
     else if (tk === 'ux') { const on = PM.on; if (on) setPayoff(false, { source: 'demo' }); S.ux = e.target.checked ? 'b' : 'a'; renderPayoffUI(); if (on) setPayoff(true, { source: 'demo' }); track('demo_ux', { ux: S.ux }); }
@@ -519,6 +533,9 @@ function bindPayoffDev(root, closeMenu) {
       const k = sb.closest('[data-pd]').dataset.pd;
       if (k === 'product') { PM.product = sb.dataset.v; applyScenario(PM.scenario); }
       if (k === 'pricing') setPricing(sb.dataset.v);
+      if (k === 'panel') { PM.panel = sb.dataset.v; store.set('panel', PM.panel); track('demo_panel', { panel: PM.panel }); renderPayoffUI(); redraw(); }
+      if (k === 'disc') { PM.disc.style = sb.dataset.v; store.set('discStyle', PM.disc.style); track('demo_disc', { style: PM.disc.style }); fitPrice(); renderPayoffUI(); redraw(); }
+      if (k === 'ratio') { PM.disc.ratio = +sb.dataset.v; store.set('discRatio', PM.disc.ratio); track('demo_disc', { ratio: PM.disc.ratio }); fitPrice(); renderPayoffUI(); redraw(); }
       syncPayoffDev(); return;
     }
     const a = e.target.closest('[data-pa]'); if (!a) return;

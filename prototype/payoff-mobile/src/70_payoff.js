@@ -15,6 +15,7 @@ const PM = {
   views: null, prevOpt: null, openedAt: 0, later: store.get('later', false), orderFail: false, orders: {}, exits: [],
   tipSeen: store.get('tipSeen', false), hintSeen: store.get('hintSeen', false), hint: false, b1: false, b2: null,
   bannerClosed: false, crossSign: 0, crossExp: null, lastMoveLog: 0,
+  panel: store.get('panel', 'list'),   // several positions: 'list' (option, qty, P&L) or 'seller' (the seller panel)
 };
 
 /* ---------- sample positions: the desktop prototype's scenarios on real Kite data ---------- */
@@ -155,6 +156,8 @@ function signAt(r, S) { let s = r.signLow; for (const x of r.roots) if (S > x) s
 
 /* ---------- improved Payoff (UX research note v1.1): UX-01, UX-02, UX-05. ?ux=a turns it off ---------- */
 const uxB = () => S.ux !== 'a';
+// the option chart carries no Payoff marks: the Nifty chart already shows the payoff of one position
+const optPlain = () => uxB();
 // UX-01: widen the index chart's price scale so the nearest breakeven on each side of the current level,
 // at the point's time, is in view. It stops when the candles in view would take less than 20% of the pane's
 // height; a breakeven further out keeps its edge label, and tapping that label fits it anyway (full).
@@ -168,7 +171,16 @@ function priceFit(full) {
   const dn = r.filter(x => x < S0).sort((a, z) => z - a)[0], up = r.filter(x => x > S0).sort((a, z) => a - z)[0];
   const span = (a, z) => { let l = lo, h = hi; if (a != null && a < l) l = a; if (z != null && z > h) h = z; const pad = (h - l) * .1; if (l < lo) l -= pad; if (h > hi) h += pad; return { lo: l, hi: h }; };
   const near = dn == null ? [null, up] : up == null ? [dn, null] : (S0 - dn <= up - S0 ? [dn, null] : [null, up]);
-  for (const [a, z] of [[dn, up], near]) { const s = span(a, z); if (s.hi - s.lo <= cap + 1e-6) return (s.lo < lo || s.hi > hi) ? s : null; }
+  // with stop loss and target lines on the chart, try to bring their nearest levels into view too
+  const tries = [[dn, up], near];
+  if (typeof discOn === 'function' && discOn() && ['lines', 'zone', 'price'].includes(PM.disc.style)) {
+    // at the point's time and at the first candle after Now: the lines bend with time in between
+    const Ts = [PM.pt.T]; const i1 = slotOfT(g, MK.nowT() + 1e-6), s1 = g.slotAt(i1); if (s1 && s1.T1 > MK.nowT()) Ts.push(s1.T1);
+    const xs = Ts.flatMap(T => { const d = discLv(b, T); return [nearest(d.sl, S0), nearest(d.tg, S0)]; }).filter(x => x != null);
+    const lo2 = Math.min(...xs.filter(x => x < S0), dn ?? Infinity), hi2 = Math.max(...xs.filter(x => x > S0), up ?? -Infinity);
+    tries.unshift([isFinite(lo2) ? lo2 : null, isFinite(hi2) ? hi2 : null]);
+  }
+  for (const [a, z] of tries) { const s = span(a, z); if (s.hi - s.lo <= cap + 1e-6) return (s.lo < lo || s.hi > hi) ? s : null; }
   return null;
 }
 function fitPrice(full) {
@@ -196,7 +208,7 @@ function plain(b, v) {
 /* ---------- drawing ---------- */
 const PO_COL = { be: '#f0b93a', pt: '#7f9bff', up: 'rgba(8,153,129,.16)', dn: 'rgba(242,54,69,.11)', zone: 'rgba(255,255,255,.035)', strike: '#b0b6c3' };
 function payoffYRange(id, info) {
-  if (!PM.on || id !== 'opt' || PM.s3 || !poPriced()) return null;
+  if (!PM.on || id !== 'opt' || PM.s3 || optPlain() || !poPriced()) return null;
   const b = book(); if (!b.legs.length || b.legs.length > 1) return null;
   const l = b.legs[0]; let lo = l.avg, hi = l.avg;
   const v = pointVals(b); if (v && v.premLo != null) { lo = Math.min(lo, v.premLo); hi = Math.max(hi, v.premHi); }
@@ -204,7 +216,7 @@ function payoffYRange(id, info) {
 }
 function payoffUnder(id, ctx, g) {
   if (!PM.on) return;
-  if (id === 'opt' && PM.s3) return;
+  if (id === 'opt' && (PM.s3 || optPlain())) return;
   const b = book(), end = poAxisEnd(b), nowX = xAtT(g, MK.nowT());
   const endX = end != null ? xAtT(g, end) : g.paneR;
   if (nowX < g.paneR) { ctx.fillStyle = PO_COL.zone; ctx.fillRect(nowX, g.pT, Math.max(0, Math.min(endX, g.paneR) - nowX), g.pB - g.pT); }
@@ -249,7 +261,7 @@ function payoffOver(id, ctx, g) {
   if (!PM.on) return;
   const b = book(), now = MK.nowT(), nowX = xAtT(g, now), end = poAxisEnd(b), endX = end != null ? xAtT(g, end) : g.paneR;
   const fs = fsC();
-  if (id === 'opt') { if (!PM.s3) drawOptOverlay(ctx, g, b, nowX, endX); drawNow(ctx, g, nowX); return; }
+  if (id === 'opt') { if (optPlain()) { PM.optMarker = null; return; } if (!PM.s3) drawOptOverlay(ctx, g, b, nowX, endX); drawNow(ctx, g, nowX); return; }
   drawNow(ctx, g, nowX);
   if (!poPriced() || !b.legs.length) return;
   // expiry and auto square-off markers (BR-06)
@@ -310,6 +322,7 @@ function payoffOver(id, ctx, g) {
     }
     ctx.restore();
   }
+  drawDisc(ctx, g, b, nowX, endX, vis);   // stop loss and target
   // strike line of a tapped leg (S3)
   if (PM.s3 && PM.strike != null) { const l = PM.legs.find(x => x.id === PM.strike); if (l && l.c.type !== 'FUT') { const y = Math.round(g.p2y(l.c.strike)) + .5; if (y > g.pT && y < g.pB) { ctx.save(); ctx.strokeStyle = PO_COL.strike; ctx.setLineDash([1.5, 3]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(g.paneR, y); ctx.stroke(); ctx.setLineDash([]); ctx.font = `500 ${10.5 * fs}px Inter, sans-serif`; const t = `${l.c.strike} ${l.c.type}`; ctx.fillStyle = 'rgba(23,23,23,.85)'; ctx.fillRect(6, y - 16, ctx.measureText(t).width + 8, 14); ctx.fillStyle = PO_COL.strike; ctx.textBaseline = 'middle'; ctx.fillText(t, 10, y - 9); ctx.restore(); } } }
   // the Payoff point: crosshair and ring
@@ -376,6 +389,7 @@ function ptSlot(g) {
 }
 function payoffAxes(id, ctx, g) {
   if (!PM.on || !poPriced()) return;
+  if (id === 'idx') drawDiscAxis(ctx, g);
   if (id === 'idx' && PM.pt) {
     const i = ptSlot(g); if (i == null) return;
     const x = g.xOf(i), y = g.p2y(PM.pt.S);
@@ -384,7 +398,7 @@ function payoffAxes(id, ctx, g) {
     if (x > 0 && x < g.paneR) { const t = ptTimeShort(PM.pt.T), w = ctx.measureText(t).width + 12; ctx.fillStyle = '#4f6ff0'; const lx = clamp(x - w / 2, 0, g.paneR - w); ctx.fillRect(lx, g.pB + 2, w, 19); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(t, lx + w / 2, g.pB + 10.6); ctx.textAlign = 'left'; }
     ctx.restore();
   }
-  if (id === 'opt' && !PM.s3 && PM.optMarker) {
+  if (id === 'opt' && !PM.s3 && !optPlain() && PM.optMarker) {
     const v = pointVals(); if (!v || v.prem == null) return;
     const y = g.p2y(v.prem); if (y < g.pT || y > g.pB) return;
     ctx.save(); ctx.font = FONT_AX; ctx.textBaseline = 'middle'; const t = v.prem.toFixed(2), w = Math.max(ctx.measureText(t).width + 10, g.axisW - 2);
@@ -443,7 +457,7 @@ function openView() {
   const fNow = clamp((.92 * gi.paneR - (endOff - nowOff)) / gi.paneR, .15, .60);
   const tgt = {}; const roFor = (g, off) => (g.paneR - (fNow * g.paneR - off)) / g.s;
   tgt.idx = { ro: roFor(gi, nowOff) };
-  if (!PM.s3) {
+  if (!PM.s3 && !optPlain()) {
     const go = geomOf('opt'), xo = go.xOf(go.n - 1), offO = xAtT(go, now) - xo, endO = xAtT(go, Tend) - xo;
     const fO = clamp((.92 * go.paneR - (endO - offO)) / go.paneR, .15, .60);
     tgt.opt = { ro: (go.paneR - (fO * go.paneR - offO)) / go.s };
@@ -452,6 +466,7 @@ function openView() {
   const xn1T = fNow * gi.paneR - nowOff, endX = xn1T + endOff;
   let T = Tend;
   if (endX > gi.paneR - 1) { const iMax = gi.n - 1 + Math.floor((gi.paneR - gi.s / 2 - xn1T) / gi.s); const sl = gi.slotAt(Math.min(iMax, gi.N - 1)); T = sl ? sl.T1 : Tend; }
+  const Th = horizonT(b, gi); if (Th != null) T = Th;   // UX-19
   PM.pt = b.legs.length && poPriced() ? { T, S: snap5(b.S0) } : null;
   // UX-01: fit the price scale for the view the chart is scrolling to, and ease into it
   if (uxB()) { const ro0 = CH.idx.ro; CH.idx.ro = tgt.idx.ro; const s = priceFit(); CH.idx.ro = ro0; if (s) tgt.idx.ys = s; }
@@ -466,7 +481,7 @@ function restoreViews() {
 }
 // Horizon chips: fit from Now to the chip's time, Now at 10% and the time at 96% (FR-14)
 function fitTo(T, chipKey) {
-  const ids = PM.s3 ? ['idx'] : ['idx', 'opt'], tgt = {};
+  const ids = PM.s3 || optPlain() ? ['idx'] : ['idx', 'opt'], tgt = {};
   for (const id of ids) {
     const g = geomOf(id), now = MK.nowT();
     const k = Math.max(1, (xAtT(g, T) - xAtT(g, now)) / g.s);
@@ -492,7 +507,7 @@ function setPoint(pt, how, opts = {}) {
   if (prev && (how === 'drag' || how === 'longpress')) {
     const s0 = Math.sign(Math.round(PF.pnl(b, prev.S, prev.T))), s1 = Math.sign(Math.round(PF.pnl(b, pt.S, pt.T)));
     const crossedExp = b.legs.some(l => (prev.T < l.c.expT) !== (pt.T < l.c.expT)) || (b.legs.every(l => l.product === 'INTRADAY') && (prev.T < PF.SQ_T) !== (pt.T < PF.SQ_T));
-    if ((s0 && s1 && s0 !== s1) || crossedExp) { Haptic.fire('select'); PM.crossed = true; }
+    if ((s0 && s1 && s0 !== s1) || crossedExp || discCrossed(b, prev, pt)) { Haptic.fire('select'); PM.crossed = true; }
   }
   if (how === 'tap' || how === 'chip' || how === 'stepper') { PM.pulseAt = performance.now(); if (how !== 'chip') Haptic.fire('open'); }
   if (PM.hint && how !== 'chip') { PM.hint = false; PM.hintSeen = true; store.set('hintSeen', true); }
@@ -650,7 +665,7 @@ function renderPayoffUI() {
     const px = uxB() ? plain(b, v) : null;
     if (px && rng.startsWith('Range')) rng = px.iv;
     html = `<div class="rt">${px ? px.head : `${idxName()} ${lvl(v.S)} · ${ptTime(v.T)}`}</div><div class="rp"><span>${lead}</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div>${px && px.vs ? `<div class="rr">${px.vs}</div>` : ''}${px && px.needs ? `<div class="rr rn">${px.needs}</div>` : ''}${rng ? `<div class="rr${px ? ' ri' : ''}">${rng}</div>` : ''}<div class="rf"><span class="mi" data-tip="model">Model estimate ${ic('info', 12, 2)}</span>${asOf}<span class="chev">${ic('chevR', 14, 2)}</span></div>`;
-    if (uxB()) html = payBoxHTML(b, v, asOf ? `<div class="bx5">${asOf}</div>` : '');
+    if (uxB()) html = payBoxHTML(b, v, discBoxHTML(b, v) + (asOf ? `<div class="bx5">${asOf}</div>` : ''));
   } else if (b.legs.length && !PM.pt) html = `<div class="rt">Pricing your position…</div><div class="rp"><span>P&amp;L</span><b class="sk"></b></div>`;
   if (html && rd._h !== html) { rd.innerHTML = html; rd._h = html; }
   rd.hidden = !html; rd.classList.toggle('pbox', uxB() && !!v && !expiredBook(b));
@@ -666,7 +681,7 @@ function renderPayoffUI() {
   // first-run hint
   hint.hidden = !(PM.hint && v && g);
   if (!hint.hidden) {
-    hint.textContent = 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
+    hint.textContent = uxB() ? 'Drag the ring to see P&L at any level and time, or tap the shaded area. Pick a date above to look further ahead.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
     const nowX = xAtT(g, MK.nowT()), zw = Math.max(150, g.paneR - nowX - 12); hint.style.width = Math.min(zw, 230) + 'px';
     const hw = Math.min(zw, 230), hh = hint.offsetHeight, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     const hl = clamp(nowX + 6, 6, g.paneR - hw - 6);
@@ -683,15 +698,16 @@ function renderPayoffUI() {
     else if (y < g.pT || y > g.pB) { edge.hidden = false; edge.textContent = `Point · ${lvl(PM.pt.S)} ${y < g.pT ? '↑' : '↓'}`; edge.style.top = (y < g.pT ? g.pT + 4 : g.pB - 30) + 'px'; edge.style.left = clamp(x - 50, 6, g.paneR - 110) + 'px'; edge.style.right = ''; }
   }
   // S2: position chip and point card on the option chart
-  chip.hidden = PM.s3 || poEmpty(b) && !b.pretrade;
+  chip.hidden = PM.s3 || optPlain() || poEmpty(b) && !b.pretrade;
   if (!chip.hidden) { const l = b.legs[0] || b.settled[0]; chip.textContent = b.pretrade ? `Not holding · as a buy of ${PM.lots * E.LOT}` : l ? `${l.side > 0 ? 'Bought' : 'Sold'} ${l.qty} at ${E.prem(l.avg)}` : ''; }
-  card.hidden = PM.s3 || !v || b.legs.length !== 1;
+  card.hidden = PM.s3 || optPlain() || !v || b.legs.length !== 1;
   if (!card.hidden) {
     const go = CH.opt.g, others = PM.others.length ? `<div class="rf2">${PM.others.length} position${PM.others.length > 1 ? 's' : ''} on other charts</div>` : '';
     const prem = v.prem != null ? `${E.prem(v.prem)}` : '';
+    const ml = uxB() ? `<div class="rf2 ml">${maxLossTxt(b, true)}</div>` : '';
     const ch = b.pretrade
-      ? `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>Premium</span><b>${prem}</b></div><div class="rr">${v.uncertain ? 'Too uncertain to price' : `${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${others}`
-      : `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>P&amp;L</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div><div class="rr">Premium ${prem}${v.atExpiry || v.uncertain ? '' : ` · ${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${others}`;
+      ? `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>Premium</span><b>${prem}</b></div><div class="rr">${v.uncertain ? 'Too uncertain to price' : `${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`
+      : `<div class="rt">${ptTime(v.T)}</div><div class="rp"><span>P&amp;L</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div><div class="rr">Premium ${prem}${v.atExpiry || v.uncertain ? '' : ` · ${E.prem(v.premLo)} to ${E.prem(v.premHi)}`}</div>${ml}${others}`;
     if (card._h !== ch) { card.innerHTML = ch; card._h = ch; }
     if (go) {
       const w = card.offsetWidth, h = card.offsetHeight; let left = 8, top = go.pT + 6;
@@ -703,8 +719,9 @@ function renderPayoffUI() {
   // S3: the Payoff list
   list.hidden = !PM.s3;
   if (!PM.s3) PM.pexp = false;
-  list.classList.toggle('sp', PM.s3 && uxB());
-  if (PM.s3) (uxB() ? renderSellerPanel : renderPayoffList)(b, v);
+  const seller = PM.s3 && uxB() && PM.panel === 'seller';
+  list.classList.toggle('sp', seller); list.classList.toggle('sl', PM.s3 && uxB() && !seller);
+  if (PM.s3) (!uxB() ? renderPayoffList : seller ? renderSellerPanel : renderSimpleList)(b, v);
   renderB1();
 }
 function asOfText(short) {
@@ -799,7 +816,7 @@ function renderB1() {
   const html = `<div class="b1grab"></div><div class="b1hd"><b class="b1t" tabindex="-1">Payoff at a point</b><button class="b1x" aria-label="Close">${ic('x', 18, 1.8)}</button></div>
     <div class="b1st"><span>${idxName()} level</span><button data-s="lv-" aria-label="Lower level 5 points">${ic('minus', 18, 2.2)}</button><b>${lvl(v.S)}</b><button data-s="lv+" aria-label="Raise level 5 points">${ic('plus', 18, 2.2)}</button></div>
     <div class="b1st"><span>Time</span><button data-s="t-" aria-label="One candle earlier"${atFirst ? ' disabled' : ''}>${ic('chevL', 18, 2.2)}</button><b>${ptTime(v.T)}</b><button data-s="t+" aria-label="One candle later"${atLast ? ' disabled' : ''}>${ic('chevR', 18, 2.2)}</button></div>
-    <div class="b1v" aria-live="polite">${px ? `<div class="b1r b1q">${px.head}</div>` : ''}${lead}${extra}${rng}${prem}${flat}</div>
+    <div class="b1v" aria-live="polite">${px ? `<div class="b1r b1q">${px.head}</div>` : ''}${lead}${extra}${rng}${prem}${flat}${px ? `<div class="b1r">${maxLossTxt(b)}</div>` : ''}</div>
     <div class="b1m"><span class="mi" data-tip="model">Model estimate, not a forecast ${ic('info', 12, 2)}</span></div>${pre}<div class="b1a${live ? '' : ' off'}">${acts}</div>${!live && acts ? '<p class="b1h">Prices aren’t live</p>' : ''}`;
   if (el._h !== html) { el.innerHTML = html; el._h = html; }
   const top = L.cards.opt.y - 6;
@@ -819,7 +836,7 @@ function stepPoint(kind) {
   if (lv > g.y2p(g.pT + 6) || lv < g.y2p(g.pB - 6)) { const hi = Math.max(g.y2p(g.pT), lv + span * .08), lo = Math.min(g.y2p(g.pB), lv - span * .08); CH.idx.ys = { hi, lo }; }
   setPoint({ T, S: lv }, 'stepper');
   // keep the point in view horizontally
-  const x = g.xOf(i); if (x > g.paneR - 6) { CH.idx.ro -= (x - (g.paneR - 6)) / g.s + .5; } else if (x < 6) CH.idx.ro += (6 - x) / g.s + .5;
+  const x = g.xOf(i); if (x > g.paneR - 6) { CH.idx.ro += (x - (g.paneR - 6)) / g.s + .5; } else if (x < 6) CH.idx.ro -= (6 - x) / g.s + .5;
   redraw('idx'); return true;
 }
 

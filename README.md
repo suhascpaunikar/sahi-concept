@@ -100,8 +100,10 @@ Example values in the PRD come from the desktop research model (Nifty 25,000, IV
 
 ### Run the mobile Payoff prototype
 
-The prototype now includes the first three suggestions from the research note. Add `&ux=a` to a link, or untick "Improved Payoff" in the demo controls, to see PRD v1.0 as first built.
+The prototype includes five suggestions from the research note. Add `&ux=a` to a link, or untick "Improved Payoff" in the demo controls, to see PRD v1.0 as first built.
 
+- **The point opens at the trader's horizon (UX-19):** 30 minutes ahead when every position is intraday or expires today, and at the session end otherwise.
+- **The most the position can lose (UX-20):** the point sheet says "Most you can lose: ₹13,572, the premium paid", or "Loss isn't capped below 22,285 at expiry" for a sold option.
 - **Breakevens in view (UX-01):** when Payoff opens, the index chart's price scale widens to show the nearest breakeven, and the loss side is shaded red. It stops widening when the candles would take less than 20% of the chart's height; a breakeven further out keeps an edge label with its distance, and tapping the label brings it into view. Closing Payoff puts the scale back.
 - **Plain wording (UX-02):** the point sheet says "If Nifty stays at 22,665 till 3:30 pm", the change from now ("−₹521 vs now · time decay"), "Needs Nifty above 22,677 (+12)" for a loss or before a buy, and "If IV moves: …" in place of "Range".
 - **A visible way in (UX-05):** a Payoff button in the index chart's header, named while a position is held and icon-only otherwise. The wheel and Quick actions still work, and the first-run tip points at the button.
@@ -109,12 +111,23 @@ The prototype now includes the first three suggestions from the research note. A
 Two parts follow Sahi's Option Seller panel on mobile (screenshots shared on 11 Nov 2026):
 
 - **The payoff box** on the index chart uses the wording and style of the seller panel's payoff-graph tooltip: "When price is at 22665.00 0.00%", then "Expected P&L on", the point's time ("Today, 3:30 pm: +₹1.50K") and "Expiry date: −₹2.85K". Tapping it still opens the point sheet, which holds the plain-wording lines and the model label.
-- **Several positions** open in a panel with the seller panel's structure: "NIFTY50 positions", **Positions | Analyse** tabs, leg cards (side, expiry, LTP, type, strike, quantity, P&L at the point), and under Analyse a **Summary** (Max Loss, Max Profit, POP, premium, Greeks, breakeven) and a **Payoff graph** with the point's time and the expiry date. Dragging on the graph moves the point's level, and the button in the panel's header makes it full height. Margin is not modelled, so the Summary shows Open P&L in that place.
+- **One option:** the option chart stays a plain price chart. The Nifty chart already shows the payoff, so the option chart has no Payoff line, card or marker.
+- **Several positions, simple list (default):** the option chart's area lists each option's name, quantity and P&L at the point, with the total underneath. The P&L follows the crosshair.
+- **Several positions, seller panel:** pick **Seller panel** under "Option chart with several positions" in the demo controls (or add `&panel=seller`). It opens in a panel with the seller panel's structure: "NIFTY50 positions", **Positions | Analyse** tabs, leg cards (side, expiry, LTP, type, strike, quantity, P&L at the point), and under Analyse a **Summary** (Max Loss, Max Profit, POP, premium, Greeks, breakeven) and a **Payoff graph** with the point's time and the expiry date. Dragging on the graph moves the point's level, and the button in the panel's header makes it full height. Margin is not modelled, so the Summary shows Open P&L in that place.
+
+**Stop loss and target (discipline).** The trader sets a stop loss in rupees and a risk:reward ratio of 1:1, 1:2 or 1:3, as in their SAHI profile. The target is the stop times the ratio, so a ₹2,000 stop at 1:2 gives a ₹4,000 target. Payoff marks the Nifty levels where the position's P&L reaches −₹2,000 and +₹4,000. In the Lines, Zone and Price axis versions the price scale widens to bring the nearest of them into view where the 20% limit for breakevens allows; a level still off the chart keeps a label at the edge with an arrow, and the phone ticks when a dragged point crosses either one. Four versions, picked under "Stop loss and target" in the demo controls, or with `&disc=`:
+
+- **Lines** (`lines`, the default): red and green dashed lines across the future zone, labelled at the right edge of the future zone, "SL −₹2,000 · 22,586" and "Target +₹4,000 (1:2) · 22,721" for the bought call. The lines bend with time, as the breakevens do. A stop or target the position can't reach says why, for example "Target not reached by 3:30 pm" for the iron condor, or "above max profit".
+- **Zone** (`zone`): the area past the stop is shaded red and the area past the target green, with the same labels.
+- **Price axis** (`price`): red and green tags on the price axis at the point's time, with "SL" and "T 1:2" beside them.
+- **Box** (`box`): nothing on the chart. The payoff box adds "Stop loss −₹2,000 at 22,582 (−82)" and "Target 1:2 +₹4,000 at 22,719 (+54)", and says "Past your stop loss" or "Target reached" when the point is there.
+
+The seller panel's payoff graph shows the stop and the target as flat lines in every version except Box. Set the stop and the ratio in the demo controls, or with `&stop=3000&rr=3`.
 
 Open `prototype/payoff-mobile/index.html`. On a desktop you get the 412 × 915 phone with a panel beside it; on a phone the app fills the screen and the ⋮ button opens the same controls.
 
 - **Hold** the "5m" button on either chart, **slide** to Payoff and **release**. Hold again and release on Payoff (now "On") to turn it off, or tap × in the Payoff bar. Esc stands in for Android back.
-- **Move the point:** tap the shaded zone, drag the ring, or long-press anywhere and slide into the zone. Pan and pinch work as before; the point keeps its level and time, and an edge pill brings it back.
+- **Move the point:** tap the shaded zone, drag the ring, or long-press anywhere and slide into the zone. Pan (the candles follow your finger: drag left for newer candles and the future) and pinch work as before; the point keeps its level and time, and an edge pill brings it back.
 - **Tap the readout** for B1: steppers move the level 5 points and the time one candle. Hold a stepper to repeat.
 - **Date chips** fit the view to today or to an expiry; "19 Oct" shows the holiday shift ("moved from Tue 20 Oct").
 - **Tap the option chart** for the order panel; buying while Payoff is on switches pre-trade to the held position, and a second position switches to the Payoff list.

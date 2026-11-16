@@ -70,7 +70,7 @@ const spIc = (k, s = 16, w = 2) => `<svg class="ico" width="${s}" height="${s}" 
 /* ---------- the panel ---------- */
 function renderSellerPanel(b, v) {
   const el = $('#plist'), r = L.cards.opt, top = PM.pexp ? L.cards.idx.y : r.y;
-  el.style.top = top + 'px'; el.style.height = (r.y + r.h - top) + 'px'; el.classList.add('sp');
+  el.style.top = top + 'px'; el.style.height = (r.y + r.h - top) + 'px';
   const tab = PM.tab || 'pos', sub = PM.sub || 'sum', n = positionCount();
   const T = PM.pt ? PM.pt.T : MK.nowT(), S = PM.pt ? PM.pt.S : b.S0;
   let body = '', foot = '';
@@ -145,6 +145,7 @@ function drawPayGraph(el, b, v) {
     ctx.save(); ctx.beginPath(); ctx.rect(mL, top, pw, Math.max(0, hgt)); ctx.clip(); ctx.fillStyle = fill; ctx.fill(area); ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.strokeStyle = stroke; ctx.stroke(path); ctx.restore();
   }
   ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(mL, Math.round(zy) + .5); ctx.lineTo(mL + pw, Math.round(zy) + .5); ctx.stroke();
+  discGraph(ctx, Y, mL, pw, mT, ph, fs);
   // the point's time
   if (two) { ctx.save(); ctx.beginPath(); ctx.rect(mL, mT, pw, ph); ctx.clip(); ctx.beginPath(); a.forEach((p, i) => { const x = mL + pw * i / N, y = Y(p); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.strokeStyle = '#b3186d'; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.stroke(); ctx.restore(); }
   // LTP
@@ -190,4 +191,24 @@ function bindSellerPanel() {
   list.addEventListener('pointermove', e => { if (drag === e.pointerId) graphPointAt(e); });
   const end = e => { if (drag === e.pointerId) { drag = null; track('payoff_point_move', { method: 'graph' }); } };
   list.addEventListener('pointerup', end); list.addEventListener('pointercancel', end);
+}
+
+/* ---------- several positions, simple list: each option's name, quantity and P&L at the point ---------- */
+function renderSimpleList(b, v) {
+  const el = $('#plist'), r = L.cards.opt; PM.pexp = false;
+  el.style.top = r.y + 'px'; el.style.height = r.h + 'px';
+  const T = PM.pt ? PM.pt.T : MK.nowT(), S = PM.pt ? PM.pt.S : b.S0;
+  const rows = [...b.legs.map(l => ({ l, d: PF.legDetail(l, S, T, b) })), ...b.settled.map(l => { const val = E.intrinsic(l.c, E.settleS(l.c)); return { l, d: { value: val, pnl: PF.legPnl(l, val), status: 'Settled' } }; })];
+  rows.sort((a, c) => a.l.c.expT - c.l.c.expT || (a.l.c.strike || 0) - (c.l.c.strike || 0));
+  const body = !v ? `<p class="sln">Payoff can't load prices. Values are hidden until prices load.</p>` : rows.map(({ l, d }) => {
+    const fut = l.c.type === 'FUT', e = l.c.exp, sq = d.status === 'Squared off', done = d.status === 'Settled' || d.status === 'Expired';
+    const name = fut ? `${e.info.short} FUT` : `${l.c.strike} ${l.c.type === 'CE' ? 'Call' : 'Put'}`;
+    const sub = fut ? 'Future' : e.info.short + (d.status !== 'Live' ? ` · ${d.status}` : '');
+    return `<button class="slr${PM.strike === l.id ? ' sel' : ''}${sq || done ? ' sq' : ''}" data-leg="${l.id}" aria-label="${l.side > 0 ? 'Bought' : 'Sold'} ${l.qty}, ${name} ${sub}, P&L ${sgn(d.pnl)}"><span class="lb ${l.side > 0 ? 'b' : 's'}">${l.side > 0 ? 'B' : 'S'}</span><span class="sln1"><b>${name}</b><small>${sub}</small></span><span class="slq">${l.side > 0 ? '' : '−'}${l.qty}</span><span class="slp ${sq ? '' : pnlCls(d.pnl)}">${sgn(d.pnl)}</span></button>`;
+  }).join('');
+  const others = PM.others.length ? `<button class="ochip" data-tip="others">${PM.others.length} on other charts</button>` : '';
+  const html = `<div class="slh"><button class="ltitle" data-a="b1">P&amp;L at ${lvl(S)} · ${boxWhen(T)}${ic('chevR', 14, 2)}</button>${others}</div>
+    <div class="slc"><span>Option</span><span>Qty</span><span>P&amp;L</span></div><div class="lrows">${body}</div>
+    ${v ? `<div class="slf"><span>Total</span><b class="${pnlCls(v.pnl)}">${sgn(v.pnl)}</b></div>` : ''}`;
+  if (el._h !== html) { const sc = $('.lrows', el) ? $('.lrows', el).scrollTop : 0; el.innerHTML = html; el._h = html; if ($('.lrows', el)) $('.lrows', el).scrollTop = sc; }
 }
