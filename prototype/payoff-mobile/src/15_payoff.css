@@ -211,19 +211,35 @@
 .sp .spcv { position: absolute; inset: 0; width: 100%; height: 100%; }
 .sp .spgt { position: absolute; pointer-events: none; z-index: 2; }
 
-/* Payoff strip between the charts: names the mode, closes it, and holds the time rail (UX-03, UX-04) */
-.pstrip { position: absolute; left: 8px; right: 20px; height: 46px; z-index: 2; display: flex; align-items: center; gap: 12px; }
-.pspill { flex: none; position: relative; height: 34px; padding: 0 5px 0 13px; border-radius: 17px; background: #2a2a2e; color: #fff; display: flex; align-items: center; gap: 8px; font-size: calc(13px * min(var(--fs), 1.3)); font-weight: 600; }
-.pspill::after { content: ""; position: absolute; inset: -7px -4px; }
-.pspill span { width: 24px; height: 24px; border-radius: 12px; background: #3a3a3e; display: grid; place-items: center; }
-.prail { flex: 1; min-width: 0; position: relative; height: 46px; touch-action: none; cursor: pointer; outline: none; }
-.prail .trk, .prail .fill { position: absolute; left: 0; top: 13px; height: 4px; border-radius: 2px; }
-.prail .trk { right: 0; background: #3a3a3e; } .prail .fill { background: #7f9bff; }
-.prail .tks { position: absolute; inset: 0; }
-.prail .tk { position: absolute; top: 10px; width: 2px; height: 10px; margin-left: -1px; border-radius: 1px; background: #8d8d93; }
-.prail .tk.h { top: 12px; height: 6px; background: #6b6b70; } .prail .tk.exp { background: #f0b93a; height: 12px; top: 9px; } .prail .tk.day, .prail .tk.now { background: #c9c9ce; }
-.prail .lb { position: absolute; top: 26px; text-align: center; white-space: nowrap; font-size: calc(10.5px * min(var(--fs), 1.3)); color: #b9b9be; }
-.prail .lb.exp { color: #f0b93a; } .prail .lb.now { text-align: left; } .prail .lb:last-child { }
-.prail .th { position: absolute; top: 4px; width: 22px; height: 22px; margin-left: -11px; border-radius: 11px; background: #fff; box-shadow: 0 0 0 4px rgba(127,155,255,.32), 0 2px 6px rgba(0,0,0,.5); }
-.prail.drag .th, .prail:focus-visible .th { box-shadow: 0 0 0 7px rgba(127,155,255,.4), 0 2px 6px rgba(0,0,0,.5); }
 .pcard .rf2.ml { color: #d4d4d8; }
+
+/* several positions, simple list (PM.panel 'list'): option, qty, P&L at the point */
+.plist.sl .slh { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px 4px; }
+.plist.sl .slh .ltitle { padding: 0; color: #fff; font-size: calc(13px * var(--fs)); }
+.plist.sl .slc, .plist.sl .slr { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto minmax(72px, auto); align-items: center; column-gap: 10px; }
+.plist.sl .slc { flex: none; padding: 4px 14px; border-bottom: 1px solid #2a2a2e; color: #8d8d93; font-size: calc(11px * var(--fs)); }
+.plist.sl .slc span:first-child { grid-column: 1 / 3; } .plist.sl .slc span:nth-child(2) { text-align: right; } .plist.sl .slc span:last-child { text-align: right; }
+.plist.sl .slr { width: 100%; min-height: 46px; padding: 4px 14px; box-sizing: border-box; text-align: left; border-bottom: 1px solid #222225; }
+.plist.sl .slr.sel { background: #232326; }
+.plist.sl .sln1 { min-width: 0; display: flex; flex-direction: column; }
+.plist.sl .sln1 b { font-size: calc(14px * var(--fs)); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plist.sl .sln1 small { font-size: calc(11px * var(--fs)); color: #9e9e9e; }
+.plist.sl .slq { text-align: right; font-size: calc(13.5px * var(--fs)); color: #e6e6e6; font-feature-settings: "tnum"; }
+.plist.sl .slp { text-align: right; font-size: calc(14px * var(--fs)); font-weight: 600; font-feature-settings: "tnum"; }
+.plist.sl .slr.sq .slp { color: #6b6b70; }
+.plist.sl .slf { flex: none; display: flex; align-items: baseline; justify-content: space-between; padding: 8px 14px 10px; border-top: 1px solid #2a2a2e; font-size: calc(13px * var(--fs)); color: #c9c9ce; font-feature-settings: "tnum"; }
+.plist.sl .slf b { font-size: calc(17px * var(--fs)); font-weight: 700; }
+.plist.sl .sln { color: #b9b9be; font-size: calc(13px * var(--fs)); padding: 16px 14px; }
+.app.po-grey #plist .slp, .app.po-grey #plist .slf b { color: #8d8d93 !important; }
+
+/* demo panel: section heads, stop loss input */
+.pdh { margin: 10px 0 4px; font-size: 11.5px; font-weight: 600; color: #8d8d93; text-transform: uppercase; letter-spacing: .4px; }
+.pdl2 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .pdl2 .pdl { margin: 0 0 8px; } .pdl2 .pseg { flex: 1; min-width: 140px; }
+.pdl input { width: 86px; height: 30px; border-radius: 8px; background: #18181b; color: #fff; border: 1px solid #2c2c31; font: inherit; font-size: 12.5px; padding: 0 8px; }
+.pdl input:disabled { opacity: .4; }
+/* payoff box: stop loss and target rows (discipline, style 'box') */
+.pbox .bx6w { margin-top: 6px; padding-top: 6px; border-top: 1px solid #2f2f33; display: flex; flex-direction: column; gap: 2px; }
+.pbox .bx6 { display: flex; align-items: center; flex-wrap: wrap; gap: 0 4px; font-size: calc(11.5px * var(--fs)); color: #c9c9ce; }
+.pbox .bx6 i { width: 8px; height: 8px; border-radius: 2px; margin-right: 2px; } .pbox .bx6.sl i { background: #f2545f; } .pbox .bx6.tg i { background: #3fd297; }
+.pbox .bx6 b { color: #fff; font-weight: 600; } .pbox .bx6 span { color: #8d8d93; }
+.pbox .bx7 { margin-top: 3px; font-size: calc(11.5px * var(--fs)); font-weight: 600; } .pbox .bx7.sl { color: #f2545f; } .pbox .bx7.tg { color: #3fd297; }
