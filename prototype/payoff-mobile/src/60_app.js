@@ -103,8 +103,7 @@ function bindCard(id) {
     // a tap while the crosshair is on turns it off; a tap on the ring still opens the point sheet, on a breakeven label still fits it
     if (mode === 'xhpend' && e.type === 'pointerup' && !moved) {
       if (onRing) openB1('point');
-      else if (id === 'idx' && PM.on && poPriced() && beEdgeHit(cardPt(p))) { fitPrice(true); Haptic.fire('open'); track('payoff_fit_breakeven', {}); renderPayoffUI(); }
-      xhClear('tap');
+      else { if (id === 'idx' && PM.on && poPriced() && beEdgeHit(cardPt(p))) { fitPrice(true); Haptic.fire('open'); track('payoff_fit_breakeven', {}); renderPayoffUI(); } xhClear('tap'); }
     }
     if (mode === 'pending' && e.type === 'pointerup' && !moved) {
       if (XH.id) xhClear('tap');   // the crosshair is on on the other chart: this tap only turns it off
@@ -135,6 +134,7 @@ function xhSet(id) { if (XH.id && XH.id !== id) xhClear(null); XH.id = id; }
 function xhClear(source) {
   const id = XH.id; if (!id) return; XH.id = null;
   const c = CH[id]; if (c.cross) { c.cross = null; setOhlc(id, null); }
+  if (id === 'idx' && PM.on && !PM.rest) { PM.rest = true; const b = book(); if (PM.pt && b.legs.length) PM.pt = { T: PM.restT ?? PM.pt.T, S: b.S0 }; renderPayoffUI(); }
   redraw(id); if (source) track('crosshair_off', { chart: id, source });
 }
 // f: the finger in card coordinates
@@ -143,7 +143,7 @@ function xhAt(id, f, how) {
   const qz = { x: q.x, y: clamp(q.y, g.pT + 1, g.pB - 1) };
   if (id === 'idx' && PM.on && !c.draft && poPriced() && PM.pt && inFuture(qz)) {
     if (c.cross) { c.cross = null; setOhlc(id, null); }
-    const pt = pointFromXY(qz); if (pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, how);
+    const pt = pointFromXY(qz); if (pt && (PM.rest || pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, how);
     redraw(id);
   } else setCross(id, q);
 }

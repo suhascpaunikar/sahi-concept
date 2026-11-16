@@ -128,7 +128,13 @@ Open `prototype/payoff-mobile/index.html`. On a desktop you get the 412 × 915 p
 
 - **Hold** the "5m" button on either chart, **slide** to Payoff and **release**. Hold again and release on Payoff (now "On") to turn it off, or tap × in the Payoff bar. Esc stands in for Android back.
 - **Crosshair, as in Kite:** hold either chart and the crosshair appears about a fingertip up-left of your finger (up-right with Left-handed on), so your finger doesn't cover it. A grey dot marks your finger; in the Nifty chart's future zone with Payoff on, the Payoff ring does that job. The crosshair stays when you lift. While it's on, a drag anywhere on that chart moves it from just up-left of the finger, the chart doesn't pan, and a pinch still zooms. A tap turns it off, and then a drag pans again.
-- **Move the point:** with Payoff on, the crosshair in the Nifty chart's future zone sets the Payoff point. The Payoff ring is the touch circle: it sits where your finger is, down-right of the point, and the dashed lines cross at the point itself. Hold anywhere and drag, or touch the ring and drag, which moves it with no jump. A tap turns the crosshair off but keeps the point, its ring and its payoff box. With the crosshair off, a tap in the shaded zone puts the ring under your finger and the point just up-left of it, and a tap on the ring opens the point sheet. Pan (the candles follow your finger: drag left for newer candles and the future) works as before; the point keeps its level and time, and an edge pill brings it back.
+- **Move the point:** Payoff opens with the crosshair off. Nothing marks a point, and the payoff box (and the positions list or panel) reads the live price at the default time, as Kite's OHLC shows the latest candle when its crosshair is off.
+  - **Show it:** hold and drag, or tap the shaded zone. In the future zone the crosshair sets the Payoff point: the dashed lines cross at the point, with its level and time in blue on the axes, and the Payoff ring (the touch circle) sits down-right of it, where your finger is.
+  - **Move it:** touch the ring and drag; it moves with no jump.
+  - **Tap the ring:** opens the point sheet.
+  - **Tap anywhere else:** clears the crosshair, and the box goes back to the live price. The point sheet's arrows show the crosshair again.
+
+- **Pan and pinch:** with no crosshair on, the candles follow your finger: drag left for newer candles and the future. Pinch zooms either way. While the crosshair is on, the point keeps its level and time and an edge pill brings it back into view.
 - **Tap the readout** for B1: steppers move the level 5 points and the time one candle. Hold a stepper to repeat.
 - **Date chips** fit the view to today or to an expiry; "19 Oct" shows the holiday shift ("moved from Tue 20 Oct").
 - **Tap the option chart** for the order panel; buying while Payoff is on switches pre-trade to the held position, and a second position switches to the Payoff list.

@@ -2318,6 +2318,7 @@ const PM = {
   views: null, prevOpt: null, openedAt: 0, later: store.get('later', false), orderFail: false, orders: {}, exits: [],
   tipSeen: store.get('tipSeen', false), hintSeen: store.get('hintSeen', false), hint: false, b1: false, b2: null,
   bannerClosed: false, crossSign: 0, crossExp: null, lastMoveLog: 0,
+  rest: true, restT: null,   // rest: the crosshair is off, so the point is the live price at restT (the default time)
   panel: store.get('panel', 'list'),   // several positions: 'list' (option, qty, P&L) or 'seller' (the seller panel)
 };
 
@@ -2629,7 +2630,7 @@ function payoffOver(id, ctx, g) {
   // strike line of a tapped leg (S3)
   if (PM.s3 && PM.strike != null) { const l = PM.legs.find(x => x.id === PM.strike); if (l && l.c.type !== 'FUT') { const y = Math.round(g.p2y(l.c.strike)) + .5; if (y > g.pT && y < g.pB) { ctx.save(); ctx.strokeStyle = PO_COL.strike; ctx.setLineDash([1.5, 3]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(g.paneR, y); ctx.stroke(); ctx.setLineDash([]); ctx.font = `500 ${10.5 * fs}px InterQW, Inter, sans-serif`; const t = `${l.c.strike} ${l.c.type}`; ctx.fillStyle = 'rgba(23,23,23,.85)'; ctx.fillRect(6, y - 16, ctx.measureText(t).width + 8, 14); ctx.fillStyle = PO_COL.strike; ctx.textBaseline = 'middle'; ctx.fillText(t, 10, y - 9); ctx.restore(); } } }
   // the Payoff point: crosshair lines and a small dot where they cross; the ring is the touch circle, drawn by drawXHDot
-  const pt = PM.pt; if (!pt) return;
+  const pt = PM.pt; if (!pt || PM.rest) return;
   const i = ptSlot(g); if (i == null) return;
   const x = g.xOf(i), y = g.p2y(pt.S);
   if (x < -4 || x > g.paneR + 4) return;
@@ -2690,7 +2691,7 @@ function ptSlot(g) {
 function payoffAxes(id, ctx, g) {
   if (!PM.on || !poPriced()) return;
   if (id === 'idx') drawDiscAxis(ctx, g);
-  if (id === 'idx' && PM.pt) {
+  if (id === 'idx' && PM.pt && !PM.rest) {
     const i = ptSlot(g); if (i == null) return;
     const x = g.xOf(i), y = g.p2y(PM.pt.S);
     ctx.save(); ctx.font = FONT_AX; ctx.textBaseline = 'middle';
@@ -2731,7 +2732,7 @@ function setPayoff(on, meta = {}) {
   } else {
     const dur = Math.round((now() - PM.openedAt) / 1000);
     closeB2(true); closeB1(true);
-    PM.on = false; PM.hint = false; PM.pt = null; PM.strike = null;
+    PM.on = false; PM.hint = false; PM.pt = null; PM.strike = null; PM.rest = true;
     const wasS3 = PM.s3; PM.s3 = false;
     if (PM.prevOpt) { setOptContract(PM.prevOpt, { silent: true }); PM.prevOpt = null; }
     relayout();
@@ -2768,7 +2769,8 @@ function openView() {
   let T = Tend;
   if (endX > gi.paneR - 1) { const iMax = gi.n - 1 + Math.floor((gi.paneR - gi.s / 2 - xn1T) / gi.s); const sl = gi.slotAt(Math.min(iMax, gi.N - 1)); T = sl ? sl.T1 : Tend; }
   const Th = horizonT(b, gi); if (Th != null) T = Th;   // UX-19
-  PM.pt = b.legs.length && poPriced() ? { T, S: snap5(b.S0) } : null;
+  PM.rest = true; PM.restT = T;
+  PM.pt = b.legs.length && poPriced() ? { T, S: b.S0 } : null;
   // UX-01: fit the price scale for the view the chart is scrolling to, and ease into it
   if (uxB()) { const ro0 = CH.idx.ro; CH.idx.ro = tgt.idx.ro; const s = priceFit(); CH.idx.ro = ro0; if (s) tgt.idx.ys = s; }
   animateRo(tgt, 250);
@@ -2804,6 +2806,8 @@ function fitTo(T, chipKey) {
 /* ---------- moving the point (BR-16, BR-29, BR-31) ---------- */
 function setPoint(pt, how, opts = {}) {
   const b = book(); if (!b.legs.length) return;
+  if (how === 'chip') { if (PM.rest) { PM.restT = pt.T; pt = { T: pt.T, S: b.S0 }; } }
+  else if (PM.on) { PM.rest = false; if (XH.id !== 'idx') xhSet('idx'); }
   const prev = PM.pt; PM.pt = pt;
   if (prev && (how === 'drag' || how === 'longpress')) {
     const s0 = Math.sign(Math.round(PF.pnl(b, prev.S, prev.T))), s1 = Math.sign(Math.round(PF.pnl(b, pt.S, pt.T)));
@@ -2833,7 +2837,7 @@ function inFuture(q) {
 function nearPoint(q) { const r = ringXY(CH.idx.g); return !!r && hyp(q.x - r.x, q.y - r.y) <= 26; }
 // the ring: where the finger is, or was, when it set the point; down-right of the point (down-left for left-handed use)
 function ringXY(g) {
-  if (!g || !PM.on || !PM.pt || !poPriced()) return null;
+  if (!g || !PM.on || !PM.pt || PM.rest || !poPriced()) return null;
   const i = ptSlot(g); if (i == null) return null;
   const x = g.xOf(i), y = g.p2y(PM.pt.S); if (x < -4 || x > g.paneR + 4) return null;
   const o = xhOff(); return { x: x - o.x, y: Math.min(y - o.y, L.cards.idx.h - 12), px: x, py: y };
@@ -2850,9 +2854,9 @@ function bookChanged(opening) {
     const s3 = isS3();
     if (s3 !== PM.s3) { PM.s3 = s3; PM.strike = null; if (!s3) { const b = book(); if (b.legs.length === 1 && !b.pretrade && b.legs[0].c !== MK.opt && b.legs[0].c.type !== 'FUT') { if (!PM.prevOpt) PM.prevOpt = MK.opt; setOptContract(b.legs[0].c, { silent: true }); } } relayout(); }
     const b = book(), g = CH.idx.g;
-    if (!opening && b.legs.length && poPriced() && !PM.pt) PM.pt = { T: sessionEndT(b), S: snap5(b.S0) };
+    if (!opening && b.legs.length && poPriced() && !PM.pt) { PM.rest = true; PM.restT = sessionEndT(b); PM.pt = { T: PM.restT, S: b.S0 }; }
     if (!b.legs.length) PM.pt = null;
-    if (PM.pt && g) { const r = ptRange(g); if (r) { const i = ptSlot(g); if (i < r[0] || i > r[1]) PM.pt = { T: g.slotAt(clamp(i, r[0], r[1])).T1, S: PM.pt.S }; } }
+    if (PM.pt && g) { const r = ptRange(g); if (r) { const i = ptSlot(g); if (i < r[0] || i > r[1]) { PM.pt = { T: g.slotAt(clamp(i, r[0], r[1])).T1, S: PM.pt.S }; if (PM.rest) PM.restT = PM.pt.T; } } }
     if (!opening) fitPrice();
   }
   renderPayoffUI(); updatePnlPill(); redraw();
@@ -2928,6 +2932,7 @@ function chipsOf(b) {
 }
 function renderPayoffUI() {
   const ic_ = CH.idx.el, oc = CH.opt.el; if (!ic_ || !oc) return;
+  if (PM.on && PM.rest && PM.pt) PM.pt.S = MK.S0();
   app.classList.toggle('po-on', PM.on); app.classList.toggle('po-s3', PM.on && PM.s3);
   app.classList.toggle('po-grey', PM.on && (MK.pricing === 'delayed' || MK.pricing === 'offline'));
   const bar = $('.pbar', ic_), rd = $('.pread', ic_), edge = $('.pedge', ic_), hint = $('.phint', ic_), empty = $('.pempty', ic_);
@@ -2986,7 +2991,7 @@ function renderPayoffUI() {
   // first-run hint
   hint.hidden = !(PM.hint && v && g);
   if (!hint.hidden) {
-    hint.textContent = uxB() ? 'Hold and drag to see P&L at any level and time: the point sits just above your finger and stays when you lift. Tap to let go. Pick a date above to look further ahead.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
+    hint.textContent = uxB() ? 'Hold the chart and drag to see P&L at any level and time. The crosshair sits just above your finger and stays when you lift; tap to clear it. Pick a date above to look further ahead.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
     const nowX = xAtT(g, MK.nowT()), zw = Math.max(150, g.paneR - nowX - 12); hint.style.width = Math.min(zw, 230) + 'px';
     const hw = Math.min(zw, 230), hh = hint.offsetHeight, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     const hl = clamp(nowX + 6, 6, g.paneR - hw - 6);
@@ -2997,7 +3002,7 @@ function renderPayoffUI() {
   }
   // edge indicator when the point is out of view
   edge.hidden = true;
-  if (v && g && PM.pt) {
+  if (v && g && PM.pt && !PM.rest) {
     const i = ptSlot(g), x = g.xOf(i), y = g.p2y(PM.pt.S);
     if (x > g.paneR + 2 || x < -2) { edge.hidden = false; edge.textContent = x > g.paneR ? `Point · ${ptTimeShort(PM.pt.T)} →` : `← Point · ${ptTimeShort(PM.pt.T)}`; edge.style.top = (g.pB - 34) + 'px'; edge.style.left = x > g.paneR ? '' : '8px'; edge.style.right = x > g.paneR ? (r.w - g.paneR + 6) + 'px' : ''; }
     else if (y < g.pT || y > g.pB) { edge.hidden = false; edge.textContent = `Point · ${lvl(PM.pt.S)} ${y < g.pT ? '↑' : '↓'}`; edge.style.top = (y < g.pT ? g.pT + 4 : g.pB - 30) + 'px'; edge.style.left = clamp(x - 50, 6, g.paneR - 110) + 'px'; edge.style.right = ''; }
@@ -3131,6 +3136,7 @@ function stepPoint(kind) {
   const g = CH.idx.g; if (!g || !PM.pt) return false;
   const r = ptRange(g); if (!r) return false;
   let { T, S: lv } = PM.pt; let i = ptSlot(g);
+  if (PM.rest) lv = snap5(lv);
   if (kind === 'lv+') lv += PM.stepBig ? 25 : 5; else if (kind === 'lv-') lv -= PM.stepBig ? 25 : 5;
   else if (kind === 't+') { if (i >= r[1]) { Haptic.fire('error'); return false; } i++; T = g.slotAt(i).T1; }
   else if (kind === 't-') { if (i <= r[0]) { Haptic.fire('error'); return false; } i--; T = g.slotAt(i).T1; }
@@ -3801,8 +3807,7 @@ function bindCard(id) {
     // a tap while the crosshair is on turns it off; a tap on the ring still opens the point sheet, on a breakeven label still fits it
     if (mode === 'xhpend' && e.type === 'pointerup' && !moved) {
       if (onRing) openB1('point');
-      else if (id === 'idx' && PM.on && poPriced() && beEdgeHit(cardPt(p))) { fitPrice(true); Haptic.fire('open'); track('payoff_fit_breakeven', {}); renderPayoffUI(); }
-      xhClear('tap');
+      else { if (id === 'idx' && PM.on && poPriced() && beEdgeHit(cardPt(p))) { fitPrice(true); Haptic.fire('open'); track('payoff_fit_breakeven', {}); renderPayoffUI(); } xhClear('tap'); }
     }
     if (mode === 'pending' && e.type === 'pointerup' && !moved) {
       if (XH.id) xhClear('tap');   // the crosshair is on on the other chart: this tap only turns it off
@@ -3833,6 +3838,7 @@ function xhSet(id) { if (XH.id && XH.id !== id) xhClear(null); XH.id = id; }
 function xhClear(source) {
   const id = XH.id; if (!id) return; XH.id = null;
   const c = CH[id]; if (c.cross) { c.cross = null; setOhlc(id, null); }
+  if (id === 'idx' && PM.on && !PM.rest) { PM.rest = true; const b = book(); if (PM.pt && b.legs.length) PM.pt = { T: PM.restT ?? PM.pt.T, S: b.S0 }; renderPayoffUI(); }
   redraw(id); if (source) track('crosshair_off', { chart: id, source });
 }
 // f: the finger in card coordinates
@@ -3841,7 +3847,7 @@ function xhAt(id, f, how) {
   const qz = { x: q.x, y: clamp(q.y, g.pT + 1, g.pB - 1) };
   if (id === 'idx' && PM.on && !c.draft && poPriced() && PM.pt && inFuture(qz)) {
     if (c.cross) { c.cross = null; setOhlc(id, null); }
-    const pt = pointFromXY(qz); if (pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, how);
+    const pt = pointFromXY(qz); if (pt && (PM.rest || pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, how);
     redraw(id);
   } else setCross(id, q);
 }
