@@ -108,7 +108,7 @@ function bindCard(id) {
       if (XH.id) xhClear('tap');   // the crosshair is on on the other chart: this tap only turns it off
       else if (c.draft && c.g) { const q = cardPt(p); placePoint(id, { t: xToTime(c.g, q.x), p: c.g.y2p(q.y) }); }
       else if (id === 'idx' && PM.on && poPriced() && beEdgeHit(cardPt(p))) { fitPrice(true); Haptic.fire('open'); track('payoff_fit_breakeven', {}); redraw('idx'); renderPayoffUI(); }
-      else if (id === 'idx' && PM.on && poPriced() && inFuture(cardPt(p))) { const pt = pointFromXY(cardPt(p)); if (pt) setPoint(pt, 'tap'); }
+      else if (id === 'idx' && PM.on && poPriced() && inFuture(cardPt(p))) { const q = cardPt(p), o = xhOff(), pt = pointFromXY({ x: q.x + o.x, y: q.y + o.y }); if (pt) setPoint(pt, 'tap'); }
       else if (id === 'opt' && !(PM.on && PM.s3)) { if (S.order) closeOrderPanel(); else openOrderPanel(); }
     }
     if (mode === 'cross') { if (c.draft && c.g && c.cross) placePoint(id, { t: xToTime(c.g, c.cross.x), p: c.g.y2p(c.cross.y) }); c.cross = null; setOhlc(id, null); redraw(id); }
@@ -145,14 +145,24 @@ function xhAt(id, f, how) {
     redraw(id);
   } else setCross(id, q);
 }
-// the grey dot where the finger is, or was: touch there to move the crosshair without a jump
+// the touch circle, where the finger is or was; touch there to move the crosshair without a jump.
+// With Payoff on it is the Payoff ring (always shown, down-right of the point); for the plain crosshair, a grey dot.
 function drawXHDot(id, ctx, g) {
-  if (XH.id !== id) return;
-  const c = CH[id]; let x, y;
-  if (c.cross) { x = c.cross.x; y = c.cross.y; }
-  else if (id === 'idx' && PM.on && PM.pt) { const i = ptSlot(g); if (i == null) return; x = g.xOf(i); y = g.p2y(PM.pt.S); }
-  else return;
-  const o = xhOff(), fx = x - o.x, fy = y - o.y;
+  const c = CH[id];
+  if (id === 'idx') {
+    const r = ringXY(g);
+    if (r) {
+      ctx.save();
+      const pulse = PM.pulseAt ? clamp((performance.now() - PM.pulseAt) / 450, 0, 1) : 1;
+      if (pulse < 1) { ctx.beginPath(); ctx.arc(r.x, r.y, 11 + pulse * 16, 0, 7); ctx.strokeStyle = `rgba(127,155,255,${.6 * (1 - pulse)})`; ctx.lineWidth = 2; ctx.stroke(); requestAnimationFrame(() => redraw('idx')); }
+      const on = XH.id === 'idx' && !c.cross;
+      ctx.beginPath(); ctx.arc(r.x, r.y, 11, 0, 7); ctx.fillStyle = on ? 'rgba(127,155,255,.32)' : 'rgba(127,155,255,.2)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(r.x, r.y, 7, 0, 7); ctx.fillStyle = '#171717'; ctx.fill(); ctx.lineWidth = 2.4; ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.restore();
+    }
+  }
+  if (XH.id !== id || !c.cross) return;
+  const o = xhOff(), fx = c.cross.x - o.x, fy = c.cross.y - o.y;
   ctx.save(); ctx.beginPath(); ctx.arc(fx, fy, 10, 0, Math.PI * 2); ctx.fillStyle = 'rgba(176,176,182,.45)'; ctx.fill();
   ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.stroke(); ctx.restore();
 }

@@ -325,17 +325,14 @@ function payoffOver(id, ctx, g) {
   drawDisc(ctx, g, b, nowX, endX, vis);   // stop loss and target
   // strike line of a tapped leg (S3)
   if (PM.s3 && PM.strike != null) { const l = PM.legs.find(x => x.id === PM.strike); if (l && l.c.type !== 'FUT') { const y = Math.round(g.p2y(l.c.strike)) + .5; if (y > g.pT && y < g.pB) { ctx.save(); ctx.strokeStyle = PO_COL.strike; ctx.setLineDash([1.5, 3]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(g.paneR, y); ctx.stroke(); ctx.setLineDash([]); ctx.font = `500 ${10.5 * fs}px Inter, sans-serif`; const t = `${l.c.strike} ${l.c.type}`; ctx.fillStyle = 'rgba(23,23,23,.85)'; ctx.fillRect(6, y - 16, ctx.measureText(t).width + 8, 14); ctx.fillStyle = PO_COL.strike; ctx.textBaseline = 'middle'; ctx.fillText(t, 10, y - 9); ctx.restore(); } } }
-  // the Payoff point: crosshair and ring
+  // the Payoff point: crosshair lines and a small dot where they cross; the ring is the touch circle, drawn by drawXHDot
   const pt = PM.pt; if (!pt) return;
   const i = ptSlot(g); if (i == null) return;
   const x = g.xOf(i), y = g.p2y(pt.S);
   if (x < -4 || x > g.paneR + 4) return;
   ctx.save(); ctx.strokeStyle = XH.id === 'idx' && !CH.idx.cross ? 'rgba(127,155,255,.95)' : 'rgba(127,155,255,.55)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(Math.round(x) + .5, g.pT); ctx.lineTo(Math.round(x) + .5, g.pB); ctx.moveTo(0, Math.round(y) + .5); ctx.lineTo(g.paneR, Math.round(y) + .5); ctx.stroke(); ctx.setLineDash([]);
-  const pulse = PM.pulseAt ? clamp((now - 0) && (performance.now() - PM.pulseAt) / 450, 0, 1) : 1;
-  if (pulse < 1) { ctx.beginPath(); ctx.arc(x, y, 8 + pulse * 16, 0, 7); ctx.strokeStyle = `rgba(127,155,255,${.6 * (1 - pulse)})`; ctx.lineWidth = 2; ctx.stroke(); requestAnimationFrame(() => redraw('idx')); }
-  ctx.beginPath(); ctx.arc(x, y, 8, 0, 7); ctx.fillStyle = 'rgba(127,155,255,.22)'; ctx.fill();
-  ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 7); ctx.fillStyle = '#171717'; ctx.fill(); ctx.lineWidth = 2.2; ctx.strokeStyle = '#fff'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fillStyle = '#9fb3ff'; ctx.fill();
   ctx.restore();
 }
 function drawNow(ctx, g, x) {
@@ -530,10 +527,13 @@ function inFuture(q) {
   const nowX = xAtT(g, MK.nowT()), end = poAxisEnd(); if (end == null) return false;
   return q.x >= nowX && q.x <= xAtT(g, end);
 }
-function nearPoint(q) {
-  const g = CH.idx.g; if (!g || !PM.pt) return false;
-  const i = ptSlot(g); if (i == null) return false;
-  return hyp(q.x - g.xOf(i), q.y - g.p2y(PM.pt.S)) <= 26;
+function nearPoint(q) { const r = ringXY(CH.idx.g); return !!r && hyp(q.x - r.x, q.y - r.y) <= 26; }
+// the ring: where the finger is, or was, when it set the point; down-right of the point (down-left for left-handed use)
+function ringXY(g) {
+  if (!g || !PM.on || !PM.pt || !poPriced()) return null;
+  const i = ptSlot(g); if (i == null) return null;
+  const x = g.xOf(i), y = g.p2y(PM.pt.S); if (x < -4 || x > g.paneR + 4) return null;
+  const o = xhOff(); return { x: x - o.x, y: Math.min(y - o.y, L.cards.idx.h - 12), px: x, py: y };
 }
 
 /* ---------- positions and contracts ---------- */
@@ -676,7 +676,8 @@ function renderPayoffUI() {
     let left = 8, top = g.pT + 6 + legendH + bannerH;
     const i = PM.pt ? ptSlot(g) : null, px = i != null ? g.xOf(i) : g.paneR, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     if (px < g.paneR / 2) { left = g.paneR - w - 8; top += 34 * Math.min(S.fs || 1, 1.45); }
-    if (px > left - 14 && px < left + w + 14 && py > top - 14 && py < top + h + 14) top = g.pB - h - 6;
+    const rr = ringXY(g), hitB = (x, y) => x > left - 14 && x < left + w + 14 && y > top - 14 && y < top + h + 14;
+    if (hitB(px, py) || (rr && hitB(rr.x, rr.y))) top = g.pB - h - 6;
     rd.style.left = left + 'px'; rd.style.top = top + 'px';
   }
   // first-run hint
