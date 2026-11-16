@@ -330,7 +330,7 @@ function payoffOver(id, ctx, g) {
   const i = ptSlot(g); if (i == null) return;
   const x = g.xOf(i), y = g.p2y(pt.S);
   if (x < -4 || x > g.paneR + 4) return;
-  ctx.save(); ctx.strokeStyle = 'rgba(127,155,255,.55)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+  ctx.save(); ctx.strokeStyle = XH.id === 'idx' && !CH.idx.cross ? 'rgba(127,155,255,.95)' : 'rgba(127,155,255,.55)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(Math.round(x) + .5, g.pT); ctx.lineTo(Math.round(x) + .5, g.pB); ctx.moveTo(0, Math.round(y) + .5); ctx.lineTo(g.paneR, Math.round(y) + .5); ctx.stroke(); ctx.setLineDash([]);
   const pulse = PM.pulseAt ? clamp((now - 0) && (performance.now() - PM.pulseAt) / 450, 0, 1) : 1;
   if (pulse < 1) { ctx.beginPath(); ctx.arc(x, y, 8 + pulse * 16, 0, 7); ctx.strokeStyle = `rgba(127,155,255,${.6 * (1 - pulse)})`; ctx.lineWidth = 2; ctx.stroke(); requestAnimationFrame(() => redraw('idx')); }
@@ -409,6 +409,7 @@ function payoffAxes(id, ctx, g) {
 /* ---------- turning Payoff on and off (BR-23, BR-24) ---------- */
 function setPayoff(on, meta = {}) {
   if (!!on === PM.on) return;
+  xhClear(null);
   if (on) {
     if (!payoffAvailable()) { Haptic.fire('error'); toast('Payoff needs an index with options'); return; }
     closeOrderPanel(true);
@@ -681,7 +682,7 @@ function renderPayoffUI() {
   // first-run hint
   hint.hidden = !(PM.hint && v && g);
   if (!hint.hidden) {
-    hint.textContent = uxB() ? 'Drag the ring to see P&L at any level and time, or tap the shaded area. Pick a date above to look further ahead.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
+    hint.textContent = uxB() ? 'Hold and drag to see P&L at any level and time: the point sits just above your finger and stays when you lift. Tap to let go. Pick a date above to look further ahead.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
     const nowX = xAtT(g, MK.nowT()), zw = Math.max(150, g.paneR - nowX - 12); hint.style.width = Math.min(zw, 230) + 'px';
     const hw = Math.min(zw, 230), hh = hint.offsetHeight, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     const hl = clamp(nowX + 6, 6, g.paneR - hw - 6);

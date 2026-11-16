@@ -11,6 +11,8 @@ const BASE = {
   idx: { sym: 'NIFTY50', ty: 'Spot', short: 'NIFTY50', ltp: 0, tag: 0, prev: E.PREV_CLOSE, spacing: 4.3177, ro: 5.94 },
   opt: { ...optNames(MK.opt), ltp: 0, tag: 0, prev: 0, spacing: 7.5089, ro: 3.51 },
 };
+// the chart whose crosshair is on (Kite style: it stays after the finger lifts until a tap); null when none
+const XH = { id: null };
 const fresh = id => ({ id, ...BASE[id], tf: '5m', type: 'candle', ind: {}, draws: [], draft: null, ys: null, cross: null, opts: { breaks: true, hilo: true, pline: true, wm: true, legend: true } });
 const CH = { idx: fresh('idx'), opt: fresh('opt') };
 const CHART_IDS = ['idx', 'opt'];
@@ -255,6 +257,7 @@ function drawChart(id) {
   const last = bars[bars.length - 1], tagUp = last ? last.c >= last.o : true, tagCol = tagUp ? UP : DN, ty = snap(p2y(c.tag)) + half;
   if (c.opts.pline) { ctx.strokeStyle = tagCol; ctx.lineWidth = 1; ctx.setLineDash([4.1, 6.2]); ctx.beginPath(); ctx.moveTo(xOf(g.n - 1) + s * .5 + 2, ty); ctx.lineTo(paneR, ty); ctx.stroke(); ctx.setLineDash([]); }
   // crosshair lines
+  if (c.cross && c.cross.i != null) { c.cross.x = xOf(c.cross.i); if (c.cross.p != null) c.cross.y = clamp(p2y(c.cross.p), pT + 1, pB - 1); }
   if (c.cross) { ctx.strokeStyle = 'rgba(200,200,200,.55)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); const cx = snap(c.cross.x) + half, cy = snap(c.cross.y) + half; ctx.beginPath(); ctx.moveTo(cx, pT); ctx.lineTo(cx, pB); ctx.moveTo(0, cy); ctx.lineTo(paneR, cy); ctx.stroke(); ctx.setLineDash([]); }
   ctx.restore();
   // axes
@@ -300,6 +303,7 @@ function drawChart(id) {
   ctx.restore();
   c.g = g;
   if (typeof payoffAxes === 'function') payoffAxes(id, ctx, g);
+  if (typeof drawXHDot === 'function') drawXHDot(id, ctx, g);
 }
 function drawShape(ctx, g, d, temp) {
   const ax = timeToX(g, d.a.t), ay = g.p2y(d.a.p), bx = timeToX(g, d.b.t), by = g.p2y(d.b.p);

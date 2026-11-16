@@ -147,7 +147,7 @@ function openDrawing(id) {
    ========================================================================= */
 function setTimeframe(id, tf, meta = {}) {
   const ids = S.linked ? CHART_IDS : [id];
-  for (const k of ids) { const c = CH[k]; if (c.tf === tf) continue; c.tf = tf; c.ys = null; c.cross = null; c._ic = {}; if (TF[tf] >= 1440) c.ro = 3; redraw(k); }
+  for (const k of ids) { const c = CH[k]; if (c.tf === tf) continue; c.tf = tf; c.ys = null; c.cross = null; if (XH.id === k) XH.id = null; c._ic = {}; if (TF[tf] >= 1440) c.ro = 3; redraw(k); }
   updateHeaders();
   if (!meta.silent) toast(`${ids.map(k => CH[k].short).join(' and ')} switched to ${tf}`, true);
   track('timeframe', { chart: id, tf, linked: S.linked, route: meta.route || 'popover' });
