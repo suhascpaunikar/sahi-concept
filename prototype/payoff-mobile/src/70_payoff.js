@@ -173,8 +173,10 @@ function priceFit(full) {
   const near = dn == null ? [null, up] : up == null ? [dn, null] : (S0 - dn <= up - S0 ? [dn, null] : [null, up]);
   // with stop loss and target lines on the chart, try to bring their nearest levels into view too
   const tries = [[dn, up], near];
-  if (typeof discOn === 'function' && discOn() && ['lines', 'zone'].includes(PM.disc.style)) {
-    const d = discLv(b, PM.pt.T), xs = [nearest(d.sl, S0), nearest(d.tg, S0)].filter(x => x != null);
+  if (typeof discOn === 'function' && discOn() && ['lines', 'zone', 'price'].includes(PM.disc.style)) {
+    // at the point's time and at the first candle after Now: the lines bend with time in between
+    const Ts = [PM.pt.T]; const i1 = slotOfT(g, MK.nowT() + 1e-6), s1 = g.slotAt(i1); if (s1 && s1.T1 > MK.nowT()) Ts.push(s1.T1);
+    const xs = Ts.flatMap(T => { const d = discLv(b, T); return [nearest(d.sl, S0), nearest(d.tg, S0)]; }).filter(x => x != null);
     const lo2 = Math.min(...xs.filter(x => x < S0), dn ?? Infinity), hi2 = Math.max(...xs.filter(x => x > S0), up ?? -Infinity);
     tries.unshift([isFinite(lo2) ? lo2 : null, isFinite(hi2) ? hi2 : null]);
   }

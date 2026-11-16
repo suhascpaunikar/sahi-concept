@@ -33,11 +33,11 @@ const discLv = (b, T) => ({ sl: levelRoots(b, T, -PM.disc.stop), tg: levelRoots(
 // the level the market reaches first: the root nearest the current level
 const nearest = (xs, S0) => xs.slice().sort((p, q) => Math.abs(p - S0) - Math.abs(q - S0))[0];
 // why a level has no line: the position can't make the target or lose the stop, or it is beyond ±10%
-function discWhyNot(b, k) {
+function discWhyNot(b, k, T) {
   const st = panelStats(b);
   if (k === 'tg' && st.maxP !== Infinity && st.maxP < discTarget()) return `above max profit ${rupeeK(Math.max(0, st.maxP))}`;
   if (k === 'sl' && st.maxL !== -Infinity && -st.maxL < PM.disc.stop) return `more than max loss ${rupeeK(Math.min(0, st.maxL))}`;
-  return 'not within 10% of now';
+  return T != null ? `not reached ${whenTxt(T)}` : 'not within 10% of now';
 }
 
 /* ---------- on the index chart (called from payoffOver, after the breakevens) ---------- */
@@ -65,20 +65,24 @@ function drawDisc(ctx, g, b, nowX, endX, vis) {
     for (const i of vis) { const d = discLv(b, g.slotAt(i).T1)[k], x = g.xOf(i); if (prev && prev.d.length === d.length) d.forEach((v, j) => { ctx.beginPath(); ctx.moveTo(prev.x, g.p2y(prev.d[j])); ctx.lineTo(x, g.p2y(v)); ctx.stroke(); }); prev = { d, x }; }
   }
   ctx.restore();
-  // labels just right of Now, on the first slot's levels, so they stay clear of the breakeven labels at the right edge
-  const d0 = discLv(b, g.slotAt(vis[0]).T1), xL = Math.max(4, nowX + 8);
+  // labels end at the right edge of the future zone, where the breakeven labels are, so the payoff box doesn't cover them
+  const TL = g.slotAt(vis[vis.length - 1]).T1, d0 = discLv(b, TL), xL = Math.min(g.xOf(vis[vis.length - 1]), g.paneR - 4) - 6;
   // the breakeven labels at the right edge, the edge arrows and the Now tag: places the labels keep clear of
+  // the payoff box sits over the chart (card coordinates, as the canvas): a label it would cover moves below it
+  const rd = CH.idx.el && $('.pread', CH.idx.el), box = rd && !rd.hidden ? { l: rd.offsetLeft, r: rd.offsetLeft + rd.offsetWidth, t: rd.offsetTop, b: rd.offsetTop + rd.offsetHeight } : null;
+  const underBox = (x, w, y) => box && x < box.r + 4 && x + w > box.l - 4 && y > box.t - 10 * fs && y < box.b + 10 * fs;
   const taken = slotRoots(b, g.slotAt(vis[vis.length - 1]).T1).roots.map(v => clamp(g.p2y(v), g.pT + 30 * fs, g.pB - 10 * fs)).concat([g.pB - 10 * fs]);
   ctx.save(); ctx.font = `600 ${10.5 * fs}px Inter, sans-serif`; ctx.textBaseline = 'middle';
   const lab = (v, k) => {
     // a level off the top or bottom of the chart keeps its label at that edge, with an arrow
     const y = g.p2y(v), off = y < g.pT + 10 ? '↑' : y > g.pB - 10 ? '↓' : '';
     const t = `${k === 'sl' ? `${st === 'zone' ? 'Stop loss' : 'SL'} −${rupeeK(stop)}` : `Target +${rupeeK(tgt)} (1:${PM.disc.ratio})`} · ${lvl(v)}${off ? ' ' + off : ''}`;
-    const w = ctx.measureText(t).width, x = Math.min(xL, g.paneR - w - 10), up = PF.pnl(b, v + 30, g.slotAt(vis[0]).T1) > PF.pnl(b, v, g.slotAt(vis[0]).T1);
+    const w = ctx.measureText(t).width, x = Math.max(4, xL - w), up = PF.pnl(b, v + 30, TL) > PF.pnl(b, v, TL);
     // the label sits on the far side of the line from the shaded zone
     let ly = off === '↑' ? g.pT + 30 * fs : off === '↓' ? g.pB - 30 * fs : clamp(y + ((k === 'sl') === up ? -11 : 11) * fs, g.pT + 9, g.pB - 9);
     // step away from the breakeven labels and from labels already placed
     for (let n = 0; n < 6 && taken.some(q => Math.abs(q - ly) < 18 * fs); n++) ly += (ly > (g.pT + g.pB) / 2 ? -19 : 19) * fs;
+    if (underBox(x, w, ly)) ly = box.b + 12 * fs;
     taken.push(ly);
     ctx.fillStyle = 'rgba(23,23,23,.9)'; ctx.fillRect(x - 4, ly - 8.5 * fs, w + 8, 17 * fs); ctx.fillStyle = DISC_COL[k]; ctx.fillText(t, x, ly);
   };
@@ -86,8 +90,8 @@ function drawDisc(ctx, g, b, nowX, endX, vis) {
   // a stop or target with no line says why, at the top of the future zone
   ctx.font = `500 ${10.5 * fs}px Inter, sans-serif`;
   for (const k of ['sl', 'tg']) if (!d0[k].length) {
-    const t = `${k === 'sl' ? `SL −${rupeeK(stop)}` : `Target +${rupeeK(tgt)}`}: ${discWhyNot(b, k)}`, w = ctx.measureText(t).width, x = Math.min(xL, g.paneR - w - 10);
-    let ly = g.pT + 30 * fs; for (let n = 0; n < 6 && taken.some(q => Math.abs(q - ly) < 18 * fs); n++) ly += 19 * fs; taken.push(ly);
+    const t = `${k === 'sl' ? 'SL' : 'Target'} ${discWhyNot(b, k, PM.pt ? PM.pt.T : TL).replace('not reached at', 'not reached by')}`, w = ctx.measureText(t).width, x = Math.max(4, xL - w);
+    let ly = g.pT + 30 * fs; for (let n = 0; n < 6 && taken.some(q => Math.abs(q - ly) < 18 * fs); n++) ly += 19 * fs; if (underBox(x, w, ly)) { ly = box.b + 12 * fs; for (let n = 0; n < 6 && taken.some(q => Math.abs(q - ly) < 18 * fs); n++) ly += 19 * fs; } taken.push(ly);
     ctx.fillStyle = 'rgba(23,23,23,.9)'; ctx.fillRect(x - 4, ly - 8.5 * fs, w + 8, 17 * fs); ctx.fillStyle = DISC_COL[k]; ctx.globalAlpha = .8; ctx.fillText(t, x, ly); ctx.globalAlpha = 1;
   }
   ctx.restore();
@@ -116,7 +120,7 @@ function drawDiscAxis(ctx, g) {
 function discBoxHTML(b, v) {
   if (!discOn() || PM.disc.style !== 'box' || !v) return '';
   const d = discLv(b, v.T), stop = PM.disc.stop, tgt = discTarget();
-  const row = (k, xs, amt) => { const x = nearest(xs, b.S0); return `<div class="bx6 ${k}"><i></i>${k === 'sl' ? 'Stop loss' : `Target 1:${PM.disc.ratio}`} <b>${amt}</b> ${x == null ? `<span>${discWhyNot(b, k)}</span>` : `at <b>${lvl(x)}</b> <span>(${ptsTxt(x - b.S0)})</span>`}</div>`; };
+  const row = (k, xs, amt) => { const x = nearest(xs, b.S0); return `<div class="bx6 ${k}"><i></i>${k === 'sl' ? 'Stop loss' : `Target 1:${PM.disc.ratio}`} <b>${amt}</b> ${x == null ? `<span>${discWhyNot(b, k, v.T)}</span>` : `at <b>${lvl(x)}</b> <span>(${ptsTxt(x - b.S0)})</span>`}</div>`; };
   const past = v.pnl <= -stop + .5 ? '<div class="bx7 sl">Past your stop loss</div>' : v.pnl >= tgt - .5 ? '<div class="bx7 tg">Target reached</div>' : '';
   return `<div class="bx6w">${row('sl', d.sl, '−' + rupeeK(stop))}${row('tg', d.tg, '+' + rupeeK(tgt))}${past}</div>`;
 }
