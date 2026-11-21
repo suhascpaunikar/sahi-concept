@@ -15,6 +15,7 @@ const PM = {
   views: null, prevOpt: null, openedAt: 0, later: store.get('later', false), orderFail: false, orders: {}, exits: [],
   tipSeen: store.get('tipSeen', false), hintSeen: store.get('hintSeen', false), hint: false, b1: false, b2: null,
   bannerClosed: false, crossSign: 0, crossExp: null, lastMoveLog: 0,
+  rest: true, restT: null,   // rest: the crosshair is off, so the point is the live price at restT (the default time)
   panel: store.get('panel', 'list'),   // several positions: 'list' (option, qty, P&L) or 'seller' (the seller panel)
 };
 
@@ -325,17 +326,14 @@ function payoffOver(id, ctx, g) {
   drawDisc(ctx, g, b, nowX, endX, vis);   // stop loss and target
   // strike line of a tapped leg (S3)
   if (PM.s3 && PM.strike != null) { const l = PM.legs.find(x => x.id === PM.strike); if (l && l.c.type !== 'FUT') { const y = Math.round(g.p2y(l.c.strike)) + .5; if (y > g.pT && y < g.pB) { ctx.save(); ctx.strokeStyle = PO_COL.strike; ctx.setLineDash([1.5, 3]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(g.paneR, y); ctx.stroke(); ctx.setLineDash([]); ctx.font = `500 ${10.5 * fs}px Inter, sans-serif`; const t = `${l.c.strike} ${l.c.type}`; ctx.fillStyle = 'rgba(23,23,23,.85)'; ctx.fillRect(6, y - 16, ctx.measureText(t).width + 8, 14); ctx.fillStyle = PO_COL.strike; ctx.textBaseline = 'middle'; ctx.fillText(t, 10, y - 9); ctx.restore(); } } }
-  // the Payoff point: crosshair and ring
-  const pt = PM.pt; if (!pt) return;
+  // the Payoff point: crosshair lines and a small dot where they cross; the ring is the touch circle, drawn by drawXHDot
+  const pt = PM.pt; if (!pt || PM.rest) return;
   const i = ptSlot(g); if (i == null) return;
   const x = g.xOf(i), y = g.p2y(pt.S);
   if (x < -4 || x > g.paneR + 4) return;
-  ctx.save(); ctx.strokeStyle = 'rgba(127,155,255,.55)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+  ctx.save(); ctx.strokeStyle = XH.id === 'idx' && !CH.idx.cross ? 'rgba(127,155,255,.95)' : 'rgba(127,155,255,.55)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(Math.round(x) + .5, g.pT); ctx.lineTo(Math.round(x) + .5, g.pB); ctx.moveTo(0, Math.round(y) + .5); ctx.lineTo(g.paneR, Math.round(y) + .5); ctx.stroke(); ctx.setLineDash([]);
-  const pulse = PM.pulseAt ? clamp((now - 0) && (performance.now() - PM.pulseAt) / 450, 0, 1) : 1;
-  if (pulse < 1) { ctx.beginPath(); ctx.arc(x, y, 8 + pulse * 16, 0, 7); ctx.strokeStyle = `rgba(127,155,255,${.6 * (1 - pulse)})`; ctx.lineWidth = 2; ctx.stroke(); requestAnimationFrame(() => redraw('idx')); }
-  ctx.beginPath(); ctx.arc(x, y, 8, 0, 7); ctx.fillStyle = 'rgba(127,155,255,.22)'; ctx.fill();
-  ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 7); ctx.fillStyle = '#171717'; ctx.fill(); ctx.lineWidth = 2.2; ctx.strokeStyle = '#fff'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fillStyle = '#9fb3ff'; ctx.fill();
   ctx.restore();
 }
 function drawNow(ctx, g, x) {
@@ -390,7 +388,7 @@ function ptSlot(g) {
 function payoffAxes(id, ctx, g) {
   if (!PM.on || !poPriced()) return;
   if (id === 'idx') drawDiscAxis(ctx, g);
-  if (id === 'idx' && PM.pt) {
+  if (id === 'idx' && PM.pt && !PM.rest) {
     const i = ptSlot(g); if (i == null) return;
     const x = g.xOf(i), y = g.p2y(PM.pt.S);
     ctx.save(); ctx.font = FONT_AX; ctx.textBaseline = 'middle';
@@ -409,6 +407,7 @@ function payoffAxes(id, ctx, g) {
 /* ---------- turning Payoff on and off (BR-23, BR-24) ---------- */
 function setPayoff(on, meta = {}) {
   if (!!on === PM.on) return;
+  xhClear(null);
   if (on) {
     if (!payoffAvailable()) { Haptic.fire('error'); toast('Payoff needs an index with options'); return; }
     closeOrderPanel(true);
@@ -430,7 +429,7 @@ function setPayoff(on, meta = {}) {
   } else {
     const dur = Math.round((now() - PM.openedAt) / 1000);
     closeB2(true); closeB1(true);
-    PM.on = false; PM.hint = false; PM.pt = null; PM.strike = null;
+    PM.on = false; PM.hint = false; PM.pt = null; PM.strike = null; PM.rest = true;
     const wasS3 = PM.s3; PM.s3 = false;
     if (PM.prevOpt) { setOptContract(PM.prevOpt, { silent: true }); PM.prevOpt = null; }
     relayout();
@@ -467,7 +466,8 @@ function openView() {
   let T = Tend;
   if (endX > gi.paneR - 1) { const iMax = gi.n - 1 + Math.floor((gi.paneR - gi.s / 2 - xn1T) / gi.s); const sl = gi.slotAt(Math.min(iMax, gi.N - 1)); T = sl ? sl.T1 : Tend; }
   const Th = horizonT(b, gi); if (Th != null) T = Th;   // UX-19
-  PM.pt = b.legs.length && poPriced() ? { T, S: snap5(b.S0) } : null;
+  PM.rest = true; PM.restT = T;
+  PM.pt = b.legs.length && poPriced() ? { T, S: b.S0 } : null;
   // UX-01: fit the price scale for the view the chart is scrolling to, and ease into it
   if (uxB()) { const ro0 = CH.idx.ro; CH.idx.ro = tgt.idx.ro; const s = priceFit(); CH.idx.ro = ro0; if (s) tgt.idx.ys = s; }
   animateRo(tgt, 250);
@@ -503,6 +503,8 @@ function fitTo(T, chipKey) {
 /* ---------- moving the point (BR-16, BR-29, BR-31) ---------- */
 function setPoint(pt, how, opts = {}) {
   const b = book(); if (!b.legs.length) return;
+  if (how === 'chip') { if (PM.rest) { PM.restT = pt.T; pt = { T: pt.T, S: b.S0 }; } }
+  else if (PM.on) { PM.rest = false; if (XH.id !== 'idx') xhSet('idx'); }
   const prev = PM.pt; PM.pt = pt;
   if (prev && (how === 'drag' || how === 'longpress')) {
     const s0 = Math.sign(Math.round(PF.pnl(b, prev.S, prev.T))), s1 = Math.sign(Math.round(PF.pnl(b, pt.S, pt.T)));
@@ -529,10 +531,13 @@ function inFuture(q) {
   const nowX = xAtT(g, MK.nowT()), end = poAxisEnd(); if (end == null) return false;
   return q.x >= nowX && q.x <= xAtT(g, end);
 }
-function nearPoint(q) {
-  const g = CH.idx.g; if (!g || !PM.pt) return false;
-  const i = ptSlot(g); if (i == null) return false;
-  return hyp(q.x - g.xOf(i), q.y - g.p2y(PM.pt.S)) <= 26;
+function nearPoint(q) { const r = ringXY(CH.idx.g); return !!r && hyp(q.x - r.x, q.y - r.y) <= 26; }
+// the ring: where the finger is, or was, when it set the point; down-right of the point (down-left for left-handed use)
+function ringXY(g) {
+  if (!g || !PM.on || !PM.pt || PM.rest || !poPriced()) return null;
+  const i = ptSlot(g); if (i == null) return null;
+  const x = g.xOf(i), y = g.p2y(PM.pt.S); if (x < -4 || x > g.paneR + 4) return null;
+  const o = xhOff(); return { x: x - o.x, y: Math.min(y - o.y, L.cards.idx.h - 12), px: x, py: y };
 }
 
 /* ---------- positions and contracts ---------- */
@@ -546,9 +551,9 @@ function bookChanged(opening) {
     const s3 = isS3();
     if (s3 !== PM.s3) { PM.s3 = s3; PM.strike = null; if (!s3) { const b = book(); if (b.legs.length === 1 && !b.pretrade && b.legs[0].c !== MK.opt && b.legs[0].c.type !== 'FUT') { if (!PM.prevOpt) PM.prevOpt = MK.opt; setOptContract(b.legs[0].c, { silent: true }); } } relayout(); }
     const b = book(), g = CH.idx.g;
-    if (!opening && b.legs.length && poPriced() && !PM.pt) PM.pt = { T: sessionEndT(b), S: snap5(b.S0) };
+    if (!opening && b.legs.length && poPriced() && !PM.pt) { PM.rest = true; PM.restT = sessionEndT(b); PM.pt = { T: PM.restT, S: b.S0 }; }
     if (!b.legs.length) PM.pt = null;
-    if (PM.pt && g) { const r = ptRange(g); if (r) { const i = ptSlot(g); if (i < r[0] || i > r[1]) PM.pt = { T: g.slotAt(clamp(i, r[0], r[1])).T1, S: PM.pt.S }; } }
+    if (PM.pt && g) { const r = ptRange(g); if (r) { const i = ptSlot(g); if (i < r[0] || i > r[1]) { PM.pt = { T: g.slotAt(clamp(i, r[0], r[1])).T1, S: PM.pt.S }; if (PM.rest) PM.restT = PM.pt.T; } } }
     if (!opening) fitPrice();
   }
   renderPayoffUI(); updatePnlPill(); redraw();
@@ -624,6 +629,7 @@ function chipsOf(b) {
 }
 function renderPayoffUI() {
   const ic_ = CH.idx.el, oc = CH.opt.el; if (!ic_ || !oc) return;
+  if (PM.on && PM.rest && PM.pt) PM.pt.S = MK.S0();
   app.classList.toggle('po-on', PM.on); app.classList.toggle('po-s3', PM.on && PM.s3);
   app.classList.toggle('po-grey', PM.on && (MK.pricing === 'delayed' || MK.pricing === 'offline'));
   const bar = $('.pbar', ic_), rd = $('.pread', ic_), edge = $('.pedge', ic_), hint = $('.phint', ic_), empty = $('.pempty', ic_);
@@ -675,13 +681,14 @@ function renderPayoffUI() {
     let left = 8, top = g.pT + 6 + legendH + bannerH;
     const i = PM.pt ? ptSlot(g) : null, px = i != null ? g.xOf(i) : g.paneR, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     if (px < g.paneR / 2) { left = g.paneR - w - 8; top += 34 * Math.min(S.fs || 1, 1.45); }
-    if (px > left - 14 && px < left + w + 14 && py > top - 14 && py < top + h + 14) top = g.pB - h - 6;
+    const rr = ringXY(g), hitB = (x, y) => x > left - 14 && x < left + w + 14 && y > top - 14 && y < top + h + 14;
+    if (hitB(px, py) || (rr && hitB(rr.x, rr.y))) top = g.pB - h - 6;
     rd.style.left = left + 'px'; rd.style.top = top + 'px';
   }
   // first-run hint
   hint.hidden = !(PM.hint && v && g);
   if (!hint.hidden) {
-    hint.textContent = uxB() ? 'Drag the ring to see P&L at any level and time, or tap the shaded area. Pick a date above to look further ahead.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
+    hint.textContent = uxB() ? 'Hold the chart and drag to see P&L at any level and time. The crosshair sits just above your finger and stays when you lift; tap to clear it. Pick a date above to look further ahead.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
     const nowX = xAtT(g, MK.nowT()), zw = Math.max(150, g.paneR - nowX - 12); hint.style.width = Math.min(zw, 230) + 'px';
     const hw = Math.min(zw, 230), hh = hint.offsetHeight, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     const hl = clamp(nowX + 6, 6, g.paneR - hw - 6);
@@ -692,7 +699,7 @@ function renderPayoffUI() {
   }
   // edge indicator when the point is out of view
   edge.hidden = true;
-  if (v && g && PM.pt) {
+  if (v && g && PM.pt && !PM.rest) {
     const i = ptSlot(g), x = g.xOf(i), y = g.p2y(PM.pt.S);
     if (x > g.paneR + 2 || x < -2) { edge.hidden = false; edge.textContent = x > g.paneR ? `Point · ${ptTimeShort(PM.pt.T)} →` : `← Point · ${ptTimeShort(PM.pt.T)}`; edge.style.top = (g.pB - 34) + 'px'; edge.style.left = x > g.paneR ? '' : '8px'; edge.style.right = x > g.paneR ? (r.w - g.paneR + 6) + 'px' : ''; }
     else if (y < g.pT || y > g.pB) { edge.hidden = false; edge.textContent = `Point · ${lvl(PM.pt.S)} ${y < g.pT ? '↑' : '↓'}`; edge.style.top = (y < g.pT ? g.pT + 4 : g.pB - 30) + 'px'; edge.style.left = clamp(x - 50, 6, g.paneR - 110) + 'px'; edge.style.right = ''; }
@@ -826,6 +833,7 @@ function stepPoint(kind) {
   const g = CH.idx.g; if (!g || !PM.pt) return false;
   const r = ptRange(g); if (!r) return false;
   let { T, S: lv } = PM.pt; let i = ptSlot(g);
+  if (PM.rest) lv = snap5(lv);
   if (kind === 'lv+') lv += PM.stepBig ? 25 : 5; else if (kind === 'lv-') lv -= PM.stepBig ? 25 : 5;
   else if (kind === 't+') { if (i >= r[1]) { Haptic.fire('error'); return false; } i++; T = g.slotAt(i).T1; }
   else if (kind === 't-') { if (i <= r[0]) { Haptic.fire('error'); return false; } i--; T = g.slotAt(i).T1; }

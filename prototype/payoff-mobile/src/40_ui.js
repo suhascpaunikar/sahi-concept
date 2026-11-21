@@ -7,6 +7,10 @@ function openLayer(inner, { onClose, label = 'Dialog', scrimClose = true, cls = 
   closeTransient();
   const el = h(`<div class="layer ${cls}" role="dialog" aria-modal="true" aria-label="${label}"><div class="scrim"></div></div>`);
   el.appendChild(inner); app.appendChild(el);
+  // A phone fires a click right after the tap that opened the layer, at the same spot. Ignore clicks that early:
+  // on the scrim it would close the layer at once, and on the layer it would press whatever is under the finger.
+  const t0 = performance.now();
+  el.addEventListener('click', e => { if (performance.now() - t0 < 450) { e.stopPropagation(); e.preventDefault(); } }, true);
   const layer = { el, close(reason = 'dismissed') { if (layer.closed) return; layer.closed = true; el.classList.remove('in'); const i = LAYERS.indexOf(layer); if (i >= 0) LAYERS.splice(i, 1); setTimeout(() => el.remove(), 260); onClose && onClose(reason); syncDevHints(); } };
   if (scrimClose) $('.scrim', el).addEventListener('click', () => layer.close('scrim'));
   LAYERS.push(layer); requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));
@@ -147,7 +151,7 @@ function openDrawing(id) {
    ========================================================================= */
 function setTimeframe(id, tf, meta = {}) {
   const ids = S.linked ? CHART_IDS : [id];
-  for (const k of ids) { const c = CH[k]; if (c.tf === tf) continue; c.tf = tf; c.ys = null; c.cross = null; c._ic = {}; if (TF[tf] >= 1440) c.ro = 3; redraw(k); }
+  for (const k of ids) { const c = CH[k]; if (c.tf === tf) continue; c.tf = tf; c.ys = null; c.cross = null; if (XH.id === k) XH.id = null; c._ic = {}; if (TF[tf] >= 1440) c.ro = 3; redraw(k); }
   updateHeaders();
   if (!meta.silent) toast(`${ids.map(k => CH[k].short).join(' and ')} switched to ${tf}`, true);
   track('timeframe', { chart: id, tf, linked: S.linked, route: meta.route || 'popover' });

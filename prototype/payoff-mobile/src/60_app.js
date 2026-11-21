@@ -1,5 +1,5 @@
 /* =========================================================================
-   Chart gestures: pan, pinch, crosshair (long-press), axis scale, split
+   Chart gestures: pan, pinch, crosshair (hold; stays until a tap), axis scale, split
    ========================================================================= */
 function startDrag(e, el, drag) {
   if (G.st !== 'idle' || !drag) return;
@@ -42,11 +42,13 @@ function bindCard(id) {
   const lk = $('.lnk', el); if (lk) lk.addEventListener('click', () => { S.linked = !S.linked; updateHeaders(); syncDev(); toast(S.linked ? 'Timeframes linked: changes apply to both charts' : 'Timeframes unlinked'); track('link', { on: S.linked }); });
   $('.banner button', el).addEventListener('click', () => { disarm(id); $$('.dtool').forEach(x => x.remove()); });
   // canvas regions
-  const P0 = new Map(); let mode = null, lp = 0, start = null, ro0 = 0, sp0 = 0, d0 = 0, moved = false;
+  const P0 = new Map(); let mode = null, lp = 0, start = null, ro0 = 0, sp0 = 0, d0 = 0, moved = false, onRing = false;
   const cardPt = p => ({ x: p.x - L.cards[id].x, y: p.y - L.cards[id].y });
   cv.addEventListener('pointerdown', e => {
     if (e.button !== 0 || LAYERS.length) return;
-    const p = appPt(e), reg = regionAt(id, p);
+    const p = appPt(e); let reg = regionAt(id, p);
+    // the Payoff ring can hang over the price or time axis (it sits down-right of the point): a touch on it grabs it there too
+    if (reg !== 'pane' && id === 'idx' && PM.on && !c.draft && poPriced() && nearPoint({ x: p.x - L.cards[id].x, y: p.y - L.cards[id].y })) reg = 'pane';
     if (G.st !== 'idle') return;
     S.focus = id; syncFocus();
     if (reg === 'axis') {
@@ -59,20 +61,22 @@ function bindCard(id) {
     if (reg !== 'pane') return;
     P0.set(e.pointerId, p); try { cv.setPointerCapture(e.pointerId); } catch {}
     if (P0.size === 1) {
-      mode = 'pending'; start = p; ro0 = c.ro; moved = false;
+      mode = 'pending'; start = p; ro0 = c.ro; moved = false; onRing = false;
       // Payoff: a touch that starts on the point drags it, or opens B1 if it lifts without moving (BR-29)
-      if (id === 'idx' && PM.on && !c.draft && poPriced() && nearPoint(cardPt(p))) mode = 'ptpend';
+      if (id === 'idx' && PM.on && !c.draft && poPriced() && nearPoint(cardPt(p))) { mode = 'ptpend'; onRing = true; }
+      // the crosshair is on: a drag moves it from just up-left of the finger, a tap turns it off
+      if (XH.id === id && !c.draft) mode = 'xhpend';
       clearTimeout(lp); lp = setTimeout(() => {
+        if (mode === 'xhpend') { mode = 'xh'; moved = true; xhAt(id, cardPt(P0.get(e.pointerId) || start), 'drag'); return; }
         if (mode !== 'pending') return;
-        mode = 'cross';
-        if (id === 'idx' && PM.on && !c.draft && poPriced() && inFuture(cardPt(start))) { const pt = pointFromXY(cardPt(start)); if (pt) setPoint(pt, 'longpress'); }
-        else setCross(id, cardPt(start));
+        if (c.draft) { mode = 'cross'; setCross(id, cardPt(start)); }   // drawing tools keep hold-to-place, under the finger
+        else { mode = 'xh'; xhSet(id); xhAt(id, cardPt(start), 'longpress'); }
         Haptic.fire('select'); track('crosshair', { chart: id });
       }, 400);
     } else if (P0.size === 2) {
-      if (mode === 'ptdrag' || mode === 'ptpend') { /* a second finger ends the point drag and starts a pinch */ }
+      // a second finger ends a crosshair drag and starts a pinch; the crosshair stays on
       if (id === 'idx' && PM.on) PM.chip = null;
-      clearTimeout(lp); mode = 'pinch'; const [a, b] = [...P0.values()]; d0 = hyp(a.x - b.x, a.y - b.y) || 1; sp0 = c.spacing; ro0 = c.ro; c.cross = null; redraw(id);
+      clearTimeout(lp); mode = 'pinch'; const [a, b] = [...P0.values()]; d0 = hyp(a.x - b.x, a.y - b.y) || 1; sp0 = c.spacing; ro0 = c.ro; if (XH.id !== id) c.cross = null; redraw(id);
     }
   });
   cv.addEventListener('pointermove', e => {
@@ -82,14 +86,12 @@ function bindCard(id) {
       return;
     }
     const p = appPt(e); P0.set(e.pointerId, p);
-    if (mode === 'ptpend' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'ptdrag'; moved = true; }
-    if (mode === 'ptdrag') { const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'drag'); return; }
+    // dragging the ring, or any drag while the crosshair is on, moves the crosshair from just up-left of the finger
+    if ((mode === 'ptpend' || mode === 'xhpend') && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); if (mode === 'ptpend') { xhSet(id); track('crosshair', { chart: id, source: 'point' }); } mode = 'xh'; moved = true; }
+    if (mode === 'xh') { xhAt(id, cardPt(p), 'drag'); return; }
     if (mode === 'pending' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'pan'; moved = true; if (id === 'idx' && PM.on && PM.chip) { PM.chip = null; renderPayoffUI(); } }
     if (mode === 'pan') { c.ro = ro0 - (p.x - start.x) / c.spacing; redraw(id); }   // candles follow the finger: drag left for newer candles and the future
-    else if (mode === 'cross') {
-      if (id === 'idx' && PM.on && !c.draft && poPriced() && inFuture(cardPt(p))) { if (c.cross) { c.cross = null; setOhlc(id, null); } const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'longpress'); redraw(id); }
-      else { setCross(id, cardPt(p)); if (c.draft && c.draft.pts.length) { c.draft.hover = { t: xToTime(c.g, c.cross.x), p: c.g.y2p(c.cross.y) }; } }
-    }
+    else if (mode === 'cross') { setCross(id, cardPt(p)); if (c.draft && c.draft.pts.length) { c.draft.hover = { t: xToTime(c.g, c.cross.x), p: c.g.y2p(c.cross.y) }; } }
     else if (mode === 'pinch' && P0.size >= 2) { const [a, b] = [...P0.values()]; const d = hyp(a.x - b.x, a.y - b.y); c.spacing = clamp(sp0 * d / d0, 1.2, 48); redraw(id); }
   });
   const end = e => {
@@ -98,10 +100,16 @@ function bindCard(id) {
     if (P0.size) return;
     const p = appPt(e);
     if (mode === 'ptpend' && e.type === 'pointerup') openB1('point');
+    // a tap while the crosshair is on turns it off; a tap on the ring still opens the point sheet, on a breakeven label still fits it
+    if (mode === 'xhpend' && e.type === 'pointerup' && !moved) {
+      if (onRing) openB1('point');
+      else { if (id === 'idx' && PM.on && poPriced() && beEdgeHit(cardPt(p))) { fitPrice(true); Haptic.fire('open'); track('payoff_fit_breakeven', {}); renderPayoffUI(); } xhClear('tap'); }
+    }
     if (mode === 'pending' && e.type === 'pointerup' && !moved) {
-      if (c.draft && c.g) { const q = cardPt(p); placePoint(id, { t: xToTime(c.g, q.x), p: c.g.y2p(q.y) }); }
+      if (XH.id) xhClear('tap');   // the crosshair is on on the other chart: this tap only turns it off
+      else if (c.draft && c.g) { const q = cardPt(p); placePoint(id, { t: xToTime(c.g, q.x), p: c.g.y2p(q.y) }); }
       else if (id === 'idx' && PM.on && poPriced() && beEdgeHit(cardPt(p))) { fitPrice(true); Haptic.fire('open'); track('payoff_fit_breakeven', {}); redraw('idx'); renderPayoffUI(); }
-      else if (id === 'idx' && PM.on && poPriced() && inFuture(cardPt(p))) { const pt = pointFromXY(cardPt(p)); if (pt) setPoint(pt, 'tap'); }
+      else if (id === 'idx' && PM.on && poPriced() && inFuture(cardPt(p))) { const q = cardPt(p), o = xhOff(), pt = pointFromXY({ x: q.x + o.x, y: q.y + o.y }); if (pt) setPoint(pt, 'tap'); }
       else if (id === 'opt' && !(PM.on && PM.s3)) { if (S.order) closeOrderPanel(); else openOrderPanel(); }
     }
     if (mode === 'cross') { if (c.draft && c.g && c.cross) placePoint(id, { t: xToTime(c.g, c.cross.x), p: c.g.y2p(c.cross.y) }); c.cross = null; setOhlc(id, null); redraw(id); }
@@ -112,8 +120,53 @@ function bindCard(id) {
 function setCross(id, q) {
   const c = CH[id], g = c.g; if (!g) return;
   const fi = Math.round(g.n - 1 - ((g.paneR - q.x) / g.s - c.ro)), i = clamp(fi, 0, g.n - 1);
-  c.cross = { x: g.xOf(i), y: clamp(q.y, g.pT + 1, g.pB - 1), i };
+  c.cross = { x: g.xOf(i), y: clamp(q.y, g.pT + 1, g.pB - 1), i }; c.cross.p = g.y2p(c.cross.y);
   setOhlc(id, g.bars[i]); redraw(id);
+}
+/* ---------- Kite-style crosshair (XH) ----------
+   Hold to show it. It sits about a fingertip up-left of the finger (up-right for left-handed use), so the finger
+   doesn't cover what it points at, and a grey dot marks the finger. It stays on after the finger lifts; while it
+   is on, a drag anywhere on that chart moves it (the chart doesn't pan) and a pinch still zooms. A tap turns it off.
+   On the Nifty chart with Payoff on, the crosshair in the future zone is the Payoff ring; turning it off keeps the point. */
+const XH_GAP = 40;
+const xhOff = () => ({ x: S.hand === 'left' ? XH_GAP : -XH_GAP, y: -XH_GAP });
+function xhSet(id) { if (XH.id && XH.id !== id) xhClear(null); XH.id = id; }
+function xhClear(source) {
+  const id = XH.id; if (!id) return; XH.id = null;
+  const c = CH[id]; if (c.cross) { c.cross = null; setOhlc(id, null); }
+  if (id === 'idx' && PM.on && !PM.rest) { PM.rest = true; const b = book(); if (PM.pt && b.legs.length) PM.pt = { T: PM.restT ?? PM.pt.T, S: b.S0 }; renderPayoffUI(); }
+  redraw(id); if (source) track('crosshair_off', { chart: id, source });
+}
+// f: the finger in card coordinates
+function xhAt(id, f, how) {
+  const c = CH[id], o = xhOff(), q = { x: f.x + o.x, y: f.y + o.y }, g = c.g; if (!g) return;
+  const qz = { x: q.x, y: clamp(q.y, g.pT + 1, g.pB - 1) };
+  if (id === 'idx' && PM.on && !c.draft && poPriced() && PM.pt && inFuture(qz)) {
+    if (c.cross) { c.cross = null; setOhlc(id, null); }
+    const pt = pointFromXY(qz); if (pt && (PM.rest || pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, how);
+    redraw(id);
+  } else setCross(id, q);
+}
+// the touch circle, where the finger is or was; touch there to move the crosshair without a jump.
+// With Payoff on it is the Payoff ring (always shown, down-right of the point); for the plain crosshair, a grey dot.
+function drawXHDot(id, ctx, g) {
+  const c = CH[id];
+  if (id === 'idx') {
+    const r = ringXY(g);
+    if (r) {
+      ctx.save();
+      const pulse = PM.pulseAt ? clamp((performance.now() - PM.pulseAt) / 450, 0, 1) : 1;
+      if (pulse < 1) { ctx.beginPath(); ctx.arc(r.x, r.y, 11 + pulse * 16, 0, 7); ctx.strokeStyle = `rgba(127,155,255,${.6 * (1 - pulse)})`; ctx.lineWidth = 2; ctx.stroke(); requestAnimationFrame(() => redraw('idx')); }
+      const on = XH.id === 'idx' && !c.cross;
+      ctx.beginPath(); ctx.arc(r.x, r.y, 11, 0, 7); ctx.fillStyle = on ? 'rgba(127,155,255,.32)' : 'rgba(127,155,255,.2)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(r.x, r.y, 7, 0, 7); ctx.fillStyle = '#171717'; ctx.fill(); ctx.lineWidth = 2.4; ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.restore();
+    }
+  }
+  if (XH.id !== id || !c.cross) return;
+  const o = xhOff(), fx = c.cross.x - o.x, fy = c.cross.y - o.y;
+  ctx.save(); ctx.beginPath(); ctx.arc(fx, fy, 10, 0, Math.PI * 2); ctx.fillStyle = 'rgba(176,176,182,.45)'; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.stroke(); ctx.restore();
 }
 function setOhlc(id, b) {
   const el = CH[id].el; let o = $('.ohlc', el);
@@ -317,7 +370,7 @@ const Study = (() => {
 function copyJSON(obj) { const s = JSON.stringify(obj, null, 2); (navigator.clipboard ? navigator.clipboard.writeText(s) : Promise.reject()).then(() => toast('Copied'), () => { const t = document.createElement('textarea'); t.value = s; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); toast('Copied'); } catch { toast('Copy failed'); } t.remove(); }); }
 function resetCharts(quiet) {
   if (PM.on) setPayoff(false, { source: 'reset' });
-  for (const id of CHART_IDS) { const c = CH[id]; Object.assign(c, { tf: '5m', type: 'candle', ind: {}, draws: [], draft: null, ys: null, cross: null, spacing: BASE[id].spacing, ro: BASE[id].ro, _ic: {}, _rk: null }); }
+  for (const id of CHART_IDS) { const c = CH[id]; Object.assign(c, { tf: '5m', type: 'candle', ind: {}, draws: [], draft: null, ys: null, cross: null, spacing: BASE[id].spacing, ro: BASE[id].ro, _ic: {}, _rk: null }); } XH.id = null;
   S.linked = false; $$('.dtool').forEach(x => x.remove()); updateHeaders(); redraw();
 }
 
@@ -333,7 +386,7 @@ function renderZones() {
     if (v === 'v1' || v === 'v6') { const p = rectIn($('.tfb', CH[id].el)); add(p.x - 4, p.y - 6, p.w + 8, p.h + 12, 'hold'); }
     if (v === 'v2') { const hb = cornerHub(id); add(hb.x - 30, hb.y - 19, 60, 38, 'hold'); }
     if (v === 'v3') { const band = [Math.max(r.y + r.paneT, L.sat + 4 + 8 + 156), Math.min(r.y + r.paneB, L.H - L.sab - 4 - 8 - 156)]; add(r.x + g.paneR, r.y + r.paneT, g.axisW, r.paneB - r.paneT, 'drag = scale'); if (band[1] > band[0]) add(r.x + g.paneR + 4, band[0], g.axisW - 8, band[1] - band[0], 'hold = wheel'); }
-    add(r.x + 8, r.y + r.paneT + 30, Math.min(150, g.paneR - 16), 22, 'long-press = crosshair');
+    add(r.x + 8, r.y + r.paneT + 30, Math.min(150, g.paneR - 16), 22, 'hold = crosshair · tap hides it');
   }
   if (v === 'v4') add(L.W * .2, L.divY - 10, L.W * .6, L.gap + 20, 'hold = dial · drag = resize');
   if (v === 'v5') { const d = rectIn($('#dock')); add(d.x - 4, d.y - 4, d.w + 8, d.h + 8, 'hold'); }

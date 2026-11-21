@@ -1278,6 +1278,8 @@ const BASE = {
   idx: { sym: 'NIFTY50', ty: 'Spot', short: 'NIFTY50', ltp: 0, tag: 0, prev: E.PREV_CLOSE, spacing: 4.3177, ro: 5.94 },
   opt: { ...optNames(MK.opt), ltp: 0, tag: 0, prev: 0, spacing: 7.5089, ro: 3.51 },
 };
+// the chart whose crosshair is on (Kite style: it stays after the finger lifts until a tap); null when none
+const XH = { id: null };
 const fresh = id => ({ id, ...BASE[id], tf: '5m', type: 'candle', ind: {}, draws: [], draft: null, ys: null, cross: null, opts: { breaks: true, hilo: true, pline: true, wm: true, legend: true } });
 const CH = { idx: fresh('idx'), opt: fresh('opt') };
 const CHART_IDS = ['idx', 'opt'];
@@ -1522,6 +1524,7 @@ function drawChart(id) {
   const last = bars[bars.length - 1], tagUp = last ? last.c >= last.o : true, tagCol = tagUp ? UP : DN, ty = snap(p2y(c.tag)) + half;
   if (c.opts.pline) { ctx.strokeStyle = tagCol; ctx.lineWidth = 1; ctx.setLineDash([4.1, 6.2]); ctx.beginPath(); ctx.moveTo(xOf(g.n - 1) + s * .5 + 2, ty); ctx.lineTo(paneR, ty); ctx.stroke(); ctx.setLineDash([]); }
   // crosshair lines
+  if (c.cross && c.cross.i != null) { c.cross.x = xOf(c.cross.i); if (c.cross.p != null) c.cross.y = clamp(p2y(c.cross.p), pT + 1, pB - 1); }
   if (c.cross) { ctx.strokeStyle = 'rgba(200,200,200,.55)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); const cx = snap(c.cross.x) + half, cy = snap(c.cross.y) + half; ctx.beginPath(); ctx.moveTo(cx, pT); ctx.lineTo(cx, pB); ctx.moveTo(0, cy); ctx.lineTo(paneR, cy); ctx.stroke(); ctx.setLineDash([]); }
   ctx.restore();
   // axes
@@ -1567,6 +1570,7 @@ function drawChart(id) {
   ctx.restore();
   c.g = g;
   if (typeof payoffAxes === 'function') payoffAxes(id, ctx, g);
+  if (typeof drawXHDot === 'function') drawXHDot(id, ctx, g);
 }
 function drawShape(ctx, g, d, temp) {
   const ax = timeToX(g, d.a.t), ay = g.p2y(d.a.p), bx = timeToX(g, d.b.t), by = g.p2y(d.b.p);
@@ -1617,6 +1621,10 @@ function openLayer(inner, { onClose, label = 'Dialog', scrimClose = true, cls = 
   closeTransient();
   const el = h(`<div class="layer ${cls}" role="dialog" aria-modal="true" aria-label="${label}"><div class="scrim"></div></div>`);
   el.appendChild(inner); app.appendChild(el);
+  // A phone fires a click right after the tap that opened the layer, at the same spot. Ignore clicks that early:
+  // on the scrim it would close the layer at once, and on the layer it would press whatever is under the finger.
+  const t0 = performance.now();
+  el.addEventListener('click', e => { if (performance.now() - t0 < 450) { e.stopPropagation(); e.preventDefault(); } }, true);
   const layer = { el, close(reason = 'dismissed') { if (layer.closed) return; layer.closed = true; el.classList.remove('in'); const i = LAYERS.indexOf(layer); if (i >= 0) LAYERS.splice(i, 1); setTimeout(() => el.remove(), 260); onClose && onClose(reason); syncDevHints(); } };
   if (scrimClose) $('.scrim', el).addEventListener('click', () => layer.close('scrim'));
   LAYERS.push(layer); requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));
@@ -1757,7 +1765,7 @@ function openDrawing(id) {
    ========================================================================= */
 function setTimeframe(id, tf, meta = {}) {
   const ids = S.linked ? CHART_IDS : [id];
-  for (const k of ids) { const c = CH[k]; if (c.tf === tf) continue; c.tf = tf; c.ys = null; c.cross = null; c._ic = {}; if (TF[tf] >= 1440) c.ro = 3; redraw(k); }
+  for (const k of ids) { const c = CH[k]; if (c.tf === tf) continue; c.tf = tf; c.ys = null; c.cross = null; if (XH.id === k) XH.id = null; c._ic = {}; if (TF[tf] >= 1440) c.ro = 3; redraw(k); }
   updateHeaders();
   if (!meta.silent) toast(`${ids.map(k => CH[k].short).join(' and ')} switched to ${tf}`, true);
   track('timeframe', { chart: id, tf, linked: S.linked, route: meta.route || 'popover' });
@@ -2314,6 +2322,7 @@ const PM = {
   views: null, prevOpt: null, openedAt: 0, later: store.get('later', false), orderFail: false, orders: {}, exits: [],
   tipSeen: store.get('tipSeen', false), hintSeen: store.get('hintSeen', false), hint: false, b1: false, b2: null,
   bannerClosed: false, crossSign: 0, crossExp: null, lastMoveLog: 0,
+  rest: true, restT: null,   // rest: the crosshair is off, so the point is the live price at restT (the default time)
   panel: store.get('panel', 'list'),   // several positions: 'list' (option, qty, P&L) or 'seller' (the seller panel)
 };
 
@@ -2624,17 +2633,14 @@ function payoffOver(id, ctx, g) {
   drawDisc(ctx, g, b, nowX, endX, vis);   // stop loss and target
   // strike line of a tapped leg (S3)
   if (PM.s3 && PM.strike != null) { const l = PM.legs.find(x => x.id === PM.strike); if (l && l.c.type !== 'FUT') { const y = Math.round(g.p2y(l.c.strike)) + .5; if (y > g.pT && y < g.pB) { ctx.save(); ctx.strokeStyle = PO_COL.strike; ctx.setLineDash([1.5, 3]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(g.paneR, y); ctx.stroke(); ctx.setLineDash([]); ctx.font = `500 ${10.5 * fs}px InterQW, Inter, sans-serif`; const t = `${l.c.strike} ${l.c.type}`; ctx.fillStyle = 'rgba(23,23,23,.85)'; ctx.fillRect(6, y - 16, ctx.measureText(t).width + 8, 14); ctx.fillStyle = PO_COL.strike; ctx.textBaseline = 'middle'; ctx.fillText(t, 10, y - 9); ctx.restore(); } } }
-  // the Payoff point: crosshair and ring
-  const pt = PM.pt; if (!pt) return;
+  // the Payoff point: crosshair lines and a small dot where they cross; the ring is the touch circle, drawn by drawXHDot
+  const pt = PM.pt; if (!pt || PM.rest) return;
   const i = ptSlot(g); if (i == null) return;
   const x = g.xOf(i), y = g.p2y(pt.S);
   if (x < -4 || x > g.paneR + 4) return;
-  ctx.save(); ctx.strokeStyle = 'rgba(127,155,255,.55)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+  ctx.save(); ctx.strokeStyle = XH.id === 'idx' && !CH.idx.cross ? 'rgba(127,155,255,.95)' : 'rgba(127,155,255,.55)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(Math.round(x) + .5, g.pT); ctx.lineTo(Math.round(x) + .5, g.pB); ctx.moveTo(0, Math.round(y) + .5); ctx.lineTo(g.paneR, Math.round(y) + .5); ctx.stroke(); ctx.setLineDash([]);
-  const pulse = PM.pulseAt ? clamp((now - 0) && (performance.now() - PM.pulseAt) / 450, 0, 1) : 1;
-  if (pulse < 1) { ctx.beginPath(); ctx.arc(x, y, 8 + pulse * 16, 0, 7); ctx.strokeStyle = `rgba(127,155,255,${.6 * (1 - pulse)})`; ctx.lineWidth = 2; ctx.stroke(); requestAnimationFrame(() => redraw('idx')); }
-  ctx.beginPath(); ctx.arc(x, y, 8, 0, 7); ctx.fillStyle = 'rgba(127,155,255,.22)'; ctx.fill();
-  ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 7); ctx.fillStyle = '#171717'; ctx.fill(); ctx.lineWidth = 2.2; ctx.strokeStyle = '#fff'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fillStyle = '#9fb3ff'; ctx.fill();
   ctx.restore();
 }
 function drawNow(ctx, g, x) {
@@ -2689,7 +2695,7 @@ function ptSlot(g) {
 function payoffAxes(id, ctx, g) {
   if (!PM.on || !poPriced()) return;
   if (id === 'idx') drawDiscAxis(ctx, g);
-  if (id === 'idx' && PM.pt) {
+  if (id === 'idx' && PM.pt && !PM.rest) {
     const i = ptSlot(g); if (i == null) return;
     const x = g.xOf(i), y = g.p2y(PM.pt.S);
     ctx.save(); ctx.font = FONT_AX; ctx.textBaseline = 'middle';
@@ -2708,6 +2714,7 @@ function payoffAxes(id, ctx, g) {
 /* ---------- turning Payoff on and off (BR-23, BR-24) ---------- */
 function setPayoff(on, meta = {}) {
   if (!!on === PM.on) return;
+  xhClear(null);
   if (on) {
     if (!payoffAvailable()) { Haptic.fire('error'); toast('Payoff needs an index with options'); return; }
     closeOrderPanel(true);
@@ -2729,7 +2736,7 @@ function setPayoff(on, meta = {}) {
   } else {
     const dur = Math.round((now() - PM.openedAt) / 1000);
     closeB2(true); closeB1(true);
-    PM.on = false; PM.hint = false; PM.pt = null; PM.strike = null;
+    PM.on = false; PM.hint = false; PM.pt = null; PM.strike = null; PM.rest = true;
     const wasS3 = PM.s3; PM.s3 = false;
     if (PM.prevOpt) { setOptContract(PM.prevOpt, { silent: true }); PM.prevOpt = null; }
     relayout();
@@ -2766,7 +2773,8 @@ function openView() {
   let T = Tend;
   if (endX > gi.paneR - 1) { const iMax = gi.n - 1 + Math.floor((gi.paneR - gi.s / 2 - xn1T) / gi.s); const sl = gi.slotAt(Math.min(iMax, gi.N - 1)); T = sl ? sl.T1 : Tend; }
   const Th = horizonT(b, gi); if (Th != null) T = Th;   // UX-19
-  PM.pt = b.legs.length && poPriced() ? { T, S: snap5(b.S0) } : null;
+  PM.rest = true; PM.restT = T;
+  PM.pt = b.legs.length && poPriced() ? { T, S: b.S0 } : null;
   // UX-01: fit the price scale for the view the chart is scrolling to, and ease into it
   if (uxB()) { const ro0 = CH.idx.ro; CH.idx.ro = tgt.idx.ro; const s = priceFit(); CH.idx.ro = ro0; if (s) tgt.idx.ys = s; }
   animateRo(tgt, 250);
@@ -2802,6 +2810,8 @@ function fitTo(T, chipKey) {
 /* ---------- moving the point (BR-16, BR-29, BR-31) ---------- */
 function setPoint(pt, how, opts = {}) {
   const b = book(); if (!b.legs.length) return;
+  if (how === 'chip') { if (PM.rest) { PM.restT = pt.T; pt = { T: pt.T, S: b.S0 }; } }
+  else if (PM.on) { PM.rest = false; if (XH.id !== 'idx') xhSet('idx'); }
   const prev = PM.pt; PM.pt = pt;
   if (prev && (how === 'drag' || how === 'longpress')) {
     const s0 = Math.sign(Math.round(PF.pnl(b, prev.S, prev.T))), s1 = Math.sign(Math.round(PF.pnl(b, pt.S, pt.T)));
@@ -2828,10 +2838,13 @@ function inFuture(q) {
   const nowX = xAtT(g, MK.nowT()), end = poAxisEnd(); if (end == null) return false;
   return q.x >= nowX && q.x <= xAtT(g, end);
 }
-function nearPoint(q) {
-  const g = CH.idx.g; if (!g || !PM.pt) return false;
-  const i = ptSlot(g); if (i == null) return false;
-  return hyp(q.x - g.xOf(i), q.y - g.p2y(PM.pt.S)) <= 26;
+function nearPoint(q) { const r = ringXY(CH.idx.g); return !!r && hyp(q.x - r.x, q.y - r.y) <= 26; }
+// the ring: where the finger is, or was, when it set the point; down-right of the point (down-left for left-handed use)
+function ringXY(g) {
+  if (!g || !PM.on || !PM.pt || PM.rest || !poPriced()) return null;
+  const i = ptSlot(g); if (i == null) return null;
+  const x = g.xOf(i), y = g.p2y(PM.pt.S); if (x < -4 || x > g.paneR + 4) return null;
+  const o = xhOff(); return { x: x - o.x, y: Math.min(y - o.y, L.cards.idx.h - 12), px: x, py: y };
 }
 
 /* ---------- positions and contracts ---------- */
@@ -2845,9 +2858,9 @@ function bookChanged(opening) {
     const s3 = isS3();
     if (s3 !== PM.s3) { PM.s3 = s3; PM.strike = null; if (!s3) { const b = book(); if (b.legs.length === 1 && !b.pretrade && b.legs[0].c !== MK.opt && b.legs[0].c.type !== 'FUT') { if (!PM.prevOpt) PM.prevOpt = MK.opt; setOptContract(b.legs[0].c, { silent: true }); } } relayout(); }
     const b = book(), g = CH.idx.g;
-    if (!opening && b.legs.length && poPriced() && !PM.pt) PM.pt = { T: sessionEndT(b), S: snap5(b.S0) };
+    if (!opening && b.legs.length && poPriced() && !PM.pt) { PM.rest = true; PM.restT = sessionEndT(b); PM.pt = { T: PM.restT, S: b.S0 }; }
     if (!b.legs.length) PM.pt = null;
-    if (PM.pt && g) { const r = ptRange(g); if (r) { const i = ptSlot(g); if (i < r[0] || i > r[1]) PM.pt = { T: g.slotAt(clamp(i, r[0], r[1])).T1, S: PM.pt.S }; } }
+    if (PM.pt && g) { const r = ptRange(g); if (r) { const i = ptSlot(g); if (i < r[0] || i > r[1]) { PM.pt = { T: g.slotAt(clamp(i, r[0], r[1])).T1, S: PM.pt.S }; if (PM.rest) PM.restT = PM.pt.T; } } }
     if (!opening) fitPrice();
   }
   renderPayoffUI(); updatePnlPill(); redraw();
@@ -2923,6 +2936,7 @@ function chipsOf(b) {
 }
 function renderPayoffUI() {
   const ic_ = CH.idx.el, oc = CH.opt.el; if (!ic_ || !oc) return;
+  if (PM.on && PM.rest && PM.pt) PM.pt.S = MK.S0();
   app.classList.toggle('po-on', PM.on); app.classList.toggle('po-s3', PM.on && PM.s3);
   app.classList.toggle('po-grey', PM.on && (MK.pricing === 'delayed' || MK.pricing === 'offline'));
   const bar = $('.pbar', ic_), rd = $('.pread', ic_), edge = $('.pedge', ic_), hint = $('.phint', ic_), empty = $('.pempty', ic_);
@@ -2974,13 +2988,14 @@ function renderPayoffUI() {
     let left = 8, top = g.pT + 6 + legendH + bannerH;
     const i = PM.pt ? ptSlot(g) : null, px = i != null ? g.xOf(i) : g.paneR, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     if (px < g.paneR / 2) { left = g.paneR - w - 8; top += 34 * Math.min(S.fs || 1, 1.45); }
-    if (px > left - 14 && px < left + w + 14 && py > top - 14 && py < top + h + 14) top = g.pB - h - 6;
+    const rr = ringXY(g), hitB = (x, y) => x > left - 14 && x < left + w + 14 && y > top - 14 && y < top + h + 14;
+    if (hitB(px, py) || (rr && hitB(rr.x, rr.y))) top = g.pB - h - 6;
     rd.style.left = left + 'px'; rd.style.top = top + 'px';
   }
   // first-run hint
   hint.hidden = !(PM.hint && v && g);
   if (!hint.hidden) {
-    hint.textContent = uxB() ? 'Drag the ring to see P&L at any level and time, or tap the shaded area. Pick a date above to look further ahead.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
+    hint.textContent = uxB() ? 'Hold the chart and drag to see P&L at any level and time. The crosshair sits just above your finger and stays when you lift; tap to clear it. Pick a date above to look further ahead.' : 'Drag the ring or tap the shaded area to see P&L at any level and time. Pick a date above to look further ahead.';
     const nowX = xAtT(g, MK.nowT()), zw = Math.max(150, g.paneR - nowX - 12); hint.style.width = Math.min(zw, 230) + 'px';
     const hw = Math.min(zw, 230), hh = hint.offsetHeight, py = PM.pt ? g.p2y(PM.pt.S) : g.pB;
     const hl = clamp(nowX + 6, 6, g.paneR - hw - 6);
@@ -2991,7 +3006,7 @@ function renderPayoffUI() {
   }
   // edge indicator when the point is out of view
   edge.hidden = true;
-  if (v && g && PM.pt) {
+  if (v && g && PM.pt && !PM.rest) {
     const i = ptSlot(g), x = g.xOf(i), y = g.p2y(PM.pt.S);
     if (x > g.paneR + 2 || x < -2) { edge.hidden = false; edge.textContent = x > g.paneR ? `Point · ${ptTimeShort(PM.pt.T)} →` : `← Point · ${ptTimeShort(PM.pt.T)}`; edge.style.top = (g.pB - 34) + 'px'; edge.style.left = x > g.paneR ? '' : '8px'; edge.style.right = x > g.paneR ? (r.w - g.paneR + 6) + 'px' : ''; }
     else if (y < g.pT || y > g.pB) { edge.hidden = false; edge.textContent = `Point · ${lvl(PM.pt.S)} ${y < g.pT ? '↑' : '↓'}`; edge.style.top = (y < g.pT ? g.pT + 4 : g.pB - 30) + 'px'; edge.style.left = clamp(x - 50, 6, g.paneR - 110) + 'px'; edge.style.right = ''; }
@@ -3125,6 +3140,7 @@ function stepPoint(kind) {
   const g = CH.idx.g; if (!g || !PM.pt) return false;
   const r = ptRange(g); if (!r) return false;
   let { T, S: lv } = PM.pt; let i = ptSlot(g);
+  if (PM.rest) lv = snap5(lv);
   if (kind === 'lv+') lv += PM.stepBig ? 25 : 5; else if (kind === 'lv-') lv -= PM.stepBig ? 25 : 5;
   else if (kind === 't+') { if (i >= r[1]) { Haptic.fire('error'); return false; } i++; T = g.slotAt(i).T1; }
   else if (kind === 't-') { if (i <= r[0]) { Haptic.fire('error'); return false; } i--; T = g.slotAt(i).T1; }
@@ -3691,7 +3707,7 @@ function discCrossed(b, a, z) {
 }
 
 /* =========================================================================
-   Chart gestures: pan, pinch, crosshair (long-press), axis scale, split
+   Chart gestures: pan, pinch, crosshair (hold; stays until a tap), axis scale, split
    ========================================================================= */
 function startDrag(e, el, drag) {
   if (G.st !== 'idle' || !drag) return;
@@ -3734,11 +3750,13 @@ function bindCard(id) {
   const lk = $('.lnk', el); if (lk) lk.addEventListener('click', () => { S.linked = !S.linked; updateHeaders(); syncDev(); toast(S.linked ? 'Timeframes linked: changes apply to both charts' : 'Timeframes unlinked'); track('link', { on: S.linked }); });
   $('.banner button', el).addEventListener('click', () => { disarm(id); $$('.dtool').forEach(x => x.remove()); });
   // canvas regions
-  const P0 = new Map(); let mode = null, lp = 0, start = null, ro0 = 0, sp0 = 0, d0 = 0, moved = false;
+  const P0 = new Map(); let mode = null, lp = 0, start = null, ro0 = 0, sp0 = 0, d0 = 0, moved = false, onRing = false;
   const cardPt = p => ({ x: p.x - L.cards[id].x, y: p.y - L.cards[id].y });
   cv.addEventListener('pointerdown', e => {
     if (e.button !== 0 || LAYERS.length) return;
-    const p = appPt(e), reg = regionAt(id, p);
+    const p = appPt(e); let reg = regionAt(id, p);
+    // the Payoff ring can hang over the price or time axis (it sits down-right of the point): a touch on it grabs it there too
+    if (reg !== 'pane' && id === 'idx' && PM.on && !c.draft && poPriced() && nearPoint({ x: p.x - L.cards[id].x, y: p.y - L.cards[id].y })) reg = 'pane';
     if (G.st !== 'idle') return;
     S.focus = id; syncFocus();
     if (reg === 'axis') {
@@ -3751,20 +3769,22 @@ function bindCard(id) {
     if (reg !== 'pane') return;
     P0.set(e.pointerId, p); try { cv.setPointerCapture(e.pointerId); } catch {}
     if (P0.size === 1) {
-      mode = 'pending'; start = p; ro0 = c.ro; moved = false;
+      mode = 'pending'; start = p; ro0 = c.ro; moved = false; onRing = false;
       // Payoff: a touch that starts on the point drags it, or opens B1 if it lifts without moving (BR-29)
-      if (id === 'idx' && PM.on && !c.draft && poPriced() && nearPoint(cardPt(p))) mode = 'ptpend';
+      if (id === 'idx' && PM.on && !c.draft && poPriced() && nearPoint(cardPt(p))) { mode = 'ptpend'; onRing = true; }
+      // the crosshair is on: a drag moves it from just up-left of the finger, a tap turns it off
+      if (XH.id === id && !c.draft) mode = 'xhpend';
       clearTimeout(lp); lp = setTimeout(() => {
+        if (mode === 'xhpend') { mode = 'xh'; moved = true; xhAt(id, cardPt(P0.get(e.pointerId) || start), 'drag'); return; }
         if (mode !== 'pending') return;
-        mode = 'cross';
-        if (id === 'idx' && PM.on && !c.draft && poPriced() && inFuture(cardPt(start))) { const pt = pointFromXY(cardPt(start)); if (pt) setPoint(pt, 'longpress'); }
-        else setCross(id, cardPt(start));
+        if (c.draft) { mode = 'cross'; setCross(id, cardPt(start)); }   // drawing tools keep hold-to-place, under the finger
+        else { mode = 'xh'; xhSet(id); xhAt(id, cardPt(start), 'longpress'); }
         Haptic.fire('select'); track('crosshair', { chart: id });
       }, 400);
     } else if (P0.size === 2) {
-      if (mode === 'ptdrag' || mode === 'ptpend') { /* a second finger ends the point drag and starts a pinch */ }
+      // a second finger ends a crosshair drag and starts a pinch; the crosshair stays on
       if (id === 'idx' && PM.on) PM.chip = null;
-      clearTimeout(lp); mode = 'pinch'; const [a, b] = [...P0.values()]; d0 = hyp(a.x - b.x, a.y - b.y) || 1; sp0 = c.spacing; ro0 = c.ro; c.cross = null; redraw(id);
+      clearTimeout(lp); mode = 'pinch'; const [a, b] = [...P0.values()]; d0 = hyp(a.x - b.x, a.y - b.y) || 1; sp0 = c.spacing; ro0 = c.ro; if (XH.id !== id) c.cross = null; redraw(id);
     }
   });
   cv.addEventListener('pointermove', e => {
@@ -3774,14 +3794,12 @@ function bindCard(id) {
       return;
     }
     const p = appPt(e); P0.set(e.pointerId, p);
-    if (mode === 'ptpend' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'ptdrag'; moved = true; }
-    if (mode === 'ptdrag') { const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'drag'); return; }
+    // dragging the ring, or any drag while the crosshair is on, moves the crosshair from just up-left of the finger
+    if ((mode === 'ptpend' || mode === 'xhpend') && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); if (mode === 'ptpend') { xhSet(id); track('crosshair', { chart: id, source: 'point' }); } mode = 'xh'; moved = true; }
+    if (mode === 'xh') { xhAt(id, cardPt(p), 'drag'); return; }
     if (mode === 'pending' && hyp(p.x - start.x, p.y - start.y) > 8) { clearTimeout(lp); mode = 'pan'; moved = true; if (id === 'idx' && PM.on && PM.chip) { PM.chip = null; renderPayoffUI(); } }
     if (mode === 'pan') { c.ro = ro0 - (p.x - start.x) / c.spacing; redraw(id); }   // candles follow the finger: drag left for newer candles and the future
-    else if (mode === 'cross') {
-      if (id === 'idx' && PM.on && !c.draft && poPriced() && inFuture(cardPt(p))) { if (c.cross) { c.cross = null; setOhlc(id, null); } const pt = pointFromXY(cardPt(p)); if (pt && PM.pt && (pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, 'longpress'); redraw(id); }
-      else { setCross(id, cardPt(p)); if (c.draft && c.draft.pts.length) { c.draft.hover = { t: xToTime(c.g, c.cross.x), p: c.g.y2p(c.cross.y) }; } }
-    }
+    else if (mode === 'cross') { setCross(id, cardPt(p)); if (c.draft && c.draft.pts.length) { c.draft.hover = { t: xToTime(c.g, c.cross.x), p: c.g.y2p(c.cross.y) }; } }
     else if (mode === 'pinch' && P0.size >= 2) { const [a, b] = [...P0.values()]; const d = hyp(a.x - b.x, a.y - b.y); c.spacing = clamp(sp0 * d / d0, 1.2, 48); redraw(id); }
   });
   const end = e => {
@@ -3790,10 +3808,16 @@ function bindCard(id) {
     if (P0.size) return;
     const p = appPt(e);
     if (mode === 'ptpend' && e.type === 'pointerup') openB1('point');
+    // a tap while the crosshair is on turns it off; a tap on the ring still opens the point sheet, on a breakeven label still fits it
+    if (mode === 'xhpend' && e.type === 'pointerup' && !moved) {
+      if (onRing) openB1('point');
+      else { if (id === 'idx' && PM.on && poPriced() && beEdgeHit(cardPt(p))) { fitPrice(true); Haptic.fire('open'); track('payoff_fit_breakeven', {}); renderPayoffUI(); } xhClear('tap'); }
+    }
     if (mode === 'pending' && e.type === 'pointerup' && !moved) {
-      if (c.draft && c.g) { const q = cardPt(p); placePoint(id, { t: xToTime(c.g, q.x), p: c.g.y2p(q.y) }); }
+      if (XH.id) xhClear('tap');   // the crosshair is on on the other chart: this tap only turns it off
+      else if (c.draft && c.g) { const q = cardPt(p); placePoint(id, { t: xToTime(c.g, q.x), p: c.g.y2p(q.y) }); }
       else if (id === 'idx' && PM.on && poPriced() && beEdgeHit(cardPt(p))) { fitPrice(true); Haptic.fire('open'); track('payoff_fit_breakeven', {}); redraw('idx'); renderPayoffUI(); }
-      else if (id === 'idx' && PM.on && poPriced() && inFuture(cardPt(p))) { const pt = pointFromXY(cardPt(p)); if (pt) setPoint(pt, 'tap'); }
+      else if (id === 'idx' && PM.on && poPriced() && inFuture(cardPt(p))) { const q = cardPt(p), o = xhOff(), pt = pointFromXY({ x: q.x + o.x, y: q.y + o.y }); if (pt) setPoint(pt, 'tap'); }
       else if (id === 'opt' && !(PM.on && PM.s3)) { if (S.order) closeOrderPanel(); else openOrderPanel(); }
     }
     if (mode === 'cross') { if (c.draft && c.g && c.cross) placePoint(id, { t: xToTime(c.g, c.cross.x), p: c.g.y2p(c.cross.y) }); c.cross = null; setOhlc(id, null); redraw(id); }
@@ -3804,8 +3828,53 @@ function bindCard(id) {
 function setCross(id, q) {
   const c = CH[id], g = c.g; if (!g) return;
   const fi = Math.round(g.n - 1 - ((g.paneR - q.x) / g.s - c.ro)), i = clamp(fi, 0, g.n - 1);
-  c.cross = { x: g.xOf(i), y: clamp(q.y, g.pT + 1, g.pB - 1), i };
+  c.cross = { x: g.xOf(i), y: clamp(q.y, g.pT + 1, g.pB - 1), i }; c.cross.p = g.y2p(c.cross.y);
   setOhlc(id, g.bars[i]); redraw(id);
+}
+/* ---------- Kite-style crosshair (XH) ----------
+   Hold to show it. It sits about a fingertip up-left of the finger (up-right for left-handed use), so the finger
+   doesn't cover what it points at, and a grey dot marks the finger. It stays on after the finger lifts; while it
+   is on, a drag anywhere on that chart moves it (the chart doesn't pan) and a pinch still zooms. A tap turns it off.
+   On the Nifty chart with Payoff on, the crosshair in the future zone is the Payoff ring; turning it off keeps the point. */
+const XH_GAP = 40;
+const xhOff = () => ({ x: S.hand === 'left' ? XH_GAP : -XH_GAP, y: -XH_GAP });
+function xhSet(id) { if (XH.id && XH.id !== id) xhClear(null); XH.id = id; }
+function xhClear(source) {
+  const id = XH.id; if (!id) return; XH.id = null;
+  const c = CH[id]; if (c.cross) { c.cross = null; setOhlc(id, null); }
+  if (id === 'idx' && PM.on && !PM.rest) { PM.rest = true; const b = book(); if (PM.pt && b.legs.length) PM.pt = { T: PM.restT ?? PM.pt.T, S: b.S0 }; renderPayoffUI(); }
+  redraw(id); if (source) track('crosshair_off', { chart: id, source });
+}
+// f: the finger in card coordinates
+function xhAt(id, f, how) {
+  const c = CH[id], o = xhOff(), q = { x: f.x + o.x, y: f.y + o.y }, g = c.g; if (!g) return;
+  const qz = { x: q.x, y: clamp(q.y, g.pT + 1, g.pB - 1) };
+  if (id === 'idx' && PM.on && !c.draft && poPriced() && PM.pt && inFuture(qz)) {
+    if (c.cross) { c.cross = null; setOhlc(id, null); }
+    const pt = pointFromXY(qz); if (pt && (PM.rest || pt.T !== PM.pt.T || pt.S !== PM.pt.S)) setPoint(pt, how);
+    redraw(id);
+  } else setCross(id, q);
+}
+// the touch circle, where the finger is or was; touch there to move the crosshair without a jump.
+// With Payoff on it is the Payoff ring (always shown, down-right of the point); for the plain crosshair, a grey dot.
+function drawXHDot(id, ctx, g) {
+  const c = CH[id];
+  if (id === 'idx') {
+    const r = ringXY(g);
+    if (r) {
+      ctx.save();
+      const pulse = PM.pulseAt ? clamp((performance.now() - PM.pulseAt) / 450, 0, 1) : 1;
+      if (pulse < 1) { ctx.beginPath(); ctx.arc(r.x, r.y, 11 + pulse * 16, 0, 7); ctx.strokeStyle = `rgba(127,155,255,${.6 * (1 - pulse)})`; ctx.lineWidth = 2; ctx.stroke(); requestAnimationFrame(() => redraw('idx')); }
+      const on = XH.id === 'idx' && !c.cross;
+      ctx.beginPath(); ctx.arc(r.x, r.y, 11, 0, 7); ctx.fillStyle = on ? 'rgba(127,155,255,.32)' : 'rgba(127,155,255,.2)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(r.x, r.y, 7, 0, 7); ctx.fillStyle = '#171717'; ctx.fill(); ctx.lineWidth = 2.4; ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.restore();
+    }
+  }
+  if (XH.id !== id || !c.cross) return;
+  const o = xhOff(), fx = c.cross.x - o.x, fy = c.cross.y - o.y;
+  ctx.save(); ctx.beginPath(); ctx.arc(fx, fy, 10, 0, Math.PI * 2); ctx.fillStyle = 'rgba(176,176,182,.45)'; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.stroke(); ctx.restore();
 }
 function setOhlc(id, b) {
   const el = CH[id].el; let o = $('.ohlc', el);
@@ -4009,7 +4078,7 @@ const Study = (() => {
 function copyJSON(obj) { const s = JSON.stringify(obj, null, 2); (navigator.clipboard ? navigator.clipboard.writeText(s) : Promise.reject()).then(() => toast('Copied'), () => { const t = document.createElement('textarea'); t.value = s; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); toast('Copied'); } catch { toast('Copy failed'); } t.remove(); }); }
 function resetCharts(quiet) {
   if (PM.on) setPayoff(false, { source: 'reset' });
-  for (const id of CHART_IDS) { const c = CH[id]; Object.assign(c, { tf: '5m', type: 'candle', ind: {}, draws: [], draft: null, ys: null, cross: null, spacing: BASE[id].spacing, ro: BASE[id].ro, _ic: {}, _rk: null }); }
+  for (const id of CHART_IDS) { const c = CH[id]; Object.assign(c, { tf: '5m', type: 'candle', ind: {}, draws: [], draft: null, ys: null, cross: null, spacing: BASE[id].spacing, ro: BASE[id].ro, _ic: {}, _rk: null }); } XH.id = null;
   S.linked = false; $$('.dtool').forEach(x => x.remove()); updateHeaders(); redraw();
 }
 
@@ -4025,7 +4094,7 @@ function renderZones() {
     if (v === 'v1' || v === 'v6') { const p = rectIn($('.tfb', CH[id].el)); add(p.x - 4, p.y - 6, p.w + 8, p.h + 12, 'hold'); }
     if (v === 'v2') { const hb = cornerHub(id); add(hb.x - 30, hb.y - 19, 60, 38, 'hold'); }
     if (v === 'v3') { const band = [Math.max(r.y + r.paneT, L.sat + 4 + 8 + 156), Math.min(r.y + r.paneB, L.H - L.sab - 4 - 8 - 156)]; add(r.x + g.paneR, r.y + r.paneT, g.axisW, r.paneB - r.paneT, 'drag = scale'); if (band[1] > band[0]) add(r.x + g.paneR + 4, band[0], g.axisW - 8, band[1] - band[0], 'hold = wheel'); }
-    add(r.x + 8, r.y + r.paneT + 30, Math.min(150, g.paneR - 16), 22, 'long-press = crosshair');
+    add(r.x + 8, r.y + r.paneT + 30, Math.min(150, g.paneR - 16), 22, 'hold = crosshair · tap hides it');
   }
   if (v === 'v4') add(L.W * .2, L.divY - 10, L.W * .6, L.gap + 20, 'hold = dial · drag = resize');
   if (v === 'v5') { const d = rectIn($('#dock')); add(d.x - 4, d.y - 4, d.w + 8, d.h + 8, 'hold'); }
